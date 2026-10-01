@@ -159,7 +159,7 @@ for (const locale of ['zh-CN', 'en-US'] as const) test('sandbox startup recovery
   const record = join(leases, 'PiDesktop.Run.' + crypto.randomUUID().replaceAll('-', '') + '.json');
   await writeFile(record, '{damaged');
   const data = defaultData(); data.ui.locale = locale; data.settings.keepInTray = false; data.settings.shortcuts = { quickChat: '' };
-  data.threads.push(threadSchema.parse({ id: 'saved', title: '保留聊天', projectId: '', cwd: root, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' }));
+  data.threads.push(threadSchema.parse({ id: 'saved', title: '保留聊天', projectId: '', cwd: root, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' }));
   data.ui.activeThreadId = 'saved'; data.ui.threads.saved = { reviewTab: 'changes', terminalOpen: false, selectedPath: '', folds: {}, draft: { text: '保留输入内容', attachments: [] } };
   await writeFile(join(storage, 'desktop.json'), JSON.stringify(data));
   const hook = join(root, 'sandbox-dialog.cjs'), callsPath = join(root, 'dialogs.json');

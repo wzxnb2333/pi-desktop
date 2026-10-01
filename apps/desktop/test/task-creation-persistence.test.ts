@@ -13,7 +13,7 @@ import { mkdtemp } from './fixtures/node-temp.ts';
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-task-creation-')), store = new JsonStore(dir); await store.load();
   store.data.projects.push({ id: 'p', name: 'Project', path: dir, trusted: true, createdAt: 1 });
-  const parent = threadSchema.parse({ id: 'parent', title: 'Parent', projectId: 'p', directoryId: 'p', cwd: dir, policy: 'deny', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off' });
+  const parent = threadSchema.parse({ id: 'parent', title: 'Parent', projectId: 'p', directoryId: 'p', cwd: dir, policy: 'deny', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off' });
   store.data.threads.push(parent); await store.save();
   return { dir, store, parent, task: threadSchema.parse({ ...parent, id: crypto.randomUUID(), title: 'Candidate' }) };
 }

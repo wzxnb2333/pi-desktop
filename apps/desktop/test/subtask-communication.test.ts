@@ -12,7 +12,7 @@ async function until(check: () => boolean) {
 }
 function fixture() {
   const state = defaultData(); state.settings.subtasksEnabled = true;
-  const parent = threadSchema.parse({ id: 'parent', projectId: 'p', cwd: 'unused', title: 'Parent', createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'deny' });
+  const parent = threadSchema.parse({ id: 'parent', projectId: 'p', cwd: 'unused', title: 'Parent', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'deny' });
   const id = crypto.randomUUID();
   state.threads.push(parent, { ...parent, id: 'child', subtaskId: id }, { ...parent, id: 'stranger' });
   state.subtasks.push(subtaskSchema.parse({ id, parentThreadId: parent.id, childThreadId: 'child', definition: { title: 'Inspect', prompt: 'Read only', environment: 'local', policy: 'deny' }, context: '', status: 'running', stage: '子任务正在执行', createdAt: 1 }));

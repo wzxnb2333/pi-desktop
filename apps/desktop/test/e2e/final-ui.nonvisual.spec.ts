@@ -66,8 +66,8 @@ test('compact composer menus remain anchored and preserve the draft in the nativ
   if (capture) await mkdir(directory, { recursive: true });
   const ui = (await fixture.snapshot()).data.ui;
   await fixture.invoke({ op: 'ui.update', ui: { ...ui, sidebarWidth: 240, reviewOpen: false, summaryOpen: false } });
-  const providers = (await fixture.snapshot()).data.settings.providers.map(provider => ({ ...provider, reasoning: true }));
-  await fixture.invoke({ op: 'settings.patch', patch: { theme: 'dark', providers } });
+  const models = (await fixture.snapshot()).data.settings.models.map(model => ({ ...model, reasoning: true }));
+  await fixture.invoke({ op: 'settings.patch', patch: { theme: 'dark', models } });
   await fixture.invoke({ op: 'thread.update', id: 't', thinking: 'high' });
   await fixture.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1000, 700));
   const input = fixture.page.getByLabel('向 Pi 发送消息');

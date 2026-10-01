@@ -330,7 +330,7 @@ export function harnessSnapshot(data: DesktopData, thread: Thread, captured: Thr
       canAskParent: !!thread.subtaskId, canChangePolicy: false },
     ...(['all', 'session'].includes(section) ? { session: {
       id: thread.id, title: thread.title, role: thread.subtaskId ? 'child' : thread.review ? 'review' : thread.sidechat?.temporary ? 'sidechat' : 'main',
-      status: thread.status, model: { providerId: captured.providerId, thinking: captured.thinking },
+      status: thread.status, model: { modelId: captured.modelId, thinking: captured.thinking },
       usage: thread.usage, plan: thread.plan, goal: thread.goal ? { objective: thread.goal.objective, status: thread.goal.status } : null,
       queuedMessages: thread.queue?.length ?? 0, activeChildren: children.filter(activeSubtask).length,
       pendingChildQuestions: children.reduce((sum, child) => sum + (child.questions?.filter(question => question.status === 'pending').length ?? 0), 0),

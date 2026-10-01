@@ -36,7 +36,7 @@ test('real MCP results preserve images, resources, extension blocks and error de
 
 test('resource reads are bound to captured origin, current trust and restrictive tool policies', () => {
   const settings = settingsSchema.parse({ mcpServers: [config] });
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', title: 't', cwd: process.cwd(), providerId: 'p', thinking: 'off', policy: 'auto', createdAt: 0, updatedAt: 0,
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', title: 't', cwd: process.cwd(), modelId: 'p', thinking: 'off', policy: 'auto', createdAt: 0, updatedAt: 0,
     items: [{ id: 'call', role: 'tool', text: '', timestamp: 0, toolResult: { origin: { serverId: config.id, toolName: 'rich', configuration: mcpConfigurationKey(config) }, result: { content: [{ type: 'resource_link', uri: 'fixture://report' }] } } }] });
   assert.equal(mcpResourceTarget(thread, settings, true, 'call', 0).uri, 'fixture://report');
   assert.throws(() => mcpResourceTarget(thread, settings, true, 'other', 0), /不属于/);

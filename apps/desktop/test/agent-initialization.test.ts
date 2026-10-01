@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout } from 'node:timers/promises';
 import { test } from 'node:test';
 import { mkdtemp } from './fixtures/node-temp.ts';
-import { providerSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
+import { modelProviderSchema, providerModelSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
 import type { WorkerConfig, WorkerEvent } from '../src/shared/worker-protocol.ts';
 import { DesktopAgent } from '../src/worker/agent.ts';
 
@@ -17,9 +17,10 @@ for (const stage of ['approval', 'initialize', 'tools']) test('disposing initial
   const agent = new DesktopAgent(event => events.push(event));
   const config: WorkerConfig = {
     thread: threadSchema.parse({ id: 't', projectId: 'p', title: 'test', cwd: root, createdAt: 1, updatedAt: 1,
-      providerId: 'fake', thinking: 'off', policy: stage === 'approval' ? 'ask' : 'full' }),
+      modelId: 'fake', thinking: 'off', policy: stage === 'approval' ? 'ask' : 'full' }),
     trusted: true,
-    provider: providerSchema.parse({ id: 'fake', name: 'fake', provider: 'desktop-init', model: 'fake', custom: true, baseUrl: 'http://127.0.0.1:1/v1', reasoning: false }),
+    model: providerModelSchema.parse({ id: 'fake', provider: 'fake-provider', name: 'fake', model: 'fake', reasoning: false }),
+    modelProvider: modelProviderSchema.parse({ id: 'fake-provider', name: 'fake', kind: 'custom', namespace: 'desktop-fake-provider', baseUrl: 'http://127.0.0.1:1/v1' }),
     settings: settingsSchema.parse({}), agentDir: join(root, '.agent'), testMode: true,
     mcp: [{ config: { id: 'm', name: 'wait', enabled: true, transport: 'stdio', command: process.execPath,
       args: [fileURLToPath(new URL('./fixtures/mcp-wait-server.mjs', import.meta.url)), stage, marker], url: '' }, secrets: {} }],

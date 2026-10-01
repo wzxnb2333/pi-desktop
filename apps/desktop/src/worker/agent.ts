@@ -21,6 +21,7 @@ import { evaluateAction, resolveAgentFile } from '../main/policy.ts';
 import { type Approval, type Thread, type TimelineItem, thinkingSchema } from '../shared/contracts.ts';
 import { skillPathKey } from '../shared/skill-paths.ts';
 import { resolveThinkingLevel } from '../shared/thinking.ts';
+import { registerConfiguredModel } from '../shared/model-runtime.ts';
 import type { WorkerConfig, WorkerEvent } from '../shared/worker-protocol.ts';
 import { McpConnection, type McpTokenProvider } from './mcp.ts';
 import { mcpToolDecision, type McpToolPolicy } from '../shared/mcp-tool-policy.ts';
@@ -183,39 +184,14 @@ export class DesktopAgent {
       modelsPath: null,
       allowModelNetwork: false,
     });
-    const provider = config.provider;
+    const connection = config.modelProvider;
+    const configured = config.model;
     signal.throwIfAborted();
-    if (provider.custom) {
-      if (!provider.baseUrl) throw new Error('自定义供应商必须填写 Base URL');
-      const url = new URL(provider.baseUrl);
-      if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Base URL 必须使用 HTTP(S)');
-      modelRuntime.registerProvider(provider.provider, {
-        baseUrl: provider.baseUrl,
-        api: provider.api,
-        apiKey: 'desktop-runtime',
-        models: [
-          {
-            id: provider.model,
-            name: provider.name,
-            reasoning: provider.reasoning,
-            thinkingLevelMap: provider.thinkingLevels ? Object.fromEntries(
-              thinkingSchema.options.map((level) => [level,
-                provider.thinkingLevels?.includes(level) ? (level === 'off' ? undefined : level) : null]),
-            ) : undefined,
-            input: ['text', 'image'],
-            contextWindow: provider.contextWindow,
-            maxTokens: provider.maxTokens,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-          },
-        ],
-      });
-    } else if (provider.baseUrl)
-      modelRuntime.registerProvider(provider.provider, { baseUrl: provider.baseUrl });
-    if (config.apiKey) await modelRuntime.setRuntimeApiKey(provider.provider, config.apiKey);
+    await registerConfiguredModel(modelRuntime, connection, configured, config.apiKey);
     signal.throwIfAborted();
-    const model = modelRuntime.getModel(provider.provider, provider.model);
+    const model = modelRuntime.getModel(connection.namespace, configured.model);
     if (!model)
-      throw new Error(`Pi 中未找到 ${provider.provider}/${provider.model}，请检查模型 ID 或启用自定义接口`);
+      throw new Error(`Pi 中未找到 ${connection.namespace}/${configured.model}，请检查模型 ID 或改用自定义提供商`);
     const directories = config.directories ?? [];
     const customTools: ToolDefinition[] = directories.length > 1 ? projectFileTools(directories) : [];
     if (this.desktopTool) customTools.push(projectActionsListTool(this.desktopTool));
@@ -389,14 +365,14 @@ export class DesktopAgent {
           this.reviewing.add(controller);
           try {
             const user = [...this.items.values()].findLast(item => item.role === 'user') ?? config.thread.items.findLast(item => item.role === 'user');
-            const review = await reviewAction(config.provider, config.apiKey, {
+            const review = await reviewAction(config.modelProvider, config.model, config.apiKey, {
               tool: event.toolName, arguments: structuredClone(event.input), cwd: executionDirectory,
               userRequest: user?.input?.text ?? user?.text ?? '',
             }, AbortSignal.any([controller.signal, this.lifetime.signal]));
             controller.signal.throwIfAborted();
             if (review.risk !== 'low' && !(await this.ask('action', event.toolName,
               JSON.stringify(event.input, null, 2), undefined, undefined,
-              { ...review, risk: review.risk, model: config.provider.name })).approved)
+              { ...review, risk: review.risk, model: config.model.name })).approved)
               return { block: true, reason: '用户拒绝了本次操作' };
             controller.signal.throwIfAborted();
           } catch (error) {
@@ -502,7 +478,7 @@ export class DesktopAgent {
         sessionManager: manager,
         sessionStartEvent,
         model,
-      thinkingLevel: resolveThinkingLevel(provider, config.thread.thinking),
+      thinkingLevel: resolveThinkingLevel(config.model, config.thread.thinking),
         customTools,
         ...(!config.thread.projectId ? { tools: ['update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...harnessToolNames, ...parentQuestionToolNames] } : config.thread.planMode || config.thread.policy === 'deny'
           ? { tools: ['read', 'grep', 'find', 'ls', 'update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...harnessToolNames, ...parentQuestionToolNames, ...(config.thread.review ? ['submit_review', 'read_review_file'] : []), ...(directories.length > 1 ? ['project_read', 'project_list'] : [])] }
@@ -586,7 +562,7 @@ export class DesktopAgent {
     const tokens = stats.contextUsage?.tokens !== null && usage && usage.totalTokens > 0 ? usage.totalTokens : null;
     const window = this.session.model?.contextWindow;
     this.emit({ type: 'usage', usage: { input: stats.tokens.input, output: stats.tokens.output, total: stats.tokens.total,
-      cost: this.config?.provider.custom ? undefined : stats.cost, contextTokens: tokens,
+      cost: this.config?.modelProvider.kind === 'custom' ? undefined : stats.cost, contextTokens: tokens,
       contextWindow: window, contextPercent: tokens !== null && window ? tokens / window * 100 : null } });
   }
   clearQueue(expected?: readonly { id: string; revision: number }[]): NonNullable<Thread['queue']> {

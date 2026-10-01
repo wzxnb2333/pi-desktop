@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { Thread } from '../../../../shared/contracts.ts';
 import { getLocale, localizeAppError, tr } from '../../../../shared/localization.ts';
+import { findModel } from '../../../../shared/model-configuration.ts';
 import { useApp } from '../../state/app.tsx';
 import { useLocale } from '../../hooks/use-locale.ts';
 import { Button } from '../primitives/button.tsx';
@@ -77,8 +78,8 @@ function SidechatPanelContent() {
         <textarea aria-label={tr('侧聊消息')} placeholder={tr('针对这段上下文提问…')} value={draft} rows={3} maxLength={100000}
           onChange={event => updateDraft(thread.id, current => ({ ...current, text: event.target.value }))}
           onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 && !event.shiftKey && (data.settings.sendShortcut === 'enter' || event.ctrlKey)) { event.preventDefault(); if (!running) void send(); } }} />
-        <div><span>{data.settings.providers.find(provider => provider.id === thread.providerId)?.name ?? tr('选择模型')}</span>
-          {running ? <Button type="button" size="sm" disabled={pending} onClick={() => void perform(async () => { await invoke({ op: 'thread.stop', id: thread.id }); })}>{tr('停止侧聊')}</Button> : <Button type="submit" size="sm" disabled={pending || !draft.trim() || !thread.providerId}>{tr('发送侧聊')}</Button>}
+        <div><span>{findModel(data.settings, thread.modelId)?.name ?? tr('选择模型')}</span>
+          {running ? <Button type="button" size="sm" disabled={pending} onClick={() => void perform(async () => { await invoke({ op: 'thread.stop', id: thread.id }); })}>{tr('停止侧聊')}</Button> : <Button type="submit" size="sm" disabled={pending || !draft.trim() || !thread.modelId}>{tr('发送侧聊')}</Button>}
         </div>
       </form>
     </>}

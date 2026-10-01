@@ -32,6 +32,7 @@ import { GitService, gitRun } from './git.ts';
 import { GitWorkflow } from './git-workflow.ts';
 import { gitProcessProblems, onGitProcessProblems, ownGitController, retryGitProcessStop } from './git-process.ts';
 import { modelCatalog } from './model-catalog.ts';
+import { catalogModel } from '../shared/model-configuration.ts';
 import { safeProjectPath } from './policy.ts';
 import { sandboxPowerShell } from './windows-sandbox.ts';
 import { PreviewService } from './preview.ts';
@@ -182,7 +183,7 @@ export class DesktopApplication {
     this.memories = new Memories(storage);
     this.browserHistory = new BrowserHistory(storage, error => this.error(error));
     this.vault = new SecretVault(storage, safeStorage, id => {
-      if (this.store.data.settings.providers.some(provider => id === `provider:${provider.id}`)) return true;
+      if (this.store.data.settings.modelProviders.some(provider => id === `provider:${provider.id}`)) return true;
       const servers = this.credentialServers();
       const server = servers.find(server => id === `mcp:${server.id}`);
       return server ? mcpCredentialReference(server) : id.startsWith('mcp-oauth:') && servers.some(server => id === oauthCredentialKey(server));
@@ -257,11 +258,17 @@ export class DesktopApplication {
       save: state => this.store.saveAutomationState(state), changed: () => this.changed(), error: error => this.error(error) });
   }
   async init(): Promise<void> {
-    await this.store.load();
+    // The vault loads first: a legacy flat model list only merges entries that share one credential.
+    // Recovery itself waits for `store.load()`, because what to restore is decided by the saved
+    // configuration; replaying the removal journal against an empty store would drop a credential.
+    const providerKeyFingerprints = await this.vault.providerFingerprints()
+      .catch(() => { throw new StoreRecoveryError(this.storage, 'credentials'); });
+    await this.store.load({ providerKeyFingerprints });
     try {
       await this.vault.recover();
       await this.vault.pruneMcp();
-      for (const provider of this.store.data.settings.providers) provider.hasKey = await this.vault.has(`provider:${provider.id}`);
+      await this.vault.moveProviderKeys(this.store.providerKeyMoves);
+      for (const provider of this.store.data.settings.modelProviders) provider.hasKey = await this.vault.has(`provider:${provider.id}`);
     } catch { throw new StoreRecoveryError(this.storage, 'credentials'); }
     await this.memories.load();
     await this.voice.init();
@@ -309,19 +316,17 @@ export class DesktopApplication {
   }
   private normalizeThinking(settings = this.store.data.settings, updateThreads = true): void {
     const catalog = modelCatalog();
-    for (const provider of settings.providers) {
-      if (provider.custom) continue;
-      const model = catalog.find(({ id }) => id === provider.provider)?.models.find(({ id }) => id === provider.model);
-      if (!model) continue;
-      provider.reasoning = model.reasoning;
-      const levels = provider.thinkingLevels?.filter((level) => model.thinkingLevels.includes(level));
-      provider.thinkingLevels = levels?.length ? levels : model.thinkingLevels;
+    for (const model of settings.models) {
+      const entry = catalogModel(settings.modelProviders.find(({ id }) => id === model.provider), model, catalog);
+      if (!entry) continue;
+      model.reasoning = entry.reasoning;
+      const levels = model.thinkingLevels?.filter((level) => entry.thinkingLevels.includes(level));
+      model.thinkingLevels = levels?.length ? levels : [...entry.thinkingLevels];
     }
     if (!updateThreads) return;
     for (const thread of this.store.data.threads) {
       if (this.activeSends.has(thread.id) || ['running', 'waiting'].includes(thread.status)) continue;
-      const provider = settings.providers.find(({ id }) => id === thread.providerId);
-      thread.thinking = resolveThinkingLevel(provider, thread.thinking);
+      thread.thinking = resolveThinkingLevel(settings.models.find(({ id }) => id === thread.modelId), thread.thinking);
     }
   }
   private emit(event: DesktopEvent): void {
@@ -450,8 +455,8 @@ export class DesktopApplication {
     return thread;
   }
   private providerLabel(id: string): string {
-    const provider = this.store.data.settings.providers.find(item => item.id === id);
-    return provider?.name || provider?.model || id || '未选择模型';
+    const model = this.store.data.settings.models.find(item => item.id === id);
+    return model?.name || model?.model || id || '未选择模型';
   }
   private projectDirectoryConfig(project: Project): ProjectDirectoryConfig {
     return {
@@ -660,7 +665,7 @@ export class DesktopApplication {
     thread.updatedAt = Date.now();
     this.changed();
   }
-  private async ensureWorker(thread: Thread, newRun = false, override?: Partial<Pick<Thread, 'providerId' | 'thinking' | 'policy'>>, callerSignal?: AbortSignal): Promise<AgentHost> {
+  private async ensureWorker(thread: Thread, newRun = false, override?: Partial<Pick<Thread, 'modelId' | 'thinking' | 'policy'>>, callerSignal?: AbortSignal): Promise<AgentHost> {
     if (this.disposing) throw new Error('应用正在关闭，请重启后再执行操作');
     if (this.bindingChats.has(thread.id)) throw new Error('正在绑定项目目录，请稍后再发送或修改任务');
     callerSignal?.throwIfAborted();
@@ -690,23 +695,24 @@ export class DesktopApplication {
       // inference happen outside that queue, so slow workers never block preference saves.
       const snapshot = this.settingsWrites.catch(() => {}).then(async () => {
       const settings = await this.plugins.settings(this.store.data.settings);
-      const provider = settings.providers.find((provider) => provider.id === (override?.providerId ?? thread.providerId));
-      if (!provider) throw new Error('请先在设置中配置供应商与模型，再为任务选择模型。');
+      const model = settings.models.find((item) => item.id === (override?.modelId ?? thread.modelId));
+      const provider = settings.modelProviders.find((item) => item.id === model?.provider);
+      if (!model || !provider) throw new Error('请先在设置中配置模型提供商与模型，再为任务选择模型。');
       const apiKey = await this.vault.get(`provider:${provider.id}`);
       if (
         !apiKey &&
-        !(provider.custom && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?=[:/]|$)/.test(provider.baseUrl))
+        !(provider.kind === 'custom' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?=[:/]|$)/.test(provider.baseUrl))
       )
-        throw new Error('该供应商尚未设置 API Key');
+        throw new Error('该模型提供商尚未设置 API Key');
       const project = thread.projectId ? this.project(thread.projectId) : undefined;
       const mcp = [];
       for (const config of settings.mcpServers.filter((server) => server.enabled)) {
         const secret = await this.vault.get(`mcp:${config.id}`);
         mcp.push({ config, secrets: secret ? (JSON.parse(secret) as Record<string, string>) : {} });
       }
-      const thinking = resolveThinkingLevel(provider, override?.thinking ?? thread.thinking);
+      const thinking = resolveThinkingLevel(model, override?.thinking ?? thread.thinking);
       if (!override) thread.thinking = thinking;
-      return { settings, provider, apiKey, mcp, trusted: project ? taskDirectory(project, thread).trusted : false,
+      return { settings, model, modelProvider: provider, apiKey, mcp, trusted: project ? taskDirectory(project, thread).trusted : false,
         directories: project ? structuredClone(projectDirectories(project).filter(directory => !thread.subtaskId || directory.id === (thread.directoryId ?? primaryDirectory(project).id)).map(directory => taskDirectory(project, thread, directory.id))) : [], thread: structuredClone({ ...thread, ...override, thinking }) };
       });
       this.settingsWrites = snapshot;
@@ -1316,9 +1322,9 @@ export class DesktopApplication {
         return existing;
       }
       const cwd = join(this.storage, 'chat-workspaces', requestId), made = await mkdir(cwd, { recursive: true });
-      const settings = this.store.data.settings, providerId = settings.providerId || settings.providers[0]?.id || '';
-      const candidate = threadSchema.parse({ id: requestId, projectId: '', directoryId: '', cwd, title: '新任务', createdAt: Date.now(), updatedAt: Date.now(), providerId,
-        thinking: resolveThinkingLevel(settings.providers.find(provider => provider.id === providerId), settings.thinking), policy: settings.policy });
+      const settings = this.store.data.settings, modelId = settings.modelId || settings.models[0]?.id || '';
+      const candidate = threadSchema.parse({ id: requestId, projectId: '', directoryId: '', cwd, title: '新任务', createdAt: Date.now(), updatedAt: Date.now(), modelId,
+        thinking: resolveThinkingLevel(settings.models.find(model => model.id === modelId), settings.thinking), policy: settings.policy });
       try {
         const saved = await this.store.createChat(candidate, quick, () => { if (this.disposing) throw new Error('应用正在关闭，请重启后再执行操作'); });
         this.changed(); return saved;
@@ -1358,9 +1364,9 @@ export class DesktopApplication {
           validate(); if (!childCreation && this.store.data.threads.some(item => item.projectId === projectId && ['running', 'waiting'].includes(item.status))) throw new Error('请先停止该项目的任务再创建 worktree');
           return this.createManagedWorktree(requestId, projectId, directory, startPoint, signal, false);
         }) : undefined;
-        const settings = this.store.data.settings, providerId = settings.providerId || settings.providers[0]?.id || '';
+        const settings = this.store.data.settings, modelId = settings.modelId || settings.models[0]?.id || '';
         const candidate = threadSchema.parse({ id: requestId, creationKey: key, projectId, title: '新任务', cwd: worktree?.path || directory.path, directoryId: directory.id,
-          createdAt: Date.now(), updatedAt: Date.now(), providerId, thinking: resolveThinkingLevel(settings.providers.find(provider => provider.id === providerId), settings.thinking), policy: settings.policy,
+          createdAt: Date.now(), updatedAt: Date.now(), modelId, thinking: resolveThinkingLevel(settings.models.find(model => model.id === modelId), settings.thinking), policy: settings.policy,
           worktreeBranch: worktree?.branch, baseCommit: worktree?.baseCommit });
         configure?.(candidate); validate();
         if (!project && candidate.cwd === directory.path) made = await mkdir(directory.path, { recursive: true });
@@ -1422,7 +1428,7 @@ export class DesktopApplication {
     context: ContextReference[] = [],
     signal?: AbortSignal,
     onAccepted?: () => void,
-    override?: Partial<Pick<Thread, 'providerId' | 'thinking' | 'policy'>>,
+    override?: Partial<Pick<Thread, 'modelId' | 'thinking' | 'policy'>>,
   ): Promise<void> {
     await this.settingsWrites.catch(() => {});
     if (this.disposing) throw new Error('应用正在关闭，请重启后再执行操作');
@@ -1571,7 +1577,7 @@ export class DesktopApplication {
     const policy = parent.planMode || parent.policy === 'deny' || definition.policy === 'deny' ? 'deny' : parent.policy === 'ask' || definition.policy === 'ask' ? 'ask' : 'auto';
     progress(definition.environment === 'worktree' ? '创建子任务 Worktree' : '准备只读子任务');
     const child = await this.createThread(parent.projectId, definition.environment === 'worktree', parent.directoryId, definition.startPoint, signal, thread => {
-      thread.title = definition.title; thread.subtaskId = record.id; thread.providerId = parent.providerId; thread.thinking = parent.thinking; thread.policy = policy;
+      thread.title = definition.title; thread.subtaskId = record.id; thread.modelId = parent.modelId; thread.thinking = parent.thinking; thread.policy = policy;
       if (definition.environment === 'local') { thread.cwd = parent.cwd; thread.worktreeBranch = parent.worktreeBranch; thread.baseCommit = parent.baseCommit; }
     }, true);
     const initialization = this.store.data.operations.find(item => item.threadId === child.id && item.kind === 'environment.initialization');
@@ -1619,7 +1625,7 @@ export class DesktopApplication {
   }
   private async memorySecrets(settings = this.store.data.settings): Promise<string[]> {
     const result: string[] = [];
-    for (const provider of settings.providers) { const key = await this.vault.get('provider:' + provider.id); if (key) result.push(key); }
+    for (const provider of settings.modelProviders) { const key = await this.vault.get('provider:' + provider.id); if (key) result.push(key); }
     for (const server of settings.mcpServers) { const raw = await this.vault.get('mcp:' + server.id); if (raw) { const values: unknown = JSON.parse(raw); if (values && typeof values === 'object') result.push(...Object.values(values).filter((value): value is string => typeof value === 'string')); } }
     return result;
   }
@@ -1633,24 +1639,26 @@ export class DesktopApplication {
       progress('正在准备记忆来源');
       const configuration = this.settingsWrites.catch(() => {}).then(async () => {
         signal.throwIfAborted();
-        const settings = structuredClone(this.store.data.settings), provider = settings.providers.find(item => item.id === source.providerId);
-        if (!provider) throw new Error('记忆生成模型不可用');
-        return { provider, secrets: await this.memorySecrets(settings), apiKey: await this.vault.get('provider:' + provider.id) };
+        const settings = structuredClone(this.store.data.settings);
+        const model = settings.models.find(item => item.id === source.modelId);
+        const provider = settings.modelProviders.find(item => item.id === model?.provider);
+        if (!model || !provider) throw new Error('记忆生成模型不可用');
+        return { model, provider, secrets: await this.memorySecrets(settings), apiKey: await this.vault.get('provider:' + provider.id) };
       });
       this.settingsWrites = configuration;
-      const { provider, secrets, apiKey } = await configuration; signal.throwIfAborted();
+      const { model, provider, secrets, apiKey } = await configuration; signal.throwIfAborted();
       if (thread.deletedAt || automatic && (!this.store.data.settings.memory.autoGenerate || this.disposing)) throw new Error('记忆生成已取消');
       if (scope.kind === 'project' && scope.projectId !== thread.projectId) throw new Error('记忆来源不属于所选项目');
       if (this.memories.snapshot().revision !== snapshot.revision) throw new Error('生成期间记忆已更改，请重新生成');
       const input = this.memories.eligible(memoryInput(source, secrets), scope);
       if (!input.messages.length) { if (automatic) return { count: 0 }; throw new Error('没有可用于记忆的用户消息'); }
       if (this.memories.processed(input, scope)) { if (automatic) return { count: 0 }; throw new Error('这些消息已处理，请先添加新的用户消息'); }
-      if (!apiKey && !(provider.custom && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?=[:/]|$)/.test(provider.baseUrl))) throw new Error('该供应商尚未设置 API Key');
+      if (!apiKey && !(provider.kind === 'custom' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?=[:/]|$)/.test(provider.baseUrl))) throw new Error('该模型提供商尚未设置 API Key');
       progress('正在提取记忆候选');
-      const output = await generateMemories(provider, apiKey, input, AbortSignal.any([signal, AbortSignal.timeout(120000)]));
+      const output = await generateMemories(provider, model, apiKey, input, AbortSignal.any([signal, AbortSignal.timeout(120000)]));
       signal.throwIfAborted();
       if (thread.deletedAt || automatic && (!this.store.data.settings.memory.autoGenerate || this.disposing)) throw new Error('记忆生成已取消');
-      const count = await this.memories.addGenerated(input, scope, provider.id, output, secrets, snapshot.revision, signal);
+      const count = await this.memories.addGenerated(input, scope, model.id, output, secrets, snapshot.revision, signal);
       this.store.data.memoryRevision = this.memories.snapshot().revision; this.changed();
       return { count };
     });
@@ -1663,7 +1671,7 @@ export class DesktopApplication {
       if (thread.deletedAt || thread.archived || thread.review || thread.sidechat?.temporary || thread.subtaskId || thread.projectId !== job.projectId) throw new Error('自动化目标聊天不可用');
       if (job.execution?.environment === 'worktree' || job.execution?.directoryId && job.execution.directoryId !== (thread.directoryId ?? thread.projectId)) throw new Error('已有聊天使用当前工作目录，不能由自动化迁移');
     } else if (!job.projectId) throw new Error('新建自动化任务需要选择项目');
-    if (job.execution?.providerId && !this.store.data.settings.providers.some(item => item.id === job.execution?.providerId)) throw new Error('自动化所选模型已不存在');
+    if (job.execution?.modelId && !this.store.data.settings.models.some(item => item.id === job.execution?.modelId)) throw new Error('自动化所选模型已不存在');
     if (job.execution?.directoryId && !projectDirectories(this.project(job.projectId)).some(item => item.id === job.execution?.directoryId)) throw new Error('目录不属于此项目或已被移除');
   }
   private async prepareAutomation(run: AutomationRun, signal: AbortSignal): Promise<Thread> {
@@ -1673,7 +1681,7 @@ export class DesktopApplication {
     if (existing) { if (existing.deletedAt || existing.archived) throw new Error('自动化目标聊天不可用'); return existing; }
     const created = await this.createThread(job.projectId, job.execution?.environment === 'worktree', job.execution?.directoryId, job.execution?.startPoint, signal, thread => {
       thread.title = '自动化 · ' + job.name; thread.automationId = job.id; thread.automationRunId = run.id;
-      if (job.execution?.providerId) thread.providerId = job.execution.providerId;
+      if (job.execution?.modelId) thread.modelId = job.execution.modelId;
       if (job.execution?.thinking) thread.thinking = job.execution.thinking;
       if (job.execution?.policy) thread.policy = job.execution.policy;
     });
@@ -1691,7 +1699,7 @@ export class DesktopApplication {
     const requested = run.configuration.execution;
     // An existing chat's restrictions remain a ceiling on unattended execution.
     const policy = thread.policy === 'deny' || requested?.policy === 'deny' ? 'deny' : thread.policy === 'ask' || requested?.policy === 'ask' ? 'ask' : 'auto';
-    const override = { providerId: requested?.providerId ?? thread.providerId, thinking: requested?.thinking ?? thread.thinking, policy } as const;
+    const override = { modelId: requested?.modelId ?? thread.modelId, thinking: requested?.thinking ?? thread.thinking, policy } as const;
     let started = false;
     const cancel = () => { if (started) void this.handle({ op: 'thread.stop', id: thread.id }).catch(error => this.error(error)); };
     signal.addEventListener('abort', cancel, { once: true });
@@ -1874,10 +1882,10 @@ export class DesktopApplication {
               validate(); await this.worktreeCreations.inspect(receipt.id, signal);
               const baseline = await this.roundSnapshots.captureTree(receipt.threadId, receipt.path, signal);
               if (JSON.stringify(await this.worktreeCreations.inspect(receipt.id, signal)) !== JSON.stringify(receipt)) throw new Error('Worktree 创建恢复记录无效');
-              const settings = this.store.data.settings, providerId = settings.providerId || settings.providers[0]?.id || '';
+              const settings = this.store.data.settings, modelId = settings.modelId || settings.models[0]?.id || '';
               const candidate = threadSchema.parse({ id: crypto.randomUUID(), projectId: project.id, directoryId: receipt.directoryId, title: translate(this.store.data.ui.locale, '已恢复的 Worktree'),
                 cwd: receipt.path, worktreeBranch: receipt.branch, baseCommit: receipt.baseCommit, workspaceRevision: 1, createdAt: Date.now(), updatedAt: Date.now(),
-                providerId, thinking: resolveThinkingLevel(settings.providers.find(provider => provider.id === providerId), settings.thinking), policy: settings.policy });
+                modelId, thinking: resolveThinkingLevel(settings.models.find(model => model.id === modelId), settings.thinking), policy: settings.policy });
               const managed: ManagedWorktree = { id: receipt.id, threadId: candidate.id, projectId: receipt.projectId, directoryId: receipt.directoryId, localPath: receipt.localPath,
                 path: receipt.path, checkoutPath: receipt.checkoutPath, branch: receipt.branch, baseCommit: receipt.baseCommit, snapshotThreadId: receipt.threadId,
                 localBaseline: baseline, worktreeBaseline: baseline, status: 'ready', createdAt: receipt.createdAt, lastUsedAt: Date.now() };
@@ -1908,10 +1916,10 @@ export class DesktopApplication {
             });
             let owner = this.store.data.threads.find(item => item.id === record.threadId && !item.deletedAt);
             if (!owner) {
-              const settings = this.store.data.settings, providerId = settings.providerId || settings.providers[0]?.id || '';
+              const settings = this.store.data.settings, modelId = settings.modelId || settings.models[0]?.id || '';
               const candidate = threadSchema.parse({ id: crypto.randomUUID(), projectId: record.projectId, directoryId: record.directoryId,
                 title: translate(this.store.data.ui.locale, '已恢复的 Worktree'), cwd: record.path, worktreeBranch: record.branch, baseCommit: record.baseCommit, workspaceRevision: 1,
-                createdAt: Date.now(), updatedAt: Date.now(), providerId, thinking: resolveThinkingLevel(settings.providers.find(provider => provider.id === providerId), settings.thinking), policy: settings.policy });
+                createdAt: Date.now(), updatedAt: Date.now(), modelId, thinking: resolveThinkingLevel(settings.models.find(model => model.id === modelId), settings.thinking), policy: settings.policy });
               owner = await this.store.restoreWorktreeOwner(record.id, candidate, () => {
                 signal.throwIfAborted(); if (this.disposing) throw new Error('应用正在关闭，请重启后再执行操作');
                 if (!this.store.data.threads.includes(context) || context.deletedAt || context.projectId !== record.projectId) throw new Error('Worktree 不属于此项目');
@@ -2043,7 +2051,7 @@ export class DesktopApplication {
         const id = crypto.randomUUID();
         const now = Date.now();
         const thread = threadSchema.parse({ id, projectId: parent.projectId, directoryId: directory.id, cwd: directory.path,
-          title: '审查 · ' + parent.title, providerId: parent.providerId, thinking: parent.thinking, policy: 'deny', createdAt: now, updatedAt: now,
+          title: '审查 · ' + parent.title, modelId: parent.modelId, thinking: parent.thinking, policy: 'deny', createdAt: now, updatedAt: now,
           review: { parentThreadId: parent.id, scope: request.scope, ref: request.ref, instructions: request.instructions, capturedAt: now, base: '', target: '', files: [], phase: 'capturing' } });
         this.store.data.threads.unshift(thread);
         const controller = new AbortController();
@@ -2264,7 +2272,7 @@ export class DesktopApplication {
         const sidechat = captureSidechat(parent, request.anchorItemId);
         const thread = threadSchema.parse({ id: request.requestId ?? crypto.randomUUID(), projectId: parent.projectId, directoryId: parent.directoryId,
           title: '侧聊 · ' + parent.title, cwd: parent.cwd, createdAt: sidechat.capturedAt, updatedAt: sidechat.capturedAt,
-          providerId: parent.providerId, thinking: parent.thinking, policy: 'deny', sidechat });
+          modelId: parent.modelId, thinking: parent.thinking, policy: 'deny', sidechat });
         const saved = await this.store.createSidechat(thread);
         if (!source.isDestroyed() && this.windows.ui(source).activeThreadId === parent.id && this.windows.ui(source).reviewOpen === reviewOpen)
           this.windows.update(source, { ...this.windows.ui(source), reviewOpen: true });
@@ -2326,7 +2334,7 @@ export class DesktopApplication {
         if (request.deletedAt && ['running', 'waiting'].includes(thread.status)) throw new Error('请先停止任务再移入回收站');
         const { op: _op, id: _id, ...patch } = request;
         const runtimeChange =
-          request.providerId !== undefined ||
+          request.modelId !== undefined ||
           request.thinking !== undefined ||
           request.policy !== undefined ||
           request.planMode !== undefined;
@@ -2335,13 +2343,13 @@ export class DesktopApplication {
           throw new Error('任务工具正在重连，请等待完成或取消重连');
         if (runtimeChange && ['running', 'waiting'].includes(thread.status))
           throw new Error('请停止任务后修改运行配置');
-        const provider = this.store.data.settings.providers.find(({ id }) => id === (patch.providerId ?? thread.providerId));
-        if (request.thinking !== undefined && provider && !allowedThinkingLevels(provider).includes(request.thinking))
+        const model = this.store.data.settings.models.find(({ id }) => id === (patch.modelId ?? thread.modelId));
+        if (request.thinking !== undefined && model && !allowedThinkingLevels(model).includes(request.thinking))
           throw new Error('此模型未允许该思考程度，请在模型设置中修改');
-        const modelSwitch = request.providerId !== undefined && request.providerId !== thread.providerId
-          ? { from: this.providerLabel(thread.providerId), to: provider?.name || provider?.model || request.providerId } : undefined;
-        if (patch.providerId !== undefined || patch.thinking !== undefined)
-          patch.thinking = resolveThinkingLevel(provider, patch.thinking ?? thread.thinking);
+        const modelSwitch = request.modelId !== undefined && request.modelId !== thread.modelId
+          ? { from: this.providerLabel(thread.modelId), to: model?.name || model?.model || request.modelId } : undefined;
+        if (patch.modelId !== undefined || patch.thinking !== undefined)
+          patch.thinking = resolveThinkingLevel(model, patch.thinking ?? thread.thinking);
         if (runtimeChange) await this.dropWorker(thread.id);
         if (request.deletedAt || request.archived) {
           if (!thread.archived && !thread.deletedAt) await this.goals.pause(thread.id, '任务已归档或移入回收站，目标已暂停');
@@ -2457,7 +2465,7 @@ export class DesktopApplication {
         this.assertWorktreeAvailable(thread.cwd);
         if (thread.review) throw new Error('请使用审查入口重新捕获当前版本');
         if (thread.deletedAt) throw new Error('请先从回收站恢复任务');
-        if (!thread.providerId) throw new Error('请选择模型');
+        if (!thread.modelId) throw new Error('请选择模型');
         for (const path of request.attachments) {
           if (!this.attachments.get(thread.id)?.has(path)) throw new Error('请通过附件选择器添加文件');
           await safeProjectPath(join(this.storage, 'attachments', thread.id), path);
@@ -2716,21 +2724,27 @@ export class DesktopApplication {
           return this.store.data.settings;
         }
         const releaseVoice = next.voice.modelDirectory !== this.store.data.settings.voice.modelDirectory;
+        // A model cannot outlive its provider: drop orphans the renderer failed to send and re-point
+        // the default so the settings never describe a model nobody can run.
+        const providerIds = new Set(next.modelProviders.map(provider => provider.id));
+        if (next.models.some(model => !providerIds.has(model.provider))) {
+          const removedModelIds = new Set(next.models.filter(model => !providerIds.has(model.provider)).map(model => model.id));
+          next.models = next.models.filter(model => providerIds.has(model.provider));
+          if (removedModelIds.has(next.modelId)) next.modelId = next.models[0]?.id ?? '';
+        }
         if (releaseVoice) {
           if (this.voice.busy()) throw new Error('语音服务正在使用，请先结束当前操作');
           if ((await this.voice.status()).models.some(item => item.status !== 'missing')) throw new Error('请先卸载当前模型，再修改模型目录');
         }
         if (settingKeys.includes('mcpServers')) for (const server of next.mcpServers) validateMcpConfiguration(server);
-        if (settingKeys.includes('providers')) {
+        if (settingKeys.includes('models') || settingKeys.includes('modelProviders')) {
           const catalog = modelCatalog();
-          for (const provider of next.providers) {
-            if (!provider.custom && provider.thinkingLevels) {
-              const model = catalog.find(({ id }) => id === provider.provider)?.models.find(({ id }) => id === provider.model);
-              if (model && provider.thinkingLevels.some(level => !model.thinkingLevels.includes(level)))
-                throw new Error(provider.name + '：所选思考程度不在此内置模型支持的范围内');
-            }
-            provider.hasKey = await this.vault.has(`provider:${provider.id}`);
+          for (const model of next.models) {
+            const entry = catalogModel(next.modelProviders.find(item => item.id === model.provider), model, catalog);
+            if (entry && model.thinkingLevels?.some(level => !entry.thinkingLevels.includes(level)))
+              throw new Error(model.name + '：所选思考程度不在此内置模型支持的范围内');
           }
+          for (const provider of next.modelProviders) provider.hasKey = await this.vault.has(`provider:${provider.id}`);
           this.normalizeThinking(next, false);
         }
         updateIgnoredSkills(this.store.data.settings, next);
@@ -2739,21 +2753,21 @@ export class DesktopApplication {
           return key && !next.mcpServers.some(current => oauthCredentialKey(current) === key);
         }) : [];
         const removed = [
-          ...this.store.data.settings.providers.filter(old => !next.providers.some(item => item.id === old.id)).map(provider => `provider:${provider.id}`),
+          ...this.store.data.settings.modelProviders.filter(old => !next.modelProviders.some(item => item.id === old.id)).map(provider => `provider:${provider.id}`),
           ...(settingKeys.includes('mcpServers') ? retiredMcpCredentials(this.credentialServers(), this.credentialServers(next)) : []),
         ];
         const changed = changedWorkerSettingGroups(this.store.data.settings, next);
         if (settingKeys.includes('mcpServers')) this.cancelMcpTests(this.store.data.settings.mcpServers
           .filter(server => !next.mcpServers.some(current => sameSetting(current, server))).map(server => server.id));
         const commit = () => this.store.saveSettings(settingsChanges(this.store.data.settings, next));
-        if (settingKeys.includes('providers') || settingKeys.includes('mcpServers')) {
+        if (settingKeys.includes('models') || settingKeys.includes('modelProviders') || settingKeys.includes('mcpServers')) {
           for (const operation of this.store.data.operations) if (operation.status === 'running' && operation.kind.startsWith('mcp.oauth.') && retiredOAuth.some(server => server.id === operation.directoryId))
             this.operations.cancel('', operation.id);
           const warning = await this.mcpOAuth.changeConfigurations(retiredOAuth, () => this.vault.removeForSettings(removed, commit));
           if (warning) this.error(new Error(warning));
         } else await commit();
         if (releaseVoice) this.voice.releaseModels();
-        if (settingKeys.includes('providers')) this.normalizeThinking();
+        if (settingKeys.includes('models') || settingKeys.includes('modelProviders')) this.normalizeThinking();
         if (changed.length) await this.invalidateWorkers().catch(error => this.error(error));
         this.changed();
         return this.store.data.settings;
@@ -2784,11 +2798,13 @@ export class DesktopApplication {
         return this.windows.ui(source);
       }
       case 'provider.key': {
-        const provider = this.store.data.settings.providers.find(provider => provider.id === request.id);
-        if (!provider) throw new Error('模型配置已不存在，请重新打开设置后重试。');
+        const provider = this.store.data.settings.modelProviders.find(provider => provider.id === request.id);
+        if (!provider) throw new Error('模型提供商已不存在，请重新打开设置后重试。');
         if (request.base && !sameSetting({ ...provider, hasKey: false }, { ...request.base, hasKey: false }))
           throw new Error('设置已在其他位置修改，当前草稿已保留。请重新打开设置后重试。');
-        const affected = this.store.data.threads.filter((thread) => thread.providerId === request.id);
+        // Every model of this provider runs on the same credential, so they all restart.
+        const affected = this.store.data.threads.filter((thread) => this.store.data.settings.models
+          .some(model => model.id === thread.modelId && model.provider === request.id));
         await this.vault.set(`provider:${request.id}`, request.key);
         provider.hasKey = !!request.key;
         await this.invalidateWorkers(affected.map(thread => thread.id)).catch(error => this.error(error));

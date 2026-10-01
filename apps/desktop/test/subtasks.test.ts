@@ -11,7 +11,7 @@ async function until(check: () => boolean) { for (let i = 0; i < 400; i++) { if 
 function deferred() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done; }); return { promise, resolve }; }
 function fixture() {
   const state = defaultData(); state.settings.subtasksEnabled = true;
-  state.threads.push(threadSchema.parse({ id: 'p', projectId: 'project', title: 'Parent', cwd: 'unused', createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'auto', items: [{ id: 'message', role: 'user', text: 'Captured context', timestamp: 1 }] }));
+  state.threads.push(threadSchema.parse({ id: 'p', projectId: 'project', title: 'Parent', cwd: 'unused', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'auto', items: [{ id: 'message', role: 'user', text: 'Captured context', timestamp: 1 }] }));
   let saveError = false, failPrepare = false, calls = 0;
   let saving = async (_records: Subtask[]) => {};
   const errors: unknown[] = [];

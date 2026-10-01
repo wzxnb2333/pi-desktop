@@ -37,7 +37,7 @@ let approvals: Approval[] = approvalKind === 'action' || approvalKind === 'confi
     reason: params.get('risk') === 'high' ? '操作将删除现有文件。' : '独立审查失败或返回无效结果，需要你手动批准。', model: 'Fixture reviewer' } } : {}),
 }] : [];
 let data: DesktopData = dataSchema.parse({
-  version: 2,
+  version: 3,
   projects: params.has('empty') ? [] : [
     { id: 'p1', name: params.has('longproject') ? '用于验证超长中文目录名不会撑破欢迎页布局的测试项目'.repeat(3) : '参考项目', path: 'C:/temporary/project', trusted: true, createdAt: 1 },
     ...(params.has('migration') ? [{ id: 'p2', name: '第二项目', path: 'C:/temporary/second', trusted: true, createdAt: 2 }] : []),
@@ -49,7 +49,7 @@ let data: DesktopData = dataSchema.parse({
     cwd: 'C:/temporary/project',
     createdAt: id,
     updatedAt: id,
-    providerId: params.has('setup') ? '' : 'fake',
+    modelId: params.has('setup') ? '' : 'fake',
     thinking: 'medium',
     policy: 'ask',
     ...(params.has('interrupted') && id === 1 ? { status: 'interrupted', error: '上次运行已中断，可以继续此任务。' } : {}),
@@ -72,7 +72,9 @@ let data: DesktopData = dataSchema.parse({
   automations: [],
   settings: {
     theme: params.get('theme') || 'light',
-    providers: params.has('setup') ? [] : [{ id: 'fake', name: '本地测试', provider: 'faux', model: 'fake' }],
+    modelId: params.has('setup') ? '' : 'fake',
+    modelProviders: params.has('setup') ? [] : [{ id: 'fake-provider', name: '本地测试', kind: 'custom', namespace: 'desktop-fake-provider', baseUrl: 'http://127.0.0.1:9/v1', api: 'openai-completions', hasKey: false }],
+    models: params.has('setup') ? [] : [{ id: 'fake', provider: 'fake-provider', name: '本地测试', model: 'fake', reasoning: false, contextWindow: 128000, maxTokens: 8192 }],
   },
   ui: {
     locale: params.get('locale') || 'zh-CN',
@@ -156,7 +158,7 @@ const bridge: DesktopBridge = {
       case 'thread.create': {
         const project = data.projects.find(item => item.id === request.projectId);
         if (!project) throw new Error('测试项目不存在');
-        const thread = threadSchema.parse({ id: 'created-' + data.threads.length, projectId: project.id, cwd: project.path, title: '新任务', createdAt: Date.now(), updatedAt: Date.now(), providerId: data.settings.providers[0]?.id ?? '', thinking: 'medium', policy: 'ask', ...(request.worktree ? { worktreeBranch: 'task/test-worktree' } : {}) });
+        const thread = threadSchema.parse({ id: 'created-' + data.threads.length, projectId: project.id, cwd: project.path, title: '新任务', createdAt: Date.now(), updatedAt: Date.now(), modelId: data.settings.models[0]?.id ?? '', thinking: 'medium', policy: 'ask', ...(request.worktree ? { worktreeBranch: 'task/test-worktree' } : {}) });
         data = { ...data, threads: [...data.threads, thread] };
         emit();
         return thread;

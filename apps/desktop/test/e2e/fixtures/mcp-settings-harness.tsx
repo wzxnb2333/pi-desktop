@@ -22,7 +22,7 @@ let data = defaultData();
 data.settings.mcpServers = [{ id: 'm', name: '本地 MCP', enabled: true, transport: 'stdio', command: 'node', args: [], url: '' }];
 const params = new URLSearchParams(window.location.search);
 if (params.has('oauth')) data.settings.mcpServers = [{ id: 'm', name: '本地 OAuth', enabled: true, transport: 'http', command: '', args: [], url: 'http://127.0.0.1:12345/mcp', oauth: { clientId: '', scope: '' } }];
-data.threads = [threadSchema.parse({ id: 't', title: '已有任务', projectId: 'p', cwd: 'C:/project', providerId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2,
+data.threads = [threadSchema.parse({ id: 't', title: '已有任务', projectId: 'p', cwd: 'C:/project', modelId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2,
   mcp: [{ id: 'm', state: 'disconnected', tools: [{ name: 'mcp_echo', label: '本地 MCP · echo', description: '工具描述' }] }] })];
 const calls: DesktopRequest[] = [];
 const held = new Set<string>();

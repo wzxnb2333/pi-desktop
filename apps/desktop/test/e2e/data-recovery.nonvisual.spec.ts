@@ -14,7 +14,7 @@ test.afterAll(cleanupTemporaryDirectories);
 async function recoveryFixture(mode: 'invalid' | 'future' | 'backup' | 'legacy' | 'credentials') {
   const root = await mkdtemp(join(tmpdir(), 'pi-recovery-')), storage = join(root, 'profile'); await mkdir(storage);
   const data = defaultData(); data.settings.keepInTray = false; data.settings.shortcuts = { quickChat: '' };
-  data.threads.push(threadSchema.parse({ id: 'preserved', projectId: '', title: '迁移不能丢失', cwd: root, providerId: '', thinking: 'off', policy: 'deny', createdAt: 1, updatedAt: 1 }));
+  data.threads.push(threadSchema.parse({ id: 'preserved', projectId: '', title: '迁移不能丢失', cwd: root, modelId: '', thinking: 'off', policy: 'deny', createdAt: 1, updatedAt: 1 }));
   data.ui.activeThreadId = 'preserved'; data.ui.threads.preserved = { reviewTab: 'changes', terminalOpen: false, selectedPath: '', folds: {}, draft: { text: '旧草稿', attachments: [] } };
   const original = mode === 'invalid' || mode === 'backup' ? '{CORRUPT' : JSON.stringify({ ...data, version: mode === 'future' ? 9999 : mode === 'credentials' ? 2 : 1 });
   await writeFile(join(storage, 'desktop.json'), original);

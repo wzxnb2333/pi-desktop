@@ -4,7 +4,7 @@ import { copyFile, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/pr
 import { join } from 'node:path';
 import { type DesktopData, type Project, type Settings, type Thread, dataSchema, defaultData, settingsPatchSchema, threadSchema, uiSchema, uiThreadSchema } from '../shared/contracts.ts';
 import { projectDirectories } from '../shared/project-directories.ts';
-import { migrateDesktopData, UnsupportedDataVersionError } from './data-migrations.ts';
+import { migrateDesktopData, UnsupportedDataVersionError, type MigrationOptions, type ProviderKeyMove } from './data-migrations.ts';
 import { pluginSchema, type Plugin } from '../shared/plugins.ts';
 import type { LineComment } from '../shared/reviews.ts';
 import { projectEnvironmentSchema, type ProjectEnvironment } from '../shared/project-environment.ts';
@@ -49,6 +49,8 @@ export class JsonStore {
   data: DesktopData = defaultData();
   readonly dir: string;
   recoveredFromBackup = false;
+  /** Credentials that followed a legacy model into a merged provider; replayed once by the vault. */
+  providerKeyMoves: ProviderKeyMove[] = [];
   private loadFailure?: StoreRecoveryError;
   private writing = Promise.resolve();
   private settingsRevision = 0;
@@ -72,7 +74,7 @@ export class JsonStore {
   constructor(dir: string) {
     this.dir = dir;
   }
-  async load(): Promise<void> {
+  async load(options: MigrationOptions = {}): Promise<void> {
     await this.writing;
     this.annotationRevisions.clear();
     this.browserAnnotationRevisions.clear();
@@ -87,6 +89,7 @@ export class JsonStore {
     this.taskLinkRevision = 0; this.worktreeRegistrationRevisions.clear();
     await mkdir(this.dir, { recursive: true });
     this.recoveredFromBackup = false;
+    this.providerKeyMoves = [];
     let found = false;
     let damagedPrimary: string | undefined;
     for (const filename of ['desktop.json', 'desktop.json.bak']) {
@@ -100,7 +103,7 @@ export class JsonStore {
       found = true;
       let migrated: ReturnType<typeof migrateDesktopData>;
       try {
-        migrated = migrateDesktopData(JSON.parse(raw));
+        migrated = migrateDesktopData(JSON.parse(raw), options);
       } catch (error) {
         if (error instanceof UnsupportedDataVersionError) {
           this.loadFailure = new StoreRecoveryError(this.dir, 'future');
@@ -123,6 +126,7 @@ export class JsonStore {
         await rename(join(this.dir, 'desktop.json.tmp'), join(this.dir, 'desktop.json'));
       }
       this.data = migrated.data;
+      this.providerKeyMoves = migrated.providerKeyMoves ?? [];
       this.loadFailure = undefined;
       this.recoveredFromBackup = filename !== 'desktop.json';
       return;
@@ -766,6 +770,44 @@ export class SecretVault {
   }
   recover(): Promise<void> {
     return this.enqueue(() => this.recoverPending());
+  }
+  /**
+   * SHA-256 of every readable `provider:` credential, keyed by its full vault id. Migrations use the
+   * hashes to tell identical keys apart from different ones without ever exposing the plaintext.
+   *
+   * Deliberately does not replay a pending removal journal: `recover()` decides what to restore from
+   * the saved configuration, so it must run after `store.load()`, never before it.
+   */
+  providerFingerprints(): Promise<Record<string, string>> {
+    return this.enqueue(async () => {
+      const data = await this.read();
+      const result: Record<string, string> = {};
+      for (const [id, value] of Object.entries(data)) {
+        if (!id.startsWith('provider:') || !this.encryption.isEncryptionAvailable()) continue;
+        try { result[id] = createHash('sha256').update(this.encryption.decryptString(Buffer.from(value, 'base64'))).digest('hex'); }
+        catch { /* An unreadable credential compares as unknown and never merges a second key. */ }
+      }
+      return result;
+    });
+  }
+  /** Replay a merge: copy ciphertext onto the surviving provider id, then drop the old entry. */
+  moveProviderKeys(moves: readonly ProviderKeyMove[]): Promise<void> {
+    if (!moves.length) return Promise.resolve();
+    return this.enqueue(async () => {
+      await this.recoverPending();
+      const data = await this.read();
+      let changed = false;
+      for (const move of moves) {
+        // A self-move would delete the only copy.
+        if (move.from === move.to) continue;
+        const value = data[move.from];
+        if (!value) continue;
+        data[move.to] ??= value;
+        delete data[move.from];
+        changed = true;
+      }
+      if (changed) await this.write(data);
+    });
   }
   pruneMcp(): Promise<number> {
     return this.enqueue(async () => {

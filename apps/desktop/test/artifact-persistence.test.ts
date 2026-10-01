@@ -11,7 +11,7 @@ import { mkdtemp } from './fixtures/node-temp.ts';
 
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-artifact-persistence-')), store = new JsonStore(dir); await store.load();
-  const thread = threadSchema.parse({ id: 'artifact', projectId: '', title: 'Artifacts', cwd: dir, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' });
+  const thread = threadSchema.parse({ id: 'artifact', projectId: '', title: 'Artifacts', cwd: dir, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' });
   store.data.threads.push(thread); await store.save();
   const item = artifactAnnotationSchema.parse({ id: crypto.randomUUID(), createdAt: 1, directoryId: 'p', root: dir, path: 'test.pdf', kind: 'pdf', version: 'a'.repeat(64), resources: {}, imageHash: 'b'.repeat(64), page: 2, width: 800, height: 600, scrollX: 0, scrollY: 0, rect: { x: 10, y: 20, width: 40, height: 50 }, comment: 'Page two' });
   return { dir, store, thread, item };

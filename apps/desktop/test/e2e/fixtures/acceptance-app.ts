@@ -4,7 +4,7 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
-import { type Bootstrap, type DesktopRequest, defaultData, providerSchema, threadSchema } from '../../../src/shared/contracts.ts';
+import { type Bootstrap, type DesktopRequest, defaultData, modelProviderSchema, providerModelSchema, threadSchema } from '../../../src/shared/contracts.ts';
 
 export interface CapturedPrompt {
   model?: string;
@@ -124,14 +124,15 @@ export async function acceptanceApp(rendererUrl: string, options: { args?: strin
     const url = 'http://127.0.0.1:' + address.port;
     const data = defaultData();
     data.projects.push({ id: 'p', name: '验收项目', path: project, trusted: true, createdAt: 1 });
-    data.settings.providers.push(providerSchema.parse({ id: 'local', name: '验收模型', provider: 'acceptance', model: 'acceptance', custom: true, reasoning: false, baseUrl: url + '/v1' }));
-    data.settings.providerId = 'local';
+    data.settings.modelProviders.push(modelProviderSchema.parse({ id: 'local-provider', name: '验收模型', kind: 'custom', namespace: 'desktop-local-provider', baseUrl: url + '/v1' }));
+    data.settings.models.push(providerModelSchema.parse({ id: 'local', provider: 'local-provider', name: '验收模型', model: 'acceptance', reasoning: false }));
+    data.settings.modelId = 'local';
     data.settings.keepInTray = false;
     data.settings.editor = 'system';
     data.settings.thinking = 'off';
     data.settings.theme = 'light';
     data.settings.shortcuts = { quickChat: '' };
-    data.threads.push(threadSchema.parse({ id: 't', projectId: 'p', title: '验收任务', cwd: project, createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'auto' }));
+    data.threads.push(threadSchema.parse({ id: 't', projectId: 'p', title: '验收任务', cwd: project, createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'auto' }));
     data.ui.activeThreadId = 't';
     await writeFile(join(storage, 'desktop.json'), JSON.stringify(data));
     const env = { ...process.env, HOME: home, USERPROFILE: home, PI_DESKTOP_USER_DATA: storage, ELECTRON_RENDERER_URL: rendererUrl } as Record<string, string>;

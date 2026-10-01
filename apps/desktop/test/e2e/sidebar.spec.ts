@@ -47,7 +47,7 @@ const task = (id, projectId, title, updatedAt, extra) =>
     cwd: 'C:/work/' + projectId,
     createdAt: 1,
     updatedAt,
-    providerId: 'fake',
+    modelId: 'fake',
     thinking: 'off',
     policy: 'ask',
     ...extra,

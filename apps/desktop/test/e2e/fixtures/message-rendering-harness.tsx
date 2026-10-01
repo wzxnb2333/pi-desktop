@@ -10,7 +10,7 @@ import '../../../src/renderer/src/styles/index.css';
 
 const params = new URLSearchParams(location.search), initial = defaultData();
 const data = dataSchema.parse({ ...initial, settings: { ...initial.settings, theme: params.get('theme') || 'light' },
-  threads: [threadSchema.parse({ id: 't', projectId: 'p', title: 'Messages', cwd: '.', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' })],
+  threads: [threadSchema.parse({ id: 't', projectId: 'p', title: 'Messages', cwd: '.', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' })],
   ui: { ...initial.ui, locale: params.get('locale') || 'zh-CN', activeThreadId: 't' } });
 let listener: ((event: DesktopEvent) => void) | undefined;
 const bridge: DesktopBridge = {

@@ -18,7 +18,7 @@ async function save(patch: Partial<Automation> = {}) {
 async function send(text: string) { await fixture.invoke({ op: 'thread.send', id: 't', text, attachments: [] }); }
 
 test('existing-chat wakeups queue once and use isolated model permissions while keeping drafts', async () => {
-  const snapshot = await fixture.snapshot(); await fixture.invoke({ op: 'settings.patch', patch: { providers: [...snapshot.data.settings.providers, { ...snapshot.data.settings.providers[0], id: 'alternate', name: '备用模型', model: 'alternate-model' }] } });
+  const snapshot = await fixture.snapshot(); await fixture.invoke({ op: 'settings.patch', patch: { models: [...snapshot.data.settings.models, { ...snapshot.data.settings.models[0], id: 'alternate', name: '备用模型', model: 'alternate-model' }] } });
   await fixture.invoke({ op: 'ui.threadPatch', threadId: 't', patch: { draft: { text: '保留的未发送草稿', attachments: [] } } });
   await fixture.page.getByRole('button', { name: '自动化', exact: true }).click(); await fixture.page.getByRole('button', { name: '新建自动化', exact: true }).click();
   await fixture.page.getByLabel('名称', { exact: true }).fill('已有聊天唤醒'); await fixture.page.getByLabel('执行位置').selectOption('thread'); await fixture.page.getByLabel('目标聊天').selectOption('t');
@@ -33,13 +33,13 @@ test('existing-chat wakeups queue once and use isolated model permissions while 
   fixture.setMode('hold'); await send('NORMAL_FIRST'); await expect.poll(() => fixture.calls.length).toBe(1);
   const first = await fixture.invoke({ op: 'automation.run', id: job.id }) as AutomationRun;
   const duplicate = await fixture.invoke({ op: 'automation.run', id: job.id }) as AutomationRun; expect(duplicate.id).toBe(first.id); expect((await runs())[0].status).toBe('queued');
-  await fixture.invoke({ op: 'automation.save', automation: { ...job, prompt: 'FUTURE_ONLY', execution: { providerId: 'local', policy: 'auto', environment: 'local', startPoint: 'HEAD' } } });
+  await fixture.invoke({ op: 'automation.save', automation: { ...job, prompt: 'FUTURE_ONLY', execution: { modelId: 'local', policy: 'auto', environment: 'local', startPoint: 'HEAD' } } });
   fixture.requestTool('write', { path: 'forbidden-automation.txt', content: 'must not appear' }); fixture.release();
   await expect.poll(async () => (await runs())[0].status).toBe('succeeded');
   expect(fixture.calls[0].model).toBe('acceptance'); expect(fixture.calls.slice(1).every(call => call.model === 'alternate-model')).toBe(true);
   expect(JSON.stringify(fixture.calls[1].messages)).toContain('SCHEDULED_ORIGINAL'); expect(JSON.stringify(fixture.calls[1].messages)).not.toContain('FUTURE_ONLY');
   await expect(access(join(fixture.project, 'forbidden-automation.txt'))).rejects.toThrow();
-  const after = await fixture.snapshot(); expect(after.data.threads).toHaveLength(1); expect(after.data.threads[0]).toMatchObject({ providerId: 'local', policy: 'auto' }); expect(after.data.ui.threads.t.draft?.text).toBe('保留的未发送草稿');
+  const after = await fixture.snapshot(); expect(after.data.threads).toHaveLength(1); expect(after.data.threads[0]).toMatchObject({ modelId: 'local', policy: 'auto' }); expect(after.data.ui.threads.t.draft?.text).toBe('保留的未发送草稿');
   const before = fixture.calls.length; await send('NORMAL_AFTER'); await expect.poll(() => fixture.calls.length).toBe(before + 1); expect(fixture.calls.at(-1)?.model).toBe('acceptance');
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('idle'); await fixture.restart(); expect((await runs())[0]).toMatchObject({ id: first.id, status: 'succeeded', threadId: 't' });
   await fixture.page.getByRole('button', { name: '运行历史', exact: true }).click(); await expect(fixture.page.getByText('运行成功', { exact: true })).toBeVisible();
@@ -60,7 +60,7 @@ test('queued wakeups survive restart and uncertain in-flight work is not repeate
 test('worktree automation waits for real initialization and keeps failure recovery records', async () => {
   await fixture.app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false }); });
   await fixture.invoke({ op: 'project.environment', projectId: 'p', base: { shell: 'powershell', initialization: '', cleanup: '', actions: [] }, environment: { shell: 'powershell', initialization: "Start-Sleep -Milliseconds 600; Set-Content -LiteralPath init.txt -Value ready", cleanup: '', actions: [] } });
-  const job = await save({ targetThreadId: undefined, execution: { environment: 'worktree', startPoint: 'main', policy: 'auto', providerId: 'local' } });
+  const job = await save({ targetThreadId: undefined, execution: { environment: 'worktree', startPoint: 'main', policy: 'auto', modelId: 'local' } });
   fixture.requestTool('read', { path: 'init.txt' }); await fixture.invoke({ op: 'automation.run', id: job.id }); await expect.poll(async () => (await runs())[0].status, { timeout: 45000 }).toBe('succeeded');
   const record = (await runs())[0], thread = (await fixture.snapshot()).data.threads.find(item => item.id === record.threadId)!;
   expect(thread.cwd).not.toBe(fixture.project); expect(thread.worktreeBranch).toBeTruthy(); expect(await readFile(join(thread.cwd, 'init.txt'), 'utf8')).toContain('ready');

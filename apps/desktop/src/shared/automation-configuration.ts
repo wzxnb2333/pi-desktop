@@ -5,7 +5,7 @@ export function automationConfigurationKey(job: Automation): string {
   const schedule = job.schedule, execution = job.execution;
   return JSON.stringify([job.id, job.name, job.projectId, job.prompt, job.intervalMinutes, job.enabled, job.targetThreadId ?? '',
     schedule ? [schedule.kind, schedule.time, schedule.timezone, schedule.weekday, schedule.monthday] : null,
-    [execution?.providerId ?? '', execution?.thinking ?? '', execution?.policy ?? '', execution?.directoryId ?? '', execution?.environment ?? 'local', execution?.startPoint ?? 'HEAD']]);
+    [execution?.modelId ?? '', execution?.thinking ?? '', execution?.policy ?? '', execution?.directoryId ?? '', execution?.environment ?? 'local', execution?.startPoint ?? 'HEAD']]);
 }
 
 export function assertAutomationBase(current: Automation | undefined, base: Automation | null | undefined): void {

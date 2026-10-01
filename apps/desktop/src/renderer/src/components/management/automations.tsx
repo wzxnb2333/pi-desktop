@@ -5,6 +5,7 @@ import { Clock3, Plus } from 'lucide-react';
 import type { Automation, AutomationRun, DesktopRequest, Thread } from '../../../../shared/contracts.ts';
 import { projectDirectories } from '../../../../shared/project-directories.ts';
 import { automationConfigurationKey } from '../../../../shared/automation-configuration.ts';
+import { findModel, providerModels } from '../../../../shared/model-configuration.ts';
 import { useApp } from '../../state/app.tsx';
 import { Button } from '../primitives/button.tsx';
 import { FieldRow } from '../primitives/field-row.tsx';
@@ -15,15 +16,15 @@ import { ManagementEmpty, ManagementFilters, ManagementSearch } from './chrome.t
 
 type Draft = { id: string; base?: Automation; name: string; prompt: string; projectId: string; intervalMinutes: number;
   mode: 'interval' | 'daily' | 'weekly' | 'monthly'; time: string; timezone: string; weekday: number; monthday: number;
-  destination: 'new' | 'thread'; targetThreadId: string; providerId: string; thinking: Thread['thinking'] | ''; policy: Thread['policy'] | ''; directoryId: string; environment: 'local' | 'worktree'; startPoint: string };
+  destination: 'new' | 'thread'; targetThreadId: string; modelId: string; thinking: Thread['thinking'] | ''; policy: Thread['policy'] | ''; directoryId: string; environment: 'local' | 'worktree'; startPoint: string };
 const initial: Draft = { id: '', name: '', prompt: '', projectId: '', intervalMinutes: 60, mode: 'interval',
   time: '09:00', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, weekday: 1, monthday: 1,
-  destination: 'new', targetThreadId: '', providerId: '', thinking: '', policy: '', directoryId: '', environment: 'local', startPoint: 'HEAD' };
+  destination: 'new', targetThreadId: '', modelId: '', thinking: '', policy: '', directoryId: '', environment: 'local', startPoint: 'HEAD' };
 const runStatuses = { queued: '等待聊天空闲', preparing: '准备环境', running: '运行中', succeeded: '运行成功', failed: '运行失败', interrupted: '运行已中断', cancelled: '运行已取消' } as const;
 function automationDraft(job: Automation): Draft {
   return { ...initial, id: job.id, base: structuredClone(job), name: job.name, prompt: job.prompt, projectId: job.projectId,
     intervalMinutes: job.intervalMinutes, mode: job.schedule?.kind ?? 'interval',
-    destination: job.targetThreadId ? 'thread' : 'new', targetThreadId: job.targetThreadId ?? '', providerId: job.execution?.providerId ?? '', thinking: job.execution?.thinking ?? '', policy: job.execution?.policy ?? '', directoryId: job.execution?.directoryId ?? '', environment: job.execution?.environment ?? 'local', startPoint: job.execution?.startPoint ?? 'HEAD',
+    destination: job.targetThreadId ? 'thread' : 'new', targetThreadId: job.targetThreadId ?? '', modelId: job.execution?.modelId ?? '', thinking: job.execution?.thinking ?? '', policy: job.execution?.policy ?? '', directoryId: job.execution?.directoryId ?? '', environment: job.execution?.environment ?? 'local', startPoint: job.execution?.startPoint ?? 'HEAD',
     ...(job.schedule ? { time: job.schedule.time, timezone: job.schedule.timezone, weekday: job.schedule.weekday, monthday: job.schedule.monthday } : {}) };
 }
 export function AutomationsPage() {
@@ -93,7 +94,7 @@ export function AutomationsPage() {
         projectId, intervalMinutes: draft.mode === 'interval' ? draft.intervalMinutes : previous?.intervalMinutes ?? 60,
         enabled: previous?.enabled ?? true, nextRunAt: previous?.nextRunAt ?? Date.now(),
         targetThreadId: draft.destination === 'thread' ? draft.targetThreadId : undefined,
-        execution: { providerId: draft.providerId || undefined, thinking: draft.thinking || undefined, policy: draft.policy || undefined, environment: draft.destination === 'new' ? draft.environment : 'local', directoryId: draft.destination === 'new' ? draft.directoryId || undefined : undefined, startPoint: draft.startPoint || 'HEAD' },
+        execution: { modelId: draft.modelId || undefined, thinking: draft.thinking || undefined, policy: draft.policy || undefined, environment: draft.destination === 'new' ? draft.environment : 'local', directoryId: draft.destination === 'new' ? draft.directoryId || undefined : undefined, startPoint: draft.startPoint || 'HEAD' },
         schedule: draft.mode === 'interval' ? undefined : { kind: draft.mode, time: draft.time, timezone: draft.timezone, weekday: draft.weekday, monthday: draft.monthday },
       } });
       setFeedback((draft.id ? tr("已保存 ") : tr("已创建 ")) + draft.name);
@@ -128,10 +129,11 @@ export function AutomationsPage() {
   const selectedProject = data.projects.find(item => item.id === (draft.projectId || project?.id));
   const historyRows = (runs: AutomationRun[]) => [...runs].reverse().map(run => {
     const thread = data.threads.find(item => item.id === run.threadId && !item.deletedAt);
+    const model = findModel(data.settings, run.configuration.execution?.modelId ?? '');
     return <div className="automation-run" key={run.id}><div className="row"><time>{new Date(run.createdAt).toLocaleString()}</time><strong>{tr(runStatuses[run.status])}</strong>
       {thread && <Button size="sm" onClick={() => selectThread(thread)}>{tr('打开运行聊天')}</Button>}
       {['queued', 'preparing', 'running'].includes(run.status) && <Button size="sm" disabled={!!busy} onClick={() => void action(run.configuration, { op: 'automation.cancel', runId: run.id }, tr('已取消此次运行'))}>{tr('取消此次运行')}</Button>}</div>
-      <small>{run.configuration.name} · {run.configuration.execution?.providerId || tr('沿用聊天或默认设置')}{run.merged > 0 && ' · ' + tr('合并触发') + ' ' + run.merged}</small>
+      <small>{run.configuration.name} · {model?.name ?? run.configuration.execution?.modelId ?? tr('沿用聊天或默认设置')}{run.merged > 0 && ' · ' + tr('合并触发') + ' ' + run.merged}</small>
       {run.error && <p role="status">{localizeAppError(run.error)}</p>}</div>;
   });
   return <section className="management-page automations-page">
@@ -153,7 +155,10 @@ export function AutomationsPage() {
         {!data.projects.length && <option value="">{tr("请先添加项目")}</option>}
         {data.projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
       </select></FieldRow>}
-      <FieldRow label={tr('运行模型')} htmlFor="automation-provider"><select id="automation-provider" value={draft.providerId} onChange={event => patch({ providerId: event.target.value })}><option value="">{tr('沿用聊天或默认设置')}</option>{data.settings.providers.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FieldRow>
+      <FieldRow label={tr('运行模型')} htmlFor="automation-model" description={tr('先选提供商，再选它下面的模型')}><select id="automation-model" value={draft.modelId} onChange={event => patch({ modelId: event.target.value })}><option value="">{tr('沿用聊天或默认设置')}</option>{data.settings.modelProviders.map(provider => {
+        const models = providerModels(data.settings.models, provider.id);
+        return models.length ? <optgroup key={provider.id} label={provider.name}>{models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</optgroup> : null;
+      })}</select></FieldRow>
       <FieldRow label={tr('运行权限')} htmlFor="automation-policy"><select id="automation-policy" value={draft.policy} onChange={event => patch({ policy: event.target.value as Draft['policy'] })}><option value="">{tr('沿用聊天或默认设置')}</option>{draft.policy === 'deny' && <option value="deny" hidden>{policyLabels.deny}</option>}{permissionModes.map(value => <option key={value} value={value}>{policyLabels[value]}</option>)}</select></FieldRow>
       <FieldRow label={tr('自动化思考程度')} htmlFor="automation-thinking"><select id="automation-thinking" value={draft.thinking} onChange={event => patch({ thinking: event.target.value as Draft['thinking'] })}><option value="">{tr('沿用聊天或默认设置')}</option>{(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const).map(level => <option value={level} key={level}>{thinkingLabels[level]}</option>)}</select></FieldRow>
       {draft.destination === 'new' && <><FieldRow label={tr('运行目录')} htmlFor="automation-directory"><select id="automation-directory" value={draft.directoryId} onChange={event => patch({ directoryId: event.target.value })}><option value="">{tr('项目主目录')}</option>{selectedProject && projectDirectories(selectedProject).map(item => <option value={item.id} key={item.id}>{item.name} · {item.path}</option>)}</select></FieldRow>

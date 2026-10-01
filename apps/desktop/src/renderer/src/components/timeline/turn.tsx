@@ -1,6 +1,7 @@
 import { tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
 import { CircleAlert, ListChecks } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Thread } from '../../../../shared/contracts.ts';
 import { activeSubtask, type Subtask } from '../../../../shared/subtasks.ts';
 import { activitySummary, elapsed } from '../../lib/activity.ts';
@@ -14,6 +15,57 @@ import { SubtaskLink } from '../panels/subtask-panel.tsx';
 import { subtaskCreations } from '../../lib/subtask-creations.ts';
 
 const planLabels: Record<string, string> = { get pending() { return tr("待办"); }, get in_progress() { return tr("进行中"); }, get completed() { return tr("已完成"); } };
+
+/** Further than this from the bottom counts as the reader having taken over the preview. */
+const THINKING_FOLLOW_RANGE = 24;
+
+/**
+ * The streaming preview is its own scroll box. It tracks the newest line while the model thinks,
+ * keeps whatever position the reader scrolls to, and re-attaches once they return to the bottom.
+ */
+function ThinkingPreview({ text, running, searchTarget }: { text: string; running: boolean; searchTarget?: string }) {
+  const element = useRef<HTMLDivElement>(null);
+  const following = useRef(true);
+  /** Last observed position: growth is not a reader scroll, a moved position is. */
+  const previous = useRef(-1);
+  const interacting = useRef(false);
+  const gesture = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    const node = element.current;
+    if (!node || !running) return;
+    // Content can outgrow one frame of corrections; re-pin unless a live gesture owns the position.
+    if (following.current && !interacting.current) node.scrollTop = node.scrollHeight;
+    previous.current = node.scrollTop;
+  }, [text, running]);
+
+  useEffect(() => {
+    const node = element.current;
+    if (!node) return;
+    const begin = () => {
+      interacting.current = true;
+      clearTimeout(gesture.current);
+      gesture.current = setTimeout(() => { interacting.current = false; }, 250);
+    };
+    for (const type of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'] as const) node.addEventListener(type, begin, { passive: true });
+    return () => {
+      clearTimeout(gesture.current);
+      interacting.current = false;
+      for (const type of ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'] as const) node.removeEventListener(type, begin);
+    };
+  }, []);
+
+  return <div ref={element} className="thinking-preview" data-streaming={running} data-search-target={searchTarget} tabIndex={-1}
+    onScroll={event => {
+      const node = event.currentTarget;
+      const distance = node.scrollHeight - node.scrollTop - node.clientHeight;
+      const moved = previous.current >= 0 && node.scrollTop !== previous.current;
+      // Landing at the bottom also ends the gesture: following resumes from there.
+      if (distance < THINKING_FOLLOW_RANGE) { following.current = true; interacting.current = false; clearTimeout(gesture.current); }
+      else if (moved) following.current = false;
+      previous.current = node.scrollTop;
+    }}>{text}</div>;
+}
 
 function ProcessBlock({ block, live, creations }: { block: TurnBlock; live: boolean; creations?: ReadonlyMap<string, Subtask> }) {
   useLocale();
@@ -30,7 +82,7 @@ function ProcessBlock({ block, live, creations }: { block: TurnBlock; live: bool
     const running = live && block.item.state === 'running' && block.completedAt === undefined;
     const duration = elapsed(block.startedAt, block.completedAt);
     return <Disclosure foldKey={'thinking:' + block.key} summary={running ? tr("正在思考") : duration ? tr("已思考 ") + duration : tr("思考过程")} variant="thinking" defaultOpen={running} busy={running}>
-      <div className="thinking-preview" data-streaming={running} data-search-target={conversationTarget(block.key, 'thinking')} tabIndex={-1}>{block.text}</div>
+      <ThinkingPreview text={block.text} running={running} searchTarget={conversationTarget(block.key, 'thinking')} />
     </Disclosure>;
   }
   return <div className={block.kind === 'notice' ? 'turn-notices' : block.kind === 'answer' ? 'turn-answer' : 'turn-prose'}>

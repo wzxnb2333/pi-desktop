@@ -18,11 +18,17 @@ declare global {
 }
 const params = new URLSearchParams(location.search);
 let data = dataSchema.parse({
-  version: 2,
+  version: 3,
   projects: [{ id: 'p', name: '表单测试', path: 'C:/test/forms', trusted: true, createdAt: 1 }, { id: 'p2', name: '另一个项目', path: 'C:/test/other', trusted: true, createdAt: 1 }],
-  threads: [{ id: 't', projectId: 'p', title: '已有任务', cwd: 'C:/test/forms', providerId: 'local', thinking: 'off', policy: 'ask', createdAt: 1, updatedAt: 1 }],
+  threads: [{ id: 't', projectId: 'p', title: '已有任务', cwd: 'C:/test/forms', modelId: 'local', thinking: 'off', policy: 'ask', createdAt: 1, updatedAt: 1 }],
   automations: [],
-  settings: { theme: params.get('theme') || 'light', providers: [{ id: 'local', name: '本地模型', provider: 'openai', model: 'gpt-4.1' }], mcpServers: [{ id: 'm', name: 'MCP fixture', transport: 'stdio', command: 'node', enabled: true }] },
+  settings: {
+    theme: params.get('theme') || 'light',
+    modelId: 'local',
+    modelProviders: [{ id: 'local-provider', name: '本地模型', kind: 'builtin', namespace: 'openai', baseUrl: '', api: 'openai-completions', hasKey: false }],
+    models: [{ id: 'local', provider: 'local-provider', name: '本地模型', model: 'gpt-4.1', reasoning: false, contextWindow: 128000, maxTokens: 8192 }],
+    mcpServers: [{ id: 'm', name: 'MCP fixture', transport: 'stdio', command: 'node', enabled: true }],
+  },
   ui: { locale: params.get('locale') || 'zh-CN', view: params.get('view') || 'settings', activeThreadId: 't', summaryOpen: false, reviewOpen: false, sidebarWidth: 240 },
 });
 let complete: ((error?: string) => void) | undefined;
@@ -46,7 +52,7 @@ const bridge: DesktopBridge = {
       case 'settings.patch': data = { ...data, settings: applySettingsPatch(data.settings, request.patch, request.base) }; emit(); return data.settings;
       case 'automation.save': data = { ...data, automations: [...data.automations.filter(job => job.id !== request.automation.id), request.automation] }; emit(); return null;
       case 'thread.create': {
-        const created = threadSchema.parse({ id: 'created-' + data.threads.length, title: '新建测试任务', projectId: request.projectId, cwd: 'C:/test/forms', createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'ask' });
+        const created = threadSchema.parse({ id: 'created-' + data.threads.length, title: '新建测试任务', projectId: request.projectId, cwd: 'C:/test/forms', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'ask' });
         data = { ...data, threads: [...data.threads, created] }; emit(); return created;
       }
       case 'resource.inspect': return { checkedAt: 1, diagnostics: [], directory: 'C:/test/skills', descriptions: {} };

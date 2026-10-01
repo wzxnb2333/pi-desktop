@@ -45,7 +45,7 @@ test('initial launch failures release the local server and temporary user data',
   electron.launch = async options => {
     storage = options?.env?.PI_DESKTOP_USER_DATA ?? '';
     const data = JSON.parse(await readFile(join(storage, 'desktop.json'), 'utf8'));
-    serverUrl = data.settings.providers[0].baseUrl;
+    serverUrl = data.settings.modelProviders[0].baseUrl;
     throw new Error('fixture launch failed');
   };
   try {
@@ -200,11 +200,11 @@ test('saving settings and credentials preserves an active worker and reloads the
   const pid = () => fixture.app.evaluate(({ app }) => app.getAppMetrics().find(item => item.type === 'Utility' && item.name === 'Pi Agent')?.pid);
   const activePid = await pid();
   await fixture.invoke({ op: 'settings.patch', patch: { theme: 'dark', followUpMode: 'steer' }, base: { theme: settings.theme, followUpMode: settings.followUpMode } });
-  await fixture.invoke({ op: 'settings.patch', patch: { providers: settings.providers.map(provider => ({ ...provider, model: 'next-model' })) } });
+  await fixture.invoke({ op: 'settings.patch', patch: { models: settings.models.map(model => ({ ...model, model: 'next-model' })) } });
   await fixture.invoke({ op: 'resource.create', name: '运行期间创建', content: '---\nname: running-save\ndescription: settings regression\n---\nAPPLIES_NEXT_RUN' });
   await fixture.invoke({ op: 'settings.patch', patch: { mcpServers: [mcpSchema.parse({ id: 'test', name: '已配置的测试服务', transport: 'stdio', command: process.execPath, enabled: false })] } });
   await fixture.invoke({ op: 'mcp.secret', id: 'test', value: { TOKEN: 'new' } });
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'next-key' });
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'next-key' });
   expect(await pid()).toBe(activePid);
   expect((await fixture.snapshot()).data.threads[0].status).toBe('running');
   await fixture.invoke({ op: 'thread.send', id: 't', text: '当前运行的引导', attachments: [], queue: 'steer' });
@@ -419,7 +419,7 @@ test('extension confirmation, selection and input resolve through real approval 
   await card.getByRole('button', { name: '允许这一次' }).click();
   await idle();
   await expect(fixture.page.locator('.timeline')).toContainText('EXTENSION_RESULT:二:中文输入');
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'local-only' });
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'local-only' });
   await fixture.invoke({ op: 'thread.send', id: 't', text: '拒绝扩展验收', attachments: [] });
   await expect(card).toContainText('验收确认');
   await card.getByRole('button', { name: '拒绝' }).click();

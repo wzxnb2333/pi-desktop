@@ -18,7 +18,7 @@ test('desktop sweep removes verified fixtures and preserves live owners, foreign
     for (const path of [owned, foreign]) {
       await mkdir(join(path, 'demo-project'), { recursive: true });
       const project = path === owned ? join(path, 'demo-project') : external;
-      await writeFile(join(path, 'desktop.json'), JSON.stringify({ version: path === owned ? 2 : 1, projects: [{ path: project }], threads: [{ cwd: project }] }));
+      await writeFile(join(path, 'desktop.json'), JSON.stringify({ version: path === owned ? 3 : 1, projects: [{ path: project }], threads: [{ cwd: project }] }));
       await mkdir(join(path, 'Cache'));
       await writeFile(join(path, 'Cache/data_0'), 'cache');
     }
@@ -45,7 +45,7 @@ test('desktop sweep removes verified fixtures and preserves live owners, foreign
     await writeFile(join(corrupt, 'project/.git/objects/aa', 'a'.repeat(38)), 'not a git object');
     const firstRun = join(root, 'pi-desktop-first-New001');
     await mkdir(join(firstRun, '新项目'), { recursive: true });
-    await writeFile(join(firstRun, 'desktop.json'), JSON.stringify({ version: 1, projects: [], threads: [], settings: { providers: [] } }));
+    await writeFile(join(firstRun, 'desktop.json'), JSON.stringify({ version: 3, projects: [], threads: [], settings: { modelProviders: [], models: [] } }));
     const git = join(root, 'pi-acceptance-Git001');
     const blob = Buffer.from('blob 5\0hello');
     const treeBody = Buffer.concat([Buffer.from('100644 README.md\0'), createHash('sha1').update(blob).digest()]);

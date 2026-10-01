@@ -24,7 +24,7 @@ import { messageInputSchema } from './message-input.ts';
 import { timelineFocusTargetSchema } from './harness-tools.ts';
 export { mcpSchema } from './mcp-schema.ts';
 
-export const DATA_VERSION = 2;
+export const DATA_VERSION = 3;
 
 // deny remains an internal read-only constraint for reviews and side conversations.
 export const policySchema = z.enum(['ask', 'auto', 'full', 'deny']);
@@ -43,24 +43,38 @@ export const modelCatalogSchema = z.array(z.object({
   })),
 }));
 export type ModelCatalog = z.infer<typeof modelCatalogSchema>;
-export const providerSchema = z
+export const modelApiSchema = z.enum(['openai-completions', 'openai-responses', 'anthropic-messages', 'google-generative-ai']);
+export type ModelApi = z.infer<typeof modelApiSchema>;
+/** One connection plus one credential. Models hang under a provider and share its key. */
+export const modelProviderSchema = z
   .object({
     id: z.string().min(1).max(100),
     name: z.string().min(1),
-    provider: z.string().min(1),
-    model: z.string().min(1),
+    // `builtin` uses the SDK catalog namespace; `custom` points at a user-supplied endpoint.
+    kind: z.enum(['builtin', 'custom']).default('builtin'),
+    // Pi provider namespace: a catalog id (`openai`) or the generated `desktop-<id>` for custom endpoints.
+    namespace: z.string().min(1).max(200),
     baseUrl: z.string().max(2048).default(''),
-    api: z
-      .enum(['openai-completions', 'openai-responses', 'anthropic-messages', 'google-generative-ai'])
-      .default('openai-completions'),
-    custom: z.boolean().default(false),
+    api: modelApiSchema.default('openai-completions'),
+    hasKey: z.boolean().default(false),
+  })
+  .strict();
+/** One runnable model inside a provider; `provider` is the owning `settings.modelProviders[].id`. */
+export const providerModelSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+    provider: z.string().min(1).max(100),
+    name: z.string().min(1),
+    // Upstream model id sent to the API.
+    model: z.string().min(1).max(300),
     reasoning: z.boolean().default(true),
     thinkingLevels: z.array(thinkingSchema).min(1).max(7).optional(),
     contextWindow: z.number().int().min(1024).max(10000000).default(128000),
     maxTokens: z.number().int().min(256).max(1000000).default(8192),
-    hasKey: z.boolean().default(false),
   })
   .strict();
+export type ModelProvider = z.infer<typeof modelProviderSchema>;
+export type ProviderModel = z.infer<typeof providerModelSchema>;
 export const resourceSchema = z
   .object({
     id: z.string(),
@@ -107,7 +121,8 @@ export const settingsSchema = z
     editor: z.enum(['vscode', 'system']).default('vscode'),
     policy: policySchema.default('ask'),
     thinking: thinkingSchema.default('medium'),
-    providerId: z.string().default(''),
+    // Default model for new threads (a `settings.models[].id`).
+    modelId: z.string().default(''),
     keepInTray: z.boolean().default(true),
     sendShortcut: z.enum(['enter', 'ctrl-enter']).default('enter'),
     notifications: z.boolean().optional(),
@@ -121,7 +136,8 @@ export const settingsSchema = z
     followUpMode: z.enum(['steer', 'followUp']).default('followUp'),
     promptTemplates: z.array(promptTemplateSchema).max(100).default([]),
     shortcuts: z.record(z.string(), z.string()).optional(),
-    providers: z.array(providerSchema).default([]),
+    modelProviders: z.array(modelProviderSchema).default([]),
+    models: z.array(providerModelSchema).default([]),
     resources: z.array(resourceSchema).default([]),
     ignoredSkillPaths: z.array(z.string()).default([]),
     mcpServers: z.array(mcpSchema).default([]),
@@ -198,7 +214,8 @@ export const threadSchema = z
     recentFiles: z.array(z.object({ directoryId: z.string(), path: z.string(), at: z.number() }).strict()).max(50).optional(),
     sessionFile: z.string().optional(),
     revision: z.object({ parentThreadId: z.string(), itemId: z.string(), requestId: z.uuid(), fingerprint: z.string(), kind: z.enum(['edit', 'regenerate']) }).strict().optional(),
-    providerId: z.string(),
+    // Selected model (a `settings.models[].id`); the thread keeps its own copy.
+    modelId: z.string(),
     modelSwitchNotice: z.object({ from: z.string(), to: z.string() }).strict().optional(),
     thinking: thinkingSchema,
     policy: policySchema,
@@ -239,7 +256,7 @@ export const automationSchema = z
     lastRunAt: z.number().optional(),
     lastThreadId: z.string().optional(),
     targetThreadId: z.string().min(1).max(200).optional(),
-    execution: z.object({ providerId: z.string().max(100).optional(), thinking: thinkingSchema.optional(), policy: policySchema.optional(), directoryId: z.string().max(200).optional(), environment: z.enum(['local', 'worktree']).default('local'), startPoint: z.string().min(1).max(3000).default('HEAD') }).strict().optional(),
+    execution: z.object({ modelId: z.string().max(100).optional(), thinking: thinkingSchema.optional(), policy: policySchema.optional(), directoryId: z.string().max(200).optional(), environment: z.enum(['local', 'worktree']).default('local'), startPoint: z.string().min(1).max(3000).default('HEAD') }).strict().optional(),
     schedule: z.object({ kind: z.enum(['daily', 'weekly', 'monthly']), time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), timezone: z.string().refine(value => { try { new Intl.DateTimeFormat('en', { timeZone: value }); return true; } catch { return false; } }), weekday: z.number().int().min(0).max(6).default(1), monthday: z.number().int().min(1).max(31).default(1) }).optional(),
   })
   .strict();
@@ -436,7 +453,7 @@ export const requestSchema = z.discriminatedUnion('op', [
       readAt: z.number().optional(),
       deletedAt: z.number().nullable().optional(),
       reviewed: z.boolean().optional(),
-      providerId: z.string().optional(),
+      modelId: z.string().optional(),
       thinking: thinkingSchema.optional(),
       policy: policySchema.optional(),
       planMode: z.boolean().optional(),
@@ -477,7 +494,7 @@ export const requestSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('ui.update'), ui: uiSchema, frame: uiFramePatchSchema.optional() }).strict(),
   z.object({ op: z.literal('ui.threadUpdate'), threadId: id, thread: uiThreadSchema }).strict(),
   z.object({ op: z.literal('ui.threadPatch'), threadId: id, patch: z.object({ reviewTab: reviewTabSchema.optional(), terminalOpen: z.boolean().optional(), selectedPath: z.string().max(2000).optional(), fileDirectory: uiThreadSchema.shape.fileDirectory, expandedDirectories: uiThreadSchema.shape.expandedDirectories, fileTreeFocus: uiThreadSchema.shape.fileTreeFocus, fileLocation: uiThreadSchema.shape.fileLocation, folds: z.record(z.string(), z.boolean()).optional(), draft: uiThreadSchema.shape.draft, sidechatId: uiThreadSchema.shape.sidechatId, contextReferences: uiThreadSchema.shape.contextReferences, directoryId: uiThreadSchema.shape.directoryId, directoryViews: uiThreadSchema.shape.directoryViews, scroll: uiThreadSchema.shape.scroll, openFiles: uiThreadSchema.shape.openFiles, browserTabs: uiThreadSchema.shape.browserTabs, closedBrowserTabs: uiThreadSchema.shape.closedBrowserTabs, activeBrowserTab: uiThreadSchema.shape.activeBrowserTab, activePanelTab: uiThreadSchema.shape.activePanelTab, panelTabs: uiThreadSchema.shape.panelTabs }).strict() }).strict(),
-  z.object({ op: z.literal('provider.key'), id, key: z.string().max(16000), base: providerSchema.optional() }).strict(),
+  z.object({ op: z.literal('provider.key'), id, key: z.string().max(16000), base: modelProviderSchema.optional() }).strict(),
   z.object({ op: z.literal('resource.pick'), kind: z.enum(['skill', 'extension']) }).strict(),
   z
     .object({
@@ -635,7 +652,6 @@ export const desktopEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('download'), id: z.string(), name: z.string(), received: z.number(), total: z.number(), state: z.enum(['progressing', 'completed', 'cancelled', 'interrupted']) }),
 ]);
 export type Policy = z.infer<typeof policySchema>;
-export type Provider = z.infer<typeof providerSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type Project = z.infer<typeof projectSchema>;
 export type Thread = z.infer<typeof threadSchema>;

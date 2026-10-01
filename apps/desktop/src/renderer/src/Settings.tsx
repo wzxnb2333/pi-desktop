@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
   type DesktopData,
   type DesktopRequest,
-  type Provider,
+  type ModelProvider,
+  type ProviderModel,
   type ModelCatalog,
   modelCatalogSchema,
   settingsSchema,
@@ -25,10 +26,7 @@ import { VoiceSettings } from './VoiceSettings.tsx';
 import { parseMcpSecrets, validateMcpConfiguration } from '../../shared/mcp-configuration.ts';
 import { DEFAULT_KEYBINDINGS, keyboardShortcut, shortcutConflicts, shortcutMatchesQuery } from '../../shared/shortcuts.ts';
 import { settingsChanges, sameSetting } from '../../shared/settings-updates.ts';
-import {
-  builtinConnection, connectionMode, connectionValues, convertEndpointOverride, customConnection,
-  type ConnectionMode, type ConnectionValues, validateModelConfiguration,
-} from '../../shared/model-configuration.ts';
+import { findModelProvider, validateModel, validateProvider } from '../../shared/model-configuration.ts';
 
 import type { Locale } from '../../shared/locale.ts';
 
@@ -54,7 +52,7 @@ const CATEGORY_GROUPS = [
 ] as const;
 const CATEGORY_KEYWORDS: Record<SettingsCategory, string[]> = {
   general: ['界面语言', '默认终端', '编辑器', '发送快捷键', '任务完成通知', '通知条件', '运行期间防止休眠', '运行中追加消息', '关闭窗口时保留到托盘', '启用可选子任务'],
-  appearance: ['主题', '字号', '界面字体', '代码字体', '代码字号', '强调色', '背景色', '前景色', '导入主题', '导出主题'], shortcuts: ['快捷键'], models: ['API Key', 'Base URL', '供应商'],
+  appearance: ['主题', '字号', '界面字体', '代码字体', '代码字号', '强调色', '背景色', '前景色', '导入主题', '导出主题'], shortcuts: ['快捷键'], models: ['提供商', '模型', 'API Key', 'Base URL', '供应商'],
   permissions: ['默认审批', '项目可信度'], mcp: ['服务器', '工具'],
   memories: ['跨会话记忆', '记忆范围', '自动生成记忆候选'],
   voice: ['离线语音', '录音设备', '模型目录', '本地听写', '合成音色'],
@@ -152,7 +150,7 @@ export function Settings({
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [modelIssue, setModelIssue] = useState<{ id: string; text: string } | null>(null);
-  const [selected, setSelected] = useState(draft.providers[0]?.id || '');
+  const [selected, setSelected] = useState(draft.modelProviders[0]?.id || '');
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [memoryDirty, setMemoryDirty] = useState(false);
@@ -165,9 +163,7 @@ export function Settings({
     observedSettings.current = data.settings;
     if (saving || !sameSetting(draft, baseline.current) || Object.values(keys).some(Boolean) || Object.values(secrets).some(value => !!value.trim())) return;
     baseline.current = data.settings; setDraft(structuredClone(data.settings));
-    setSelected(previous => data.settings.providers.some(provider => provider.id === previous) ? previous : data.settings.providers[0]?.id ?? '');
-    setConnectionModes(Object.fromEntries(data.settings.providers.map(item => [item.id, connectionMode(item)])));
-    connectionDrafts.current = {};
+    setSelected(previous => data.settings.modelProviders.some(provider => provider.id === previous) ? previous : data.settings.modelProviders[0]?.id ?? '');
   }, [data.settings]);
   const [shortcutQuery, setShortcutQuery] = useState('');
   const savingRef = useRef(false);
@@ -182,9 +178,6 @@ export function Settings({
   const [catalogError, setCatalogError] = useState('');
   const [catalogAttempt, setCatalogAttempt] = useState(0);
   const [requestCatalog] = useState(() => invoke);
-  const [connectionModes, setConnectionModes] = useState<Record<string, ConnectionMode>>(() =>
-    Object.fromEntries(draft.providers.map((item) => [item.id, connectionMode(item)])));
-  const connectionDrafts = useRef<Record<string, Partial<Record<ConnectionMode, ConnectionValues>>>>({});
   useEffect(() => {
     let active = true;
     setCatalogError('');
@@ -201,26 +194,23 @@ export function Settings({
     setDraft((prev) => ({ ...prev, ...value }));
     setFeedback(null);
   };
-  const provider = draft.providers.find((item) => item.id === selected);
-  const patchProvider = (value: Partial<Provider>) => {
+  const patchProvider = (value: Partial<ModelProvider>) => {
     setModelIssue(null);
     patch({
-      providers: draft.providers.map((item) => (item.id === selected ? { ...item, ...value } : item)),
+      modelProviders: draft.modelProviders.map((item) => (item.id === selected ? { ...item, ...value } : item)),
     });
   };
-  const mode = provider ? connectionModes[provider.id] ?? connectionMode(provider) : 'builtin';
-  const switchConnection = (next: ConnectionMode) => {
-    if (!provider || next === mode) return;
-    try {
-      const saved = connectionDrafts.current[provider.id] ?? {};
-      const values = saved[next] ?? (next === 'builtin'
-        ? builtinConnection(catalog ?? []) : customConnection(provider.id));
-      connectionDrafts.current[provider.id] = { ...saved, [mode]: connectionValues(provider) };
-      setConnectionModes((prev) => ({ ...prev, [provider.id]: next }));
-      patchProvider(values);
-    } catch (reason) {
-      setFeedback({ text: reason instanceof Error ? reason.message : String(reason), error: true });
-    }
+  const patchModel = (id: string, value: Partial<ProviderModel>) => {
+    setModelIssue(null);
+    patch({ models: draft.models.map((model) => model.id === id ? { ...model, ...value } : model) });
+  };
+  const removeModel = (id: string) => {
+    const remaining = draft.models.filter((model) => model.id !== id);
+    patch({
+      models: remaining,
+      modelId: draft.modelId === id ? remaining.find((model) => model.provider === selected)?.id ?? remaining[0]?.id ?? '' : draft.modelId,
+    });
+    setModelIssue(null);
   };
   const persist = async (): Promise<boolean> => {
     if (savingRef.current) return false;
@@ -230,19 +220,37 @@ export function Settings({
     try {
       const conflicts = shortcutConflicts(draft.shortcuts);
       if (conflicts.length) throw new Error(conflicts.join('；'));
-      const settings = { ...draft, providers: draft.providers.map((item) => ({
-        ...item, name: item.name.trim(), model: item.model.trim(), baseUrl: item.baseUrl.trim(),
-      })), mcpServers: draft.mcpServers.map(server => ({ ...server, name: server.name.trim(), command: server.command.trim(), url: server.url.trim() })) };
+      const settings = { ...draft,
+        modelProviders: draft.modelProviders.map((item) => ({ ...item, name: item.name.trim(), baseUrl: item.baseUrl.trim() })),
+        models: draft.models.map((item) => ({ ...item, name: item.name.trim(), model: item.model.trim() })),
+        mcpServers: draft.mcpServers.map(server => ({ ...server, name: server.name.trim(), command: server.command.trim(), url: server.url.trim() })) };
       const changes = settingsChanges(baseline.current, settings);
       for (const server of settings.mcpServers) validateMcpConfiguration(server);
-      // Preferences do not depend on reloading the model catalog. Validate model edits
-      // from every category, and explicit model saves, without blocking unrelated groups.
-      if (changes.providers || category === 'models') for (const item of settings.providers) {
-        try { validateModelConfiguration(item, catalog, connectionModes[item.id] ?? connectionMode(item)); }
-        catch (reason) {
-          setModelIssue({ id: item.id, text: reason instanceof Error ? reason.message : String(reason) });
-          setSelected(item.id); setCategory('models');
-          throw reason;
+      // Preferences do not depend on reloading the model catalog. Validate provider and model edits
+      // from every category, and explicit model saves, without blocking unrelated groups. When the
+      // catalog did not load, only the entries this draft touched are validated: an unrelated
+      // built-in provider must not veto saving a custom one that does not need the catalog at all.
+      const touchedProvider = (item: ModelProvider) => !baseline.current.modelProviders.some(old => old.id === item.id && sameSetting(old, item));
+      const touchedModel = (item: ProviderModel) => !baseline.current.models.some(old => old.id === item.id && sameSetting(old, item));
+      if (changes.modelProviders || changes.models || category === 'models') {
+        for (const item of settings.modelProviders) {
+          if (!catalog && !touchedProvider(item)) continue;
+          try { validateProvider(item, catalog); }
+          catch (reason) {
+            setModelIssue({ id: item.id, text: reason instanceof Error ? reason.message : String(reason) });
+            setSelected(item.id); setCategory('models');
+            throw reason;
+          }
+        }
+        for (const model of settings.models) {
+          const owner = findModelProvider(settings, model);
+          if (!catalog && !touchedModel(model) && !(owner && touchedProvider(owner))) continue;
+          try { validateModel(model, owner, catalog); }
+          catch (reason) {
+            setModelIssue({ id: model.provider, text: reason instanceof Error ? reason.message : String(reason) });
+            setSelected(model.provider); setCategory('models');
+            throw reason;
+          }
         }
       }
       setModelIssue(null);
@@ -254,19 +262,19 @@ export function Settings({
       const saved = settingsSchema.parse(await invoke({ op: 'settings.patch', patch: changes, base }));
       baseline.current = saved;
       setDraft(saved);
-      // Credentials are renderer-only drafts keyed by the stable model id. Save every remaining
-      // model's draft, regardless of the visible category; a failed write retains only unfinished keys.
-      for (const provider of settings.providers) {
+      // Credentials are renderer-only drafts keyed by the stable provider id. Save every remaining
+      // provider's draft, regardless of the visible category; a failed write retains only unfinished keys.
+      for (const provider of settings.modelProviders) {
         const { id } = provider;
         const key = keys[id];
         if (!key) continue;
         await invoke({ op: 'provider.key', id, key, base: provider });
-        baseline.current = { ...baseline.current, providers: baseline.current.providers.map(item => item.id === id ? { ...item, hasKey: true } : item) };
+        baseline.current = { ...baseline.current, modelProviders: baseline.current.modelProviders.map(item => item.id === id ? { ...item, hasKey: true } : item) };
         setKeys(previous => {
           if (previous[id] !== key) return previous;
           const next = { ...previous }; delete next[id]; return next;
         });
-        setDraft(previous => ({ ...previous, providers: previous.providers.map(item => item.id === id ? { ...item, hasKey: true } : item) }));
+        setDraft(previous => ({ ...previous, modelProviders: previous.modelProviders.map(item => item.id === id ? { ...item, hasKey: true } : item) }));
       }
       for (const secret of pending) {
         await invoke({ op: 'mcp.secret', ...secret, base: settings.mcpServers.find(server => server.id === secret.id)! });
@@ -285,16 +293,22 @@ export function Settings({
       setFeedback({ text: reason instanceof Error ? reason.message : String(reason), error: true });
     }
   };
-  const addProvider = () => {
-    const id = crypto.randomUUID();
-    const created: Provider = {
-      id,
-      name: tr("新模型"),
-      hasKey: false,
-      ...(catalog?.length ? builtinConnection(catalog) : customConnection(id)),
-    };
-    patch({ providers: [...draft.providers, created], providerId: draft.providerId || created.id });
+  const addProvider = (created: ModelProvider) => {
+    patch({ modelProviders: [...draft.modelProviders, created], modelId: draft.modelId || '' });
     setSelected(created.id);
+  };
+  const removeProvider = (id: string) => {
+    const remaining = draft.modelProviders.filter(item => item.id !== id);
+    const index = draft.modelProviders.findIndex(item => item.id === id);
+    const models = draft.models.filter(model => model.provider !== id);
+    patch({
+      modelProviders: remaining,
+      models,
+      modelId: models.some(model => model.id === draft.modelId) ? draft.modelId : models[0]?.id ?? '',
+    });
+    setKeys(previous => { const next = { ...previous }; delete next[id]; return next; });
+    setModelIssue(null);
+    setSelected(remaining[Math.min(index, remaining.length - 1)]?.id ?? '');
   };
 
   const dirty = !sameSetting(draft, baseline.current) || Object.values(keys).some(Boolean) || Object.values(secrets).some(value => !!value.trim());
@@ -312,22 +326,14 @@ export function Settings({
           <fieldset className="settings-fields" disabled={saving} aria-label={tr("设置内容")} aria-busy={saving}>
           <MemorySettings data={data} preferences={draft.memory} onChange={memory => patch({ memory })} invoke={invoke} active={category === 'memories'} onDirty={setMemoryDirty} onBusy={setMemoryBusy} />
           <VoiceSettings preferences={draft.voice} savedDirectory={data.settings.voice.modelDirectory} onChange={voice => patch({ voice })} invoke={invoke} active={category === 'voice'} />
-          {category === 'models' && <ModelSettings providers={draft.providers} defaultId={draft.providerId} selected={selected} keys={keys}
+          {category === 'models' && <ModelSettings providers={draft.modelProviders} models={draft.models} defaultId={draft.modelId} selected={selected} keys={keys}
             error={modelIssue?.id === selected ? modelIssue.text : undefined}
-            mode={mode} catalog={catalog} catalogError={catalogError} onSelect={setSelected} onAdd={addProvider}
-            onChange={patchProvider} onModeChange={switchConnection} onRetry={() => setCatalogAttempt(value => value + 1)}
-            onConvert={() => { try { if (provider) patchProvider(convertEndpointOverride(provider, catalog ?? [])); }
-              catch (reason) { setFeedback({ text: reason instanceof Error ? reason.message : String(reason), error: true }); } }}
+            catalog={catalog} catalogError={catalogError} onSelect={setSelected} onAddProvider={addProvider}
+            onChange={patchProvider} onRetry={() => setCatalogAttempt(value => value + 1)}
             onKey={(id, value) => { setKeys(previous => ({ ...previous, [id]: value })); setFeedback(null); }}
-            onDefault={id => patch({ providerId: id })} onDelete={id => {
-              const remaining = draft.providers.filter(item => item.id !== id);
-              const index = draft.providers.findIndex(item => item.id === id);
-              patch({ providers: remaining, providerId: draft.providerId === id ? remaining[0]?.id ?? '' : draft.providerId });
-              setKeys(previous => { const next = { ...previous }; delete next[id]; return next; });
-              delete connectionDrafts.current[id];
-              setModelIssue(null);
-              setSelected(remaining[Math.min(index, remaining.length - 1)]?.id ?? '');
-            }} />}
+            onAddModel={model => patch({ models: [...draft.models, model], modelId: draft.modelId || model.id })}
+            onModelChange={patchModel} onModelDelete={removeModel}
+            onDefault={id => patch({ modelId: id })} onDeleteProvider={removeProvider} />}
           {category === 'general' && <GeneralSettings draft={draft} locale={data.ui.locale} onChange={patch} onLocaleChange={onLocaleChange} />}
           {category === 'appearance' && <AppearanceSettings draft={draft} onChange={patch} invoke={invoke} onFeedback={(text, error) => setFeedback({ text, error })} />}
           {category === 'shortcuts' && (

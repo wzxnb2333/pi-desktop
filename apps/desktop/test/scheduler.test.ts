@@ -59,7 +59,7 @@ test('enqueue is atomic with next trigger time; storage failures cannot launch a
 
 test('saving a new schedule does not change an already claimed occurrence', async () => {
   const f = schedulerFixture(); f.data.automations.push(job()); f.data.threads[0].status = 'running'; f.scheduler.start(); await until(() => f.data.automationRuns.length === 1);
-  const original = structuredClone(f.data.automationRuns[0]); await f.scheduler.configure({ ...f.data.automations[0], intervalMinutes: 120, execution: { providerId: 'other', policy: 'deny', environment: 'worktree', startPoint: 'main' } });
+  const original = structuredClone(f.data.automationRuns[0]); await f.scheduler.configure({ ...f.data.automations[0], intervalMinutes: 120, execution: { modelId: 'other', policy: 'deny', environment: 'worktree', startPoint: 'main' } });
   assert.deepEqual(f.data.automationRuns[0], original); assert(f.data.automations[0].nextRunAt > original.scheduledAt);
   f.data.threads[0].status = 'idle'; f.scheduler.drain(); await until(() => f.calls.length === 1); f.scheduler.stop(); await f.scheduler.settled();
 });

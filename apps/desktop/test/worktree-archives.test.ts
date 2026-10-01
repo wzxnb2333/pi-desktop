@@ -14,7 +14,7 @@ const signal = () => new AbortController().signal;
 
 test('archive protection covers nested opened folders, pinned/shared tasks, active startup and terminals', async () => {
   const { record } = await fixture();
-  const owner = threadSchema.parse({ id: 'owner', projectId: 'project', title: 'task', cwd: record.path, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'ask' });
+  const owner = threadSchema.parse({ id: 'owner', projectId: 'project', title: 'task', cwd: record.path, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'ask' });
   const blockers = (threads = [owner], opened: string[] = [], busy = new Set<string>(), terminals = new Set<string>()) => archiveBlocker(record, threads, opened, busy, terminals);
   assert.equal(blockers(), undefined);
   assert.match(blockers([owner], [join(record.path, 'nested')])!, /窗口/);

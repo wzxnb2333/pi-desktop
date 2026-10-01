@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { inspectResources } from '../src/main/resource-inspection.ts';
 import { discoverSharedSkills, updateIgnoredSkills } from '../src/main/skills.ts';
-import { providerSchema, requestSchema, resourceInspectionSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
+import { modelProviderSchema, providerModelSchema, requestSchema, resourceInspectionSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
 import type { WorkerEvent } from '../src/shared/worker-protocol.ts';
 import { workerEventSchema } from '../src/shared/worker-protocol.ts';
 import { DesktopAgent } from '../src/worker/agent.ts';
@@ -95,8 +95,9 @@ test('real worker publishes typed skill and extension load failures and replaces
     await writeFile(skill, '---\nname: broken\n---\nNo description');
     await writeFile(extension, 'export default () => { throw new Error("RESOURCE_LOAD_FAILURE"); };');
     const config = {
-      thread: threadSchema.parse({ id: 'test', projectId: 'p', title: 'Task', cwd: root, createdAt: 1, updatedAt: 1, providerId: 'fake', thinking: 'off', policy: 'auto' }),
-      provider: providerSchema.parse({ id: 'fake', name: 'Fake', provider: 'resource-test', model: 'fake', custom: true, baseUrl: 'http://127.0.0.1:9/v1', reasoning: false }),
+      thread: threadSchema.parse({ id: 'test', projectId: 'p', title: 'Task', cwd: root, createdAt: 1, updatedAt: 1, modelId: 'fake', thinking: 'off', policy: 'auto' }),
+      model: providerModelSchema.parse({ id: 'fake', provider: 'fake-provider', name: 'Fake', model: 'fake', reasoning: false }),
+      modelProvider: modelProviderSchema.parse({ id: 'fake-provider', name: 'Fake', kind: 'custom', namespace: 'desktop-fake-provider', baseUrl: 'http://127.0.0.1:9/v1' }),
       settings: settingsSchema.parse({ resources: [{ id: 's', name: 'Skill', path: skill, kind: 'skill', enabled: true }, { id: 'e', name: 'Extension', path: extension, kind: 'extension', enabled: true }] }),
       agentDir: join(root, '.agent'), trusted: true, testMode: true, mcp: [],
     };

@@ -13,8 +13,8 @@ declare global { interface Window { goalRecovery: {
 }; } }
 const params = new URLSearchParams(location.search);
 function goal(objective: string): Goal { return goalSchema.parse({ id: crypto.randomUUID(), revision: 1, objective, criteria: [{ id: crypto.randomUUID(), text: 'Verify the result', completed: false, evidence: '' }], status: 'paused', reason: '', createdAt: 1, updatedAt: 1, rounds: 0, consecutiveFailures: 0, noProgress: 0, burstRounds: 0, history: [] }); }
-const data = dataSchema.parse({ version: 2, projects: [], automations: [],
-  threads: ['t', 'other'].map(id => ({ id, projectId: '', title: id, cwd: 'C:/project', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny', goal: id === 't' && params.has('empty') ? undefined : goal(id === 't' ? 'Existing objective' : 'Other objective') })),
+const data = dataSchema.parse({ version: 3, projects: [], automations: [],
+  threads: ['t', 'other'].map(id => ({ id, projectId: '', title: id, cwd: 'C:/project', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny', goal: id === 't' && params.has('empty') ? undefined : goal(id === 't' ? 'Existing objective' : 'Other objective') })),
   settings: { theme: params.get('theme') || 'light' }, ui: { locale: params.get('locale') || 'zh-CN', activeThreadId: 't', threads: { t: { draft: { text: 'Chat draft', attachments: [] } } } },
 });
 const listeners = new Set<(event: DesktopEvent) => void>();

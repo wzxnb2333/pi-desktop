@@ -68,15 +68,16 @@ test('running and completed defaults respect explicit nested choices and unknown
   } finally { await page.close(); }
 });
 
-test('harness calls stay visible as desktop interface activity with exact tool names', async () => {
+test('harness calls read as ordinary tool activity with the pi icon and exact tool names', async () => {
   const page = await browser.newPage({ reducedMotion: 'reduce' });
   try {
     await open(page, 'harness');
     const activity = page.locator('[data-tool-kind="harness"]');
     await expect(activity).toHaveCount(1);
     await expect(activity).toHaveAttribute('data-harness-tool', 'get_harness');
-    await expect(activity.locator('.tool-activity-origin')).toHaveText('桌面接口');
-    await expect(activity.locator('.disclosure-label')).toContainText('已调用桌面接口 get_harness');
+    await expect(activity.locator('.tool-activity-origin')).toHaveCount(0);
+    await expect(activity.locator('.disclosure-summary svg.lucide-pi')).toHaveCount(1);
+    await expect(activity.locator('.disclosure-label')).toContainText('已调用 get_harness');
   } finally { await page.close(); }
 });
 
@@ -123,6 +124,36 @@ test('folding preserves a reader anchor and follows new output only while pinned
     await page.getByRole('button', { name: '回到最新消息' }).click();
     items[3].text += '\n\n又一段内容。'; await update(page, items, 'idle');
     await expect.poll(() => scroll.evaluate(node => node.scrollHeight - node.scrollTop - node.clientHeight)).toBeLessThanOrEqual(1);
+  } finally { await page.close(); }
+});
+
+test('streamed thinking keeps the view pinned to the bottom until the reader moves it', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await open(page, 'behavior');
+    const preview = page.locator('.thinking-preview');
+    const distance = () => preview.evaluate(node => node.scrollHeight - node.scrollTop - node.clientHeight);
+    const items: Partial<TimelineItem>[] = [{ id: 'u', role: 'user', text: '开始' }, { id: 'a', role: 'assistant', state: 'running', stopReason: 'pending', blocks: [{ type: 'thinking', text: '思考第一段。\n\n'.repeat(40) }] }];
+    await update(page, items);
+    // Streaming keeps the newest line visible without the reader scrolling.
+    await expect.poll(distance).toBeLessThanOrEqual(1);
+    for (let index = 0; index < 3; index++) {
+      (items[1].blocks as { type: string; text: string }[])[0].text += '继续思考 ' + index + '。\n\n';
+      await update(page, items);
+      await expect.poll(distance).toBeLessThanOrEqual(1);
+    }
+    // A reader position away from the bottom is kept, and further output no longer drags it.
+    await preview.evaluate(node => { node.dispatchEvent(new WheelEvent('wheel', { deltaY: -200, bubbles: true })); node.scrollTop = 0; });
+    await expect.poll(distance).toBeGreaterThan(24);
+    (items[1].blocks as { type: string; text: string }[])[0].text += '读者离开之后继续输出。\n\n';
+    await update(page, items);
+    expect(await preview.evaluate(node => node.scrollTop)).toBe(0);
+    // Returning to the bottom re-attaches the stream.
+    await preview.evaluate(node => { node.scrollTop = node.scrollHeight; });
+    await expect.poll(distance).toBeLessThanOrEqual(1);
+    (items[1].blocks as { type: string; text: string }[])[0].text += '重新跟随。\n\n';
+    await update(page, items);
+    await expect.poll(distance).toBeLessThanOrEqual(1);
   } finally { await page.close(); }
 });
 

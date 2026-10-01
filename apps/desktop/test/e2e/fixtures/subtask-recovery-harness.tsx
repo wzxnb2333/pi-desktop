@@ -14,8 +14,8 @@ declare global { interface Window { subtaskRecovery: {
 const params = new URLSearchParams(location.search);
 const children = ['Agent A', 'Agent B', 'Queued agent', 'Finished agent'];
 const ids = children.map(() => crypto.randomUUID());
-const thread = { projectId: 'p', cwd: 'C:/project', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' };
-const data = dataSchema.parse({ version: 2, projects: [{ id: 'p', name: 'Observer project', path: 'C:/project', trusted: true, createdAt: 1 }], automations: [],
+const thread = { projectId: 'p', cwd: 'C:/project', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' };
+const data = dataSchema.parse({ version: 3, projects: [{ id: 'p', name: 'Observer project', path: 'C:/project', trusted: true, createdAt: 1 }], automations: [],
   threads: [
     { ...thread, id: 't', title: 'Main agent', items: [
       { id: 'u', role: 'user', text: 'Delegate inspection', timestamp: 1, state: 'done' },

@@ -15,10 +15,12 @@ export function activity(item: TimelineItem) {
   const query = typeof args.pattern === 'string' ? args.pattern : undefined;
   const command = typeof args.command === 'string' ? args.command : undefined;
   const running = item.state === 'running';
-  const verbs = { read: running ? tr("正在读取") : tr("已读取"), search: running ? tr("正在搜索") : tr("已搜索"), list: running ? tr("正在列出目录") : tr("已列出目录"), edit: running ? tr("正在编辑") : tr("已编辑"), write: running ? tr("正在写入") : tr("已写入"), command: running ? tr("正在执行") : tr("已执行"), harness: running ? tr("正在调用桌面接口") : tr("已调用桌面接口"), tool: running ? tr("正在调用") : tr("已调用") };
+  // Desktop-interface calls read exactly like any other call: the π icon marks them, not a caption.
+  const wording = kind === 'harness' ? 'tool' : kind;
+  const verbs = { read: running ? tr("正在读取") : tr("已读取"), search: running ? tr("正在搜索") : tr("已搜索"), list: running ? tr("正在列出目录") : tr("已列出目录"), edit: running ? tr("正在编辑") : tr("已编辑"), write: running ? tr("正在写入") : tr("已写入"), command: running ? tr("正在执行") : tr("已执行"), tool: running ? tr("正在调用") : tr("已调用") };
   const subject = kind === 'command' ? command : kind === 'search' ? query : path;
   const failed = item.state === 'error';
-  const label = `${failed ? item.stopReason === 'aborted' ? tr("已停止") : tr("操作失败") : verbs[kind]} ${subject ?? item.toolName ?? tr("工具")}`;
+  const label = `${failed ? item.stopReason === 'aborted' ? tr("已停止") : tr("操作失败") : verbs[wording]} ${subject ?? item.toolName ?? tr("工具")}`;
   return { kind, path, query, command, label, running, failed };
 }
 export function activitySummary(items: TimelineItem[], live = false): string {
@@ -27,8 +29,8 @@ export function activitySummary(items: TimelineItem[], live = false): string {
   if (live) return tr("正在思考");
   const counts = new Map<ActivityKind, number>();
   for (const item of items) { const kind = activity(item).kind; counts.set(kind, (counts.get(kind) ?? 0) + 1); }
-  const names: Record<ActivityKind, string> = { read: tr("次读取"), search: tr("次搜索"), list: tr("次列目录"), edit: tr("次编辑"), write: tr("次写入"), command: tr("条命令"), harness: tr("次桌面接口"), tool: tr("次工具调用") };
-  const summary = [...counts].map(([kind, count]) => `${count} ${names[kind]}`).join('、');
+  const names = { read: tr("次读取"), search: tr("次搜索"), list: tr("次列目录"), edit: tr("次编辑"), write: tr("次写入"), command: tr("条命令"), tool: tr("次工具调用") };
+  const summary = [...counts].map(([kind, count]) => `${count} ${names[kind === 'harness' ? 'tool' : kind]}`).join('、');
   const failures = items.filter((item) => item.state === 'error').length;
   return summary + (failures ? tr(" · {p0} 个失败", { p0: failures }) : '');
 }

@@ -69,7 +69,7 @@ test('literal Unicode occurrences preserve offsets, count truncated results and 
 });
 
 test('sidebar matches stored thinking, arguments, ordered text and edit details', () => {
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', title: '任务', cwd: '.', createdAt: 1, updatedAt: 1, providerId: 'fake', thinking: 'off', policy: 'ask', items: [
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', title: '任务', cwd: '.', createdAt: 1, updatedAt: 1, modelId: 'fake', thinking: 'off', policy: 'ask', items: [
     item('mixed', { role: 'assistant', text: '', thinking: '真实思考', blocks: [{ type: 'text', text: '有序文本' }] }),
     item('edit', { role: 'tool', text: '完成', args: '{"path":"Config.ts"}', details: { diff: '+新增配置' } }),
   ] });

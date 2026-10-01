@@ -10,7 +10,7 @@ import { mkdtemp } from './fixtures/node-temp.ts';
 
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-goal-persistence-')), store = new JsonStore(dir); await store.load();
-  const thread = threadSchema.parse({ id: 't', projectId: '', title: 'Goal', cwd: dir, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' });
+  const thread = threadSchema.parse({ id: 't', projectId: '', title: 'Goal', cwd: dir, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' });
   const goal = goalSchema.parse({ id: crypto.randomUUID(), revision: 1, objective: 'Verified objective', criteria: [{ id: crypto.randomUUID(), text: 'Verified result', completed: false, evidence: '' }], status: 'paused', reason: '', createdAt: 1, updatedAt: 1, rounds: 0, consecutiveFailures: 0, noProgress: 0, burstRounds: 0, history: [] });
   store.data.threads.push(thread); await store.save();
   return { dir, store, thread, goal };

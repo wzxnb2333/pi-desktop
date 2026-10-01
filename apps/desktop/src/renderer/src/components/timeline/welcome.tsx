@@ -18,7 +18,7 @@ export function Welcome() {
       </div>
     </div>
     <div className="welcome-dock">
-      {!data.settings.providers.length && <aside className="welcome-setup" aria-label={tr("模型配置引导")}>
+      {!data.settings.models.length && <aside className="welcome-setup" aria-label={tr("模型配置引导")}>
         <Settings2 size={18} aria-hidden="true" />
         <div><h2>{tr("配置模型以开始任务")}</h2><p>{tr("连接供应商并选择可用模型")}</p></div>
         <Button variant="primary" size="sm" onClick={() => setView('settings')}>{tr("配置 API Key 和模型")}</Button>

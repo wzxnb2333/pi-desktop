@@ -11,7 +11,7 @@ async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-automation-persistence-')), store = new JsonStore(dir); await store.load();
   const job = automationSchema.parse({ id: 'a', name: 'Automation', projectId: 'p', targetThreadId: 't', prompt: 'Verify', intervalMinutes: 60, nextRunAt: 10, enabled: true });
   const run: AutomationRun = { id: crypto.randomUUID(), automationId: job.id, configuration: structuredClone(job), status: 'queued', threadId: 't', createdAt: 1, scheduledAt: 10, manual: true, merged: 0 };
-  store.data.threads.push(threadSchema.parse({ id: 't', title: 'Task', cwd: dir, projectId: 'p', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' }));
+  store.data.threads.push(threadSchema.parse({ id: 't', title: 'Task', cwd: dir, projectId: 'p', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' }));
   store.data.automations.push(job); await store.save(); return { dir, store, job, run };
 }
 
@@ -45,7 +45,7 @@ test('failed cancellation retains its durable queue record and a retry survives 
 });
 
 test('deleted schedules stay deleted while retained history and optional configuration remain exact', async () => {
-  const { dir, store, job, run } = await setup(), original = structuredClone(job); await store.saveAutomationState({ automations: [{ ...job, execution: { providerId: 'model', environment: 'local', startPoint: 'HEAD' } }], automationRuns: [run] });
+  const { dir, store, job, run } = await setup(), original = structuredClone(job); await store.saveAutomationState({ automations: [{ ...job, execution: { modelId: 'model', environment: 'local', startPoint: 'HEAD' } }], automationRuns: [run] });
   await store.saveAutomationState({ automations: [original], automationRuns: [run] }); assert.equal(store.data.automations[0].execution, undefined);
   await Promise.all([store.saveAutomationState({ automations: [], automationRuns: [{ ...run, status: 'cancelled', finishedAt: 40 }] }), store.save()]);
   const reopened = new JsonStore(dir); await reopened.load(); assert.deepEqual(reopened.data.automations, []); assert.equal(reopened.data.automationRuns.length, 1);

@@ -27,7 +27,7 @@ test('failed mixed settings retain the live worker and all committed preferences
   const runningPid = await pid();
   expect(runningPid).toBeTruthy();
   const before = (await fixture.snapshot()).data.settings;
-  const patch = { theme: 'dark' as const, fontSize: 17, providers: before.providers.map(provider => ({ ...provider, model: 'after-retry' })) };
+  const patch = { theme: 'dark' as const, fontSize: 17, models: before.models.map(model => ({ ...model, model: 'after-retry' })) };
   const blocked = join(fixture.storage, 'desktop.json.tmp');
   await mkdir(blocked);
   try {
@@ -52,14 +52,14 @@ test('failed mixed settings retain the live worker and all committed preferences
 test('failed provider and MCP removal restores credentials and retry persists their removal', async () => {
   const server = mcpSchema.parse({ id: 'local-mcp', name: '本地测试', transport: 'stdio', command: process.execPath, enabled: false });
   await fixture.invoke({ op: 'settings.patch', patch: { mcpServers: [server] } });
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'provider-fake-secret' });
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'provider-fake-secret' });
   await fixture.invoke({ op: 'mcp.secret', id: server.id, value: { TOKEN: 'mcp-fake-secret' } });
   const before = (await fixture.snapshot()).data.settings;
   const encrypted = await readFile(join(fixture.storage, 'secrets.json'), 'utf8');
   const blocked = join(fixture.storage, 'desktop.json.tmp');
   await mkdir(blocked);
   try {
-    await expect(fixture.invoke({ op: 'settings.patch', patch: { providers: [], mcpServers: [] } })).rejects.toThrow(/EISDIR|EPERM|EACCES/);
+    await expect(fixture.invoke({ op: 'settings.patch', patch: { modelProviders: [], models: [], mcpServers: [] } })).rejects.toThrow(/EISDIR|EPERM|EACCES/);
     expect((await fixture.snapshot()).data.settings).toEqual(before);
     expect(await readFile(join(fixture.storage, 'secrets.json'), 'utf8')).toBe(encrypted);
     await expect(access(join(fixture.storage, 'secrets-removal.json'))).rejects.toMatchObject({ code: 'ENOENT' });
@@ -67,14 +67,14 @@ test('failed provider and MCP removal restores credentials and retry persists th
   await fixture.invoke({ op: 'thread.send', id: 't', text: '失败后仍可使用原密钥', attachments: [] });
   await expect.poll(() => fixture.authorizations.at(-1)).toBe('Bearer provider-fake-secret');
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('idle');
-  await fixture.invoke({ op: 'settings.patch', patch: { providers: [], mcpServers: [] } });
+  await fixture.invoke({ op: 'settings.patch', patch: { modelProviders: [], models: [], mcpServers: [] } });
   expect(JSON.parse(await readFile(join(fixture.storage, 'secrets.json'), 'utf8'))).toEqual({});
   await fixture.restart();
-  expect((await fixture.snapshot()).data.settings).toMatchObject({ providers: [], mcpServers: [] });
+  expect((await fixture.snapshot()).data.settings).toMatchObject({ modelProviders: [], models: [], mcpServers: [] });
 });
 
 test('credential write failures retain the UI draft and preference saves do not require decryption', async () => {
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'old-fake-key' });
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'old-fake-key' });
   const encrypted = await readFile(join(fixture.storage, 'secrets.json'), 'utf8');
   await fixture.page.keyboard.press('Control+,');
   await fixture.page.getByLabel(/^API Key/).fill('new-fake-key');
@@ -99,22 +99,22 @@ test('credential write failures retain the UI draft and preference saves do not 
   await fixture.invoke({ op: 'settings.patch', patch: { theme: 'dark', followUpMode: 'steer' } });
   expect((await fixture.snapshot()).data.settings).toMatchObject({ theme: 'dark', followUpMode: 'steer' });
   await fixture.restart();
-  expect((await fixture.snapshot()).data.settings.providers[0].hasKey).toBe(true);
+  expect((await fixture.snapshot()).data.settings.modelProviders[0].hasKey).toBe(true);
   await fixture.invoke({ op: 'thread.send', id: 't', text: '重启后使用新密钥', attachments: [] });
   await expect.poll(() => fixture.authorizations.at(-1)).toBe('Bearer new-fake-key');
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('idle');
 });
 
 test('stale model and MCP forms cannot create orphan credentials', async () => {
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'existing-fake-key' });
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'existing-fake-key' });
   const before = await readFile(join(fixture.storage, 'secrets.json'), 'utf8');
-  await expect(fixture.invoke({ op: 'provider.key', id: 'removed-provider', key: 'orphan-fake-key' })).rejects.toThrow(/模型配置已不存在/);
+  await expect(fixture.invoke({ op: 'provider.key', id: 'removed-provider', key: 'orphan-fake-key' })).rejects.toThrow(/模型提供商已不存在/);
   await expect(fixture.invoke({ op: 'mcp.secret', id: 'removed-mcp', value: { TOKEN: 'orphan-fake-secret' } })).rejects.toThrow(/保存 MCP 配置/);
   expect(await readFile(join(fixture.storage, 'secrets.json'), 'utf8')).toBe(before);
 });
 
 test('Electron restart reconciles interrupted credential removal against the saved configuration', async () => {
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'recovery-fake-key' });
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'recovery-fake-key' });
   const path = join(fixture.storage, 'secrets.json');
   const entries = JSON.parse(await readFile(path, 'utf8')) as Record<string, string>;
   const journal = JSON.stringify({ version: 1, entries });
@@ -123,29 +123,31 @@ test('Electron restart reconciles interrupted credential removal against the sav
   await writeFile(join(fixture.storage, 'secrets-removal.json'), journal);
   await writeFile(path, '{}');
   await fixture.restart();
-  expect((await fixture.snapshot()).data.settings.providers[0].hasKey).toBe(true);
+  expect((await fixture.snapshot()).data.settings.modelProviders[0].hasKey).toBe(true);
   await fixture.invoke({ op: 'thread.send', id: 't', text: '恢复后使用模型', attachments: [] });
   await expect.poll(() => fixture.authorizations.at(-1)).toBe('Bearer recovery-fake-key');
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('idle');
-  await fixture.invoke({ op: 'settings.patch', patch: { providers: [] } });
+  await fixture.invoke({ op: 'settings.patch', patch: { modelProviders: [], models: [] } });
   // A stale encrypted recovery copy must not restore a credential removed by committed settings.
   await writeFile(path, JSON.stringify(entries));
   await writeFile(join(fixture.storage, 'secrets-removal.json'), journal);
   await fixture.restart();
-  expect((await fixture.snapshot()).data.settings.providers).toEqual([]);
+  expect((await fixture.snapshot()).data.settings.modelProviders).toEqual([]);
   expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({});
   await expect(access(join(fixture.storage, 'secrets-removal.json'))).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
-test('reconfigured model and MCP forms reject stale credential targets without overwriting existing secrets', async () => {
+test('reconfigured provider and MCP forms reject stale credential targets without overwriting existing secrets', async () => {
   const server = mcpSchema.parse({ id: 'local-mcp', name: '本地测试', transport: 'stdio', command: process.execPath, enabled: false });
   await fixture.invoke({ op: 'settings.patch', patch: { mcpServers: [server] } });
-  const provider = (await fixture.snapshot()).data.settings.providers[0];
+  const provider = (await fixture.snapshot()).data.settings.modelProviders[0];
   await fixture.invoke({ op: 'provider.key', id: provider.id, key: 'existing-fake-key', base: provider });
   await fixture.invoke({ op: 'mcp.secret', id: server.id, value: { TOKEN: 'existing-mcp-secret' }, base: server });
+  const updated = { ...provider, name: '重命名后的验收模型' }; const changedServer = { ...server, args: ['different-server.js'] };
+  await fixture.invoke({ op: 'settings.patch', patch: { modelProviders: [updated], mcpServers: [changedServer] } });
+  // Saving the reconfigured server retires the credential of its previous target, so the stale
+  // writes below are compared against what the vault holds after that save.
   const before = await readFile(join(fixture.storage, 'secrets.json'), 'utf8');
-  const updated = { ...provider, model: 'new-model' }; const changedServer = { ...server, args: ['different-server.js'] };
-  await fixture.invoke({ op: 'settings.patch', patch: { providers: [updated], mcpServers: [changedServer] } });
   await expect(fixture.invoke({ op: 'provider.key', id: provider.id, key: 'stale-key', base: provider })).rejects.toThrow(/其他位置修改/);
   await expect(fixture.invoke({ op: 'mcp.secret', id: server.id, value: { TOKEN: 'stale-secret' }, base: server })).rejects.toThrow(/其他位置修改/);
   expect(await readFile(join(fixture.storage, 'secrets.json'), 'utf8')).toBe(before);
@@ -157,19 +159,24 @@ test('reconfigured model and MCP forms reject stale credential targets without o
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('idle');
 });
 
-test('a concurrent model change keeps the UI key draft and refuses silent reassignment after saving preferences', async () => {
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'old-fake-key' });
+test('a concurrent provider change keeps the UI key draft and refuses silent reassignment after saving preferences', async () => {
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'old-fake-key' });
   const before = await readFile(join(fixture.storage, 'secrets.json'), 'utf8');
   await fixture.page.keyboard.press('Control+,');
   const input = fixture.page.getByLabel(/^API Key/);
   await input.fill('unsaved-fake-key'); await expect(input).toHaveValue('unsaved-fake-key');
-  const provider = (await fixture.snapshot()).data.settings.providers[0];
-  await fixture.invoke({ op: 'settings.patch', patch: { providers: [{ ...provider, model: 'new-model' }] } });
+  const stored = (await fixture.snapshot()).data.settings;
+  const provider = stored.modelProviders[0];
+  await fixture.invoke({ op: 'settings.patch', patch: {
+    modelProviders: [{ ...provider, name: '并发修改的验收模型' }],
+    models: stored.models.map(model => ({ ...model, model: 'new-model' })),
+  } });
   await fixture.page.getByRole('button', { name: '保存设置' }).click();
   await expect(fixture.page.locator('.settings-footer [role=status]')).toContainText('其他位置修改');
   await expect(input).toHaveValue('unsaved-fake-key');
   expect(await readFile(join(fixture.storage, 'secrets.json'), 'utf8')).toBe(before);
-  await expect(fixture.page.getByLabel('模型 ID', { exact: true })).toHaveValue('new-model');
+  await expect(fixture.page.getByLabel('显示名称', { exact: true })).toHaveValue('并发修改的验收模型');
+  await expect(fixture.page.locator('.model-row-id')).toHaveText('new-model');
   // The user can review the now-visible configuration before explicitly retrying.
   await fixture.page.getByRole('button', { name: '保存设置' }).click();
   await expect(fixture.page.locator('.settings-footer [role=status]')).toHaveText('设置已保存');

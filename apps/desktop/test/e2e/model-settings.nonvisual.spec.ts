@@ -19,39 +19,51 @@ test.afterEach(async () => {
 
 test('exclusive connection modes persist across Electron restarts and reach only the fake provider', async () => {
   await fixture.page.keyboard.press('Control+,');
-  await expect(fixture.page.getByRole('radio', { name: '自定义接口', exact: true })).toBeChecked();
+  // The fixture provider points at the loopback server, so its connection shows an endpoint and no catalog namespace.
   await expect(fixture.page.getByLabel('Base URL', { exact: true })).toHaveValue(fixture.url + '/v1');
-  await fixture.page.getByRole('radio', { name: '内置供应商', exact: true }).check();
+  await expect(fixture.page.getByLabel('供应商', { exact: true })).toHaveCount(0);
+  // A built-in provider keeps a Pi catalog namespace instead of an endpoint, and its models come from that catalog.
+  await fixture.page.getByRole('button', { name: '添加提供商' }).click();
   await fixture.page.getByLabel('供应商', { exact: true }).selectOption('opencode-go');
-  await fixture.page.getByLabel('内置模型', { exact: true }).selectOption('deepseek-v4.1-flash');
-  await expect(fixture.page.getByLabel('Base URL', { exact: true })).toHaveCount(0);
+  await fixture.page.getByRole('button', { name: '创建提供商' }).click();
+  await fixture.page.getByRole('button', { name: '添加模型' }).click();
+  await fixture.page.locator('.model-catalog-options input[value="deepseek-v4.1-flash"]').check();
+  await fixture.page.getByRole('button', { name: '添加所选模型' }).click();
   await fixture.page.getByRole('button', { name: '保存设置' }).click();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
-  expect((await fixture.snapshot()).data.settings.providers[0]).toMatchObject({
-    id: 'local', custom: false, provider: 'opencode-go', model: 'deepseek-v4.1-flash', baseUrl: '',
-  });
+  const builtin = (await fixture.snapshot()).data.settings;
+  expect(builtin.modelProviders.at(-1)).toMatchObject({ kind: 'builtin', namespace: 'opencode-go', baseUrl: '' });
+  expect(builtin.models.at(-1)).toMatchObject({ provider: builtin.modelProviders.at(-1)?.id, model: 'deepseek-v4.1-flash' });
   expect(fixture.calls).toHaveLength(0);
   await fixture.restart();
   await fixture.page.keyboard.press('Control+,');
-  await expect(fixture.page.getByRole('radio', { name: '内置供应商', exact: true })).toBeChecked();
-  await expect(fixture.page.getByLabel('内置模型', { exact: true })).toHaveValue('deepseek-v4.1-flash');
-  await fixture.page.getByRole('radio', { name: '自定义接口', exact: true }).check();
+  await fixture.page.getByRole('tab', { name: 'opencode-go' }).click();
+  await expect(fixture.page.getByLabel('供应商', { exact: true })).toHaveValue('opencode-go');
+  // A built-in connection keeps its optional endpoint override collapsed, so the field is hidden.
+  await expect(fixture.page.getByLabel('Base URL', { exact: true })).toBeHidden();
+  await expect(fixture.page.locator('.model-row-id')).toHaveText('deepseek-v4.1-flash');
+  // The custom connection keeps its endpoint, protocol and credential across restarts.
+  await fixture.page.getByRole('tab', { name: '验收模型' }).click();
   await fixture.page.getByLabel('Base URL', { exact: true }).fill(fixture.url + '/v1');
+  await fixture.page.locator('.model-row-toggle').first().click();
   await fixture.page.getByLabel('模型 ID', { exact: true }).fill('acceptance');
   await fixture.page.getByLabel(/^API Key/).fill('model-settings-fake-key');
   await fixture.page.getByRole('button', { name: '保存设置' }).click();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
-  expect((await fixture.snapshot()).data.settings.providers[0]).toMatchObject({
-    id: 'local', custom: true, provider: 'desktop-local', model: 'acceptance', baseUrl: fixture.url + '/v1', hasKey: true,
+  expect((await fixture.snapshot()).data.settings.modelProviders[0]).toMatchObject({
+    id: 'local-provider', kind: 'custom', namespace: 'desktop-local-provider', baseUrl: fixture.url + '/v1', hasKey: true,
+  });
+  expect((await fixture.snapshot()).data.settings.models[0]).toMatchObject({
+    id: 'local', provider: 'local-provider', model: 'acceptance',
   });
   expect(await readFile(join(fixture.storage, 'secrets.json'), 'utf8')).not.toContain('model-settings-fake-key');
   await fixture.restart();
   await fixture.page.keyboard.press('Control+,');
-  await expect(fixture.page.getByRole('radio', { name: '自定义接口', exact: true })).toBeChecked();
   await expect(fixture.page.getByLabel('Base URL', { exact: true })).toHaveValue(fixture.url + '/v1');
+  await expect(fixture.page.getByLabel('供应商', { exact: true })).toHaveCount(0);
+  await fixture.page.locator('.model-row-toggle').first().click();
   await expect(fixture.page.getByLabel('模型 ID', { exact: true })).toHaveValue('acceptance');
   await expect(fixture.page.getByLabel(/^API Key/)).toHaveValue('');
-  await expect(fixture.page.getByLabel('供应商', { exact: true })).toHaveCount(0);
   await fixture.page.getByRole('button', { name: '返回工作台' }).click();
   await fixture.invoke({ op: 'thread.send', id: 't', text: '验证自定义连接', attachments: [] });
   await expect.poll(() => fixture.calls.length).toBe(1);
@@ -61,7 +73,8 @@ test('exclusive connection modes persist across Electron restarts and reach only
 
 test('allowed thinking levels reach the provider and persist through model changes and Electron restart', async () => {
   await fixture.page.keyboard.press('Control+,');
-  await fixture.page.locator('.connection-advanced summary').click();
+  // Model capabilities live under the provider: open its model to allow the reasoning levels.
+  await fixture.page.locator('.model-row-toggle').first().click();
   await fixture.page.getByRole('checkbox', { name: /^支持思考/ }).check();
   const levels = ['low', 'high', 'xhigh', 'max'] as const;
   for (const level of ['off', 'minimal', 'medium'])
@@ -91,7 +104,7 @@ test('allowed thinking levels reach the provider and persist through model chang
   }
   await fixture.restart();
   expect((await fixture.snapshot()).data.threads[0].thinking).toBe('max');
-  expect((await fixture.snapshot()).data.settings.providers[0].thinkingLevels).toEqual(levels);
+  expect((await fixture.snapshot()).data.settings.models[0].thinkingLevels).toEqual(levels);
   await expect(fixture.page.getByLabel('模型与能力', { exact: true })).toContainText('最高');
   await fixture.page.getByLabel('向 Pi 发送消息').fill('重启后继续最高程度');
   await fixture.page.getByLabel('发送消息', { exact: true }).click();
@@ -99,6 +112,7 @@ test('allowed thinking levels reach the provider and persist through model chang
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('idle');
   expect(fixture.calls[4].reasoning_effort).toBe('max');
   await fixture.page.keyboard.press('Control+,');
+  await fixture.page.locator('.model-row-toggle').first().click();
   for (const level of ['low', 'xhigh', 'max'])
     await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).uncheck();
   await fixture.page.getByRole('button', { name: '保存设置' }).click();
@@ -108,13 +122,13 @@ test('allowed thinking levels reach the provider and persist through model chang
   await fixture.invoke({ op: 'thread.create', projectId: 'p', worktree: false });
   expect((await fixture.snapshot()).data.threads.every((thread) => thread.thinking === 'high')).toBe(true);
   const { settings } = (await fixture.snapshot()).data;
-  settings.providers.push({ ...settings.providers[0], id: 'low-only', name: '低档模型', thinkingLevels: ['low'] });
+  settings.models.push({ ...settings.models[0], id: 'low-only', name: '低档模型', thinkingLevels: ['low'] });
   await fixture.invoke({ op: 'settings.save', settings });
-  await fixture.invoke({ op: 'thread.update', id: 't', providerId: 'low-only' });
+  await fixture.invoke({ op: 'thread.update', id: 't', modelId: 'low-only' });
   expect((await fixture.snapshot()).data.threads.find(({ id }) => id === 't')?.thinking).toBe('low');
-  await fixture.invoke({ op: 'thread.update', id: 't', providerId: 'local' });
+  await fixture.invoke({ op: 'thread.update', id: 't', modelId: 'local' });
   expect((await fixture.snapshot()).data.threads.find(({ id }) => id === 't')?.thinking).toBe('high');
-  settings.providers[0].reasoning = false;
+  settings.models[0].reasoning = false;
   await fixture.invoke({ op: 'settings.save', settings });
   expect((await fixture.snapshot()).data.threads.find(({ id }) => id === 't')?.thinking).toBe('off');
 });
@@ -122,9 +136,9 @@ test('allowed thinking levels reach the provider and persist through model chang
 test('model switch is announced once at the first following conversation', async () => {
   const snapshot = await fixture.snapshot();
   const settings = structuredClone(snapshot.data.settings);
-  settings.providers.push({ ...settings.providers[0], id: 'local-2', name: '第二验收模型', model: 'acceptance-2' });
+  settings.models.push({ ...settings.models[0], id: 'local-2', name: '第二验收模型', model: 'acceptance-2' });
   await fixture.invoke({ op: 'settings.save', settings });
-  await fixture.invoke({ op: 'thread.update', id: 't', providerId: 'local-2' });
+  await fixture.invoke({ op: 'thread.update', id: 't', modelId: 'local-2' });
   expect((await fixture.snapshot()).data.threads[0].modelSwitchNotice).toEqual({ from: '验收模型', to: '第二验收模型' });
 
   await fixture.invoke({ op: 'thread.send', id: 't', text: '第一次使用新模型', attachments: [] });

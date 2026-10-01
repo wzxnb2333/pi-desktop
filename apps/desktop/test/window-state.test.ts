@@ -7,7 +7,7 @@ import { WindowState } from '../src/main/window-state.ts';
 
 test('restored child windows resolve to a parent owner without creating another editor', () => {
   const data = defaultData(), id = crypto.randomUUID();
-  data.threads.push(threadSchema.parse({ id: 'child', subtaskId: id, title: 'Child', projectId: '', cwd: 'unused', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' }));
+  data.threads.push(threadSchema.parse({ id: 'child', subtaskId: id, title: 'Child', projectId: '', cwd: 'unused', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' }));
   data.subtasks.push(subtaskSchema.parse({ id, childThreadId: 'child', parentThreadId: 'parent', definition: { title: 'Child', prompt: 'Read', environment: 'local', policy: 'deny' }, context: '', status: 'succeeded', stage: '', createdAt: 1 }));
   const window = (id: number) => ({ id, isDestroyed: () => false, isMinimized: () => false, show() {}, focus() {} }) as unknown as BrowserWindow;
   const main = window(1), restored = window(2), state = new WindowState(() => data);

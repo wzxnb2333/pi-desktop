@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { providerSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
+import { modelProviderSchema, providerModelSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
 import type { WorkerConfig, WorkerEvent } from '../src/shared/worker-protocol.ts';
 import { DesktopAgent } from '../src/worker/agent.ts';
 
@@ -54,13 +54,18 @@ test(
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
     assert.ok(address && typeof address !== 'string');
-    const provider = providerSchema.parse({
-      id: 'fake',
+    const provider = modelProviderSchema.parse({
+      id: 'fake-provider',
       name: 'Fake',
-      provider: 'desktop-test',
-      model: 'fake-model',
-      custom: true,
+      kind: 'custom',
+      namespace: 'desktop-fake-provider',
       baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    });
+    const model = providerModelSchema.parse({
+      id: 'fake',
+      provider: 'fake-provider',
+      name: 'Fake',
+      model: 'fake-model',
       reasoning: false,
     });
     const config: WorkerConfig = {
@@ -71,12 +76,13 @@ test(
         cwd: root,
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        providerId: 'fake',
+        modelId: 'fake',
         thinking: 'off',
         policy: 'ask',
       }),
       trusted: false,
-      provider,
+      model,
+      modelProvider: provider,
       apiKey: 'fake-key',
       settings: settingsSchema.parse({}),
       mcp: [],
@@ -199,19 +205,24 @@ for (const mode of ['reject', 'deny', 'plan'] as const) {
           cwd: root,
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          providerId: 'fake',
+          modelId: 'fake',
           thinking: 'off',
           policy: mode === 'deny' ? 'deny' : 'ask',
           planMode: mode === 'plan',
         }),
         trusted: true,
-        provider: providerSchema.parse({
+        model: providerModelSchema.parse({
           id: 'fake',
+          provider: 'fake-provider',
           name: 'fake',
-          provider: `fake-${mode}`,
           model: 'fake',
-          custom: true,
           reasoning: false,
+        }),
+        modelProvider: modelProviderSchema.parse({
+          id: 'fake-provider',
+          name: 'fake',
+          kind: 'custom',
+          namespace: 'desktop-fake-provider',
           baseUrl: `http://127.0.0.1:${address.port}/v1`,
         }),
         settings: settingsSchema.parse({}),

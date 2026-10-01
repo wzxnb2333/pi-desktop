@@ -10,7 +10,7 @@ declare global {
   interface Window { sitesHarness: { calls: DesktopRequest[]; hold: boolean; release(error?: string): void; locale(locale: 'zh-CN' | 'en-US'): void; }; }
 }
 const params = new URLSearchParams(location.search);
-let data = dataSchema.parse({ version: 2, projects: [], threads: [], automations: [],
+let data = dataSchema.parse({ version: 3, projects: [], threads: [], automations: [],
   settings: { theme: params.get('theme') || 'light', browserSitePolicies: { 'https://existing.example': 'deny' } },
   ui: { locale: params.get('locale') || 'zh-CN' },
 });

@@ -13,7 +13,7 @@ async function fixture(t: TestContext) {
   await mkdir(project); await mkdir(extra);
   await writeFile(join(project, 'entry.ts'), 'first\nsecond\nthird\n');
   await writeFile(join(extra, 'entry.ts'), 'extra directory\n');
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: project, title: 'Task', createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'deny' });
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: project, title: 'Task', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'deny' });
   const ui = uiSchema.parse({ activeThreadId: 't', view: 'thread', reviewOpen: true, summaryOpen: false, threads: { t: {
     selectedPath: 'README.md', openFiles: ['README.md'], draft: { text: 'DRAFT', attachments: ['picked.png'] },
     scroll: { itemId: 'older-message', offset: 35, follow: false }, panelTabs: [{ id: 'custom-changes', kind: 'changes' }],

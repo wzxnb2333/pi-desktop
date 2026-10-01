@@ -118,7 +118,7 @@ export function ReviewFindings() {
       <label>{tr('审查范围')}<select value={scope} onChange={event => updateControls(fileScopeId, { scope: event.target.value as typeof scope })}><option value="uncommitted">{tr('未提交改动')}</option><option value="branch">{tr('对比基准分支')}</option><option value="commit">{tr('指定提交')}</option></select></label>
       {scope !== 'uncommitted' && <label>{scope === 'branch' ? tr('基准分支') : tr('提交引用')}<input value={ref} onChange={event => updateControls(fileScopeId, { ref: event.target.value })} required maxLength={3000} /></label>}
       <label>{tr('自定义审查要求')}<textarea value={instructions} maxLength={20000} onChange={event => updateControls(fileScopeId, { instructions: event.target.value })} /></label>
-      <button type="submit" disabled={starting || anyBusy || !thread?.projectId || !thread.providerId}>{tr('开始只读审查')}</button>
+      <button type="submit" disabled={starting || anyBusy || !thread?.projectId || !thread.modelId}>{tr('开始只读审查')}</button>
       {starting && <p role="status">{tr('正在启动审查…')}</p>}
     </form>
     {runs.length > 0 && <label>{tr('审查记录')}<select value={run?.id ?? ''} onChange={event => { snapshotRequest.current++; locationRequest.current++; setReading(''); updateControls(fileScopeId, { selected: event.target.value }); setCaptured(undefined); }}>{runs.map(item => <option key={item.id} value={item.id}>{new Date(item.createdAt).toLocaleString()} · {item.review?.ref || tr('未提交改动')}</option>)}</select></label>}

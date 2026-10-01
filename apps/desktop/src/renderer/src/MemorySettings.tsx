@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DesktopData, DesktopRequest, Settings } from '../../shared/contracts.ts';
 import { memoryEntrySchema, memorySnapshotSchema, memoryScopeKey, type MemoryEntry, type MemoryScope, type MemorySnapshot } from '../../shared/memories.ts';
 import { localizeAppError, localizeLabel, tr } from '../../shared/localization.ts';
+import { findModel } from '../../shared/model-configuration.ts';
 import { useLocale } from './hooks/use-locale.ts';
 import { Button } from './components/primitives/button.tsx';
 import { FieldRow } from './components/primitives/field-row.tsx';
@@ -120,7 +121,7 @@ export function MemorySettings({ data, preferences, onChange, invoke, active, on
     </div>}
     <div className="memory-entries">{visible.map(entry => <article className="config-card memory-entry" key={entry.id}>
       <div className="row"><strong>{entry.status === 'candidate' ? tr('待确认候选') : tr('已确认记忆')}</strong><span>{entry.enabled ? tr('已启用') : tr('已暂停')}</span></div><p>{entry.text}</p>
-      <details><summary>{tr('查看记忆来源')}</summary><p>{entry.source.kind === 'manual' ? tr('手动创建') : data.threads.find(thread => thread.id === entry.source.threadId && !thread.deletedAt)?.title ?? tr('源聊天已删除')}</p><time>{new Date(entry.source.createdAt).toLocaleString()}</time>{entry.source.providerId && <p>{entry.source.providerId}</p>}{entry.source.messageIds.map(id => <code key={id}>{id}</code>)}</details>
+      <details><summary>{tr('查看记忆来源')}</summary><p>{entry.source.kind === 'manual' ? tr('手动创建') : data.threads.find(thread => thread.id === entry.source.threadId && !thread.deletedAt)?.title ?? tr('源聊天已删除')}</p><time>{new Date(entry.source.createdAt).toLocaleString()}</time>{entry.source.providerId && <p>{findModel(data.settings, entry.source.providerId)?.name ?? entry.source.providerId}</p>}{entry.source.messageIds.map(id => <code key={id}>{id}</code>)}</details>
       <div className="row"><Button disabled={busy || !!draft} onClick={() => edit(entry)}>{tr('编辑或确认')}</Button><Button disabled={busy} variant="danger" onClick={() => { setFeedback(undefined); setConfirm({ kind: 'entry', entry }); }}>{tr('删除这条记忆')}</Button></div>
     </article>)}</div>
     {loaded && !loading && !readError && !visible.length && <p className="hint">{tr('没有匹配的记忆')}</p>}

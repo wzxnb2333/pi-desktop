@@ -152,6 +152,26 @@
 .model-privacy-note { margin-top: 0; font-size: 12px; line-height: 18px; }
 .model-search-empty { color: var(--muted); font-size: 12px; padding: 8px 4px; }
 .model-editor .model-remove { color: var(--danger); }
+.model-empty { margin: 0 0 12px; }
+.model-list { list-style: none; margin: 0; padding: 0; }
+.model-row { border-top: 1px solid var(--border); padding-block: 10px; }
+.model-row:first-child { border-top: 0; }
+.model-row-heading { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.model-row-toggle { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.model-row-toggle:hover { background: var(--hover); }
+.model-row-toggle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.model-row-name { font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-row-id { color: var(--muted); font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
+.model-row-capabilities { flex: none; max-width: 38%; color: var(--muted); font-size: 11px; line-height: 16px; text-align: right; }
+.model-row-editor { margin-top: 4px; padding-inline: 6px; }
+.model-add-model { margin-top: 12px; }
+.model-add-panel { margin-top: 12px; padding-block: 12px; border-top: 1px solid var(--border); }
+.model-add-panel .row { display: flex; gap: 8px; margin-top: 12px; }
+.model-catalog-options { list-style: none; margin: 8px 0 0; padding: 0; max-height: 260px; overflow-y: auto; }
+.model-catalog-option { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-radius: 10px; cursor: pointer; }
+.model-catalog-option:hover { background: var(--hover); }
+.model-catalog-option > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; line-height: 18px; }
+.model-catalog-option small { color: var(--muted); font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
 .model-connection { padding-block: 16px; }
 .connection-modes {
   display: grid;

@@ -571,3 +571,20 @@
 - 线程切换模型后，下一次真正发送的会话轮次会插入一次模型切换分隔提示；排队消息、同一模型更新和后续轮次不会重复显示，提示按当前语言本地化。
 - 新增 activity 与 model-settings 定向回归；本轮功能项完成，Goal 仍 active，H-40/H-41 不代表整体 Goal 完成。
 
+
+## 模型配置：提供商与模型两级（2026-10-01，本地时间）
+
+- 设置页的模型配置改为两级：先添加模型提供商（一个连接 + 一份密钥），再在该提供商下添加模型。内置供应商从目录复选添加模型并复制能力，自定义提供商手填模型 ID、上下文窗口、输出上限与思考档位。
+- `settings.providers` 拆成 `settings.modelProviders` 与 `settings.models`：提供商保存 kind（builtin/custom）、命名空间、Base URL、协议和密钥状态；模型通过 `provider` 字段归属提供商。API Key 由模型级提升为提供商级，同提供商下所有模型共用。
+- 任务引用改为 `thread.modelId`（模型 id 与旧配置一致，历史、子任务、审查、侧聊不变），默认模型改为 `settings.modelId`，自动化执行模型改为 `execution.modelId`。
+- `DATA_VERSION` 2 → 3：迁移按“连接 + 密钥指纹”分组，连接与密钥都相同的记录合并为一个提供商，密钥不同则拆成多个提供商，避免把两把密钥合并成一把；密钥密文从 `provider:<模型 id>` 搬到 `provider:<提供商 id>`（只搬密文），迁移前原文件按既有约定保存为 `desktop.pre-migration-v2-<hash>.json`。
+- 任务栏模型菜单改为两级：先选提供商再选模型；审批审查、记忆生成和 Worker 共用 `shared/model-runtime.ts` 的 `registerConfiguredModel` 注册所选模型，行为与旧的单条记录一致。
+- 主进程在保存设置时兜底删除失去提供商的模型并重新指向默认模型；删除提供商同时清除其密钥。
+- 定向验证：`npm run desktop:check` 通过；单元测试 `npm run test`（apps/desktop）653/654，唯一失败是本轮无关的 Git 取消文案断言（test/workbench-services.test.ts，未修改该文件，单独运行同样失败）；定向套件 settings、models、settings-layout、settings-storage、storage、composer、dialogs、automation、harness、cleanup 均退出 0；四份设置相关 Playwright 规格 55/55 通过（settings.spec.ts 27、form-navigation.spec.ts 17、model-settings.nonvisual.spec.ts 3、settings-persistence.nonvisual.spec.ts 8）。
+- 修复启动顺序：原先在 `store.load()` 之前读取密钥指纹会顺带回放凭据删除日志，此时配置为空会把仍被引用的密钥判为孤立并永久丢失；现在 `providerFingerprints()` 只读，`vault.recover()` 在加载配置之后调用，并新增单元回归 test/data-migrations.test.ts。（由定向 Playwright 发现）
+
+## 时间线：桌面接口标记与思考自动跟随（2026-10-01，本地时间）
+
+- 桌面接口（Harness）工具调用不再显示“桌面接口”字样：移除来源标签与专用措辞，改用 π 图标标记，调用名称、参数与输出保持不变，分组摘要计入“次工具调用”。
+- 流式思考预览（`.thinking-preview` 的 8.75rem 滚动框）现在自动跟随到最新一行；读者滚动后保持其位置，重新滚到底部即恢复跟随，手势期间不抢滚动。
+- 修复主时间线的跟随判定：过去只要“距底部超过 100px”就判定读者离开，而流式内容在滚动事件晚一帧到达时会触发该判定，导致思考过程不再自动跟随；现在只有“位置确实移动且不在底部”才算读者滚动，增长本身不解除跟随。

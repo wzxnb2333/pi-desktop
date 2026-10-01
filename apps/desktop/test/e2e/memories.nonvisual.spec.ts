@@ -44,7 +44,7 @@ test('memory settings preserve bilingual drafts and isolate project context acro
 });
 
 test('actual memory inference excludes tools and attachments, preserves sources and requires explicit approval', async () => {
-  await fixture.invoke({ op: 'provider.key', id: 'local', key: 'private-credential-123' });
+  await fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'private-credential-123' });
   fixture.requestTool('read', { path: 'README.md' }); await send('以后请使用中文\nAPI_KEY=private-credential-123'); await idle();
   const source = (await fixture.snapshot()).data.threads[0].items.find(item => item.role === 'user')!;
   fixture.setReply(JSON.stringify({ memories: [{ text: '用户希望使用简体中文', messageIds: [source.id] }, { text: 'password=must-never-save', messageIds: [source.id] }] }));
@@ -135,7 +135,7 @@ test('memory preparation waiting for credentials remains visible and cancellable
     fs.writeFile = async (...args: Parameters<typeof write>) => { if (String(args[0]) === path && !gate.waiting) { gate.waiting = true; await wait; } return write(...args); };
     syncBuiltinESMExports();
   }, join(fixture.storage, 'secrets.json.tmp'));
-  const credentialWrite = fixture.invoke({ op: 'provider.key', id: 'local', key: 'fixture-generation-key' }); const count = fixture.calls.length;
+  const credentialWrite = fixture.invoke({ op: 'provider.key', id: 'local-provider', key: 'fixture-generation-key' }); const count = fixture.calls.length;
   try {
     await expect.poll(() => fixture.app.evaluate(() => (globalThis as typeof globalThis & { memoryWriteGate?: MemoryWriteGate }).memoryWriteGate?.waiting)).toBe(true);
     await ui.getByRole('button', { name: '从聊天生成候选', exact: true }).click();

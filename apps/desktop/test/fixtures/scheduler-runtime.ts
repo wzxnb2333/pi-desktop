@@ -5,7 +5,7 @@ import { defaultData, threadSchema, type AutomationRun } from '../../src/shared/
 export function schedulerFixture() {
   const data = defaultData(), errors: unknown[] = [], calls: AutomationRun[] = [];
   let failSave = false, saveHook = async () => {}, run = async (_run: AutomationRun, _signal: AbortSignal) => {};
-  const thread = (id: string) => threadSchema.parse({ id, projectId: 'p', title: id, cwd: 'unused', createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'ask' });
+  const thread = (id: string) => threadSchema.parse({ id, projectId: 'p', title: id, cwd: 'unused', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'ask' });
   data.threads.push(thread('t'));
   const runtime: ConstructorParameters<typeof Scheduler>[0] = { state: () => data, threads: () => data.threads,
     busy: current => ['running', 'waiting'].includes(current.status),

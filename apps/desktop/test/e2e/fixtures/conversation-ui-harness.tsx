@@ -1,13 +1,13 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '../../../src/renderer/src/App.tsx';
-import { defaultData, projectSchema, providerSchema, threadSchema, timelineSchema, type DesktopData, type DesktopEvent, type DesktopRequest, type Thread } from '../../../src/shared/contracts.ts';
+import { defaultData, modelProviderSchema, projectSchema, providerModelSchema, threadSchema, timelineSchema, type DesktopData, type DesktopEvent, type DesktopRequest, type Thread } from '../../../src/shared/contracts.ts';
 import { applyUiPatch } from '../../../src/shared/ui-patches.ts';
 import '../../../src/renderer/src/styles/index.css';
 
 export const quoteText = ['第一段 重复片段。', '', '第二段 重复片段 与 **加粗内容**，还有 `const value = 1`。', '', '```typescript', 'const repeated = "重复片段";', 'console.log(repeated);', '```', '', '| 检查 | 内容 |', '| --- | --- |', '| 来源 | 表格内容 |', '', '转义：&amp; 与 \\*星号\\*。'].join('\n');
 let data: DesktopData = defaultData();
-const makeThread = (id: string, title: string, projectId = 'p') => threadSchema.parse({ id, title, projectId, cwd: 'C:/fixture', providerId: 'fake', thinking: 'off', policy: 'ask', createdAt: 1, updatedAt: 2, items: [timelineSchema.parse({ id: id + '-answer', role: 'assistant', timestamp: 2, text: '未读内容' })] });
-data = { ...data, projects: [projectSchema.parse({ id: 'p', name: '测试项目', path: 'C:/fixture', createdAt: 1, trusted: true })], settings: { ...data.settings, theme: 'light', providers: [providerSchema.parse({ id: 'fake', name: '测试模型', provider: 'faux', model: 'fake' })] },
+const makeThread = (id: string, title: string, projectId = 'p') => threadSchema.parse({ id, title, projectId, cwd: 'C:/fixture', modelId: 'fake', thinking: 'off', policy: 'ask', createdAt: 1, updatedAt: 2, items: [timelineSchema.parse({ id: id + '-answer', role: 'assistant', timestamp: 2, text: '未读内容' })] });
+data = { ...data, projects: [projectSchema.parse({ id: 'p', name: '测试项目', path: 'C:/fixture', createdAt: 1, trusted: true })], settings: { ...data.settings, theme: 'light', modelId: 'fake', modelProviders: [modelProviderSchema.parse({ id: 'fake-provider', name: '测试模型', kind: 'custom', namespace: 'desktop-fake-provider', baseUrl: 'http://127.0.0.1:9/v1' })], models: [providerModelSchema.parse({ id: 'fake', provider: 'fake-provider', name: '测试模型', model: 'fake', reasoning: false })] },
   threads: [makeThread('t', '主对话'), makeThread('short', '短任务'), makeThread('long', '用于测试省略的非常非常长的任务标题'), makeThread('chat', '独立聊天', '')],
   ui: { ...data.ui, activeThreadId: 't', sidebarWidth: 240, summaryOpen: true } };
 data.threads[0].items = [timelineSchema.parse({ id: 'question', role: 'user', timestamp: 1, text: '核对界面' }), timelineSchema.parse({ id: 'earlier', role: 'assistant', timestamp: 2, text: '更早的内容\n\n'.repeat(45) }), timelineSchema.parse({ id: 'question-2', role: 'user', timestamp: 3, text: '引用这些片段' }), timelineSchema.parse({ id: 'answer', role: 'assistant', timestamp: 4, text: quoteText })];

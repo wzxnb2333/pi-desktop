@@ -156,7 +156,7 @@ test('settings search, category navigation and language switching preserve every
     await expect(page.locator('.settings-footer [role=status]')).toHaveText(translate('en-US', '设置已保存'));
     const requests = await page.evaluate(() => window.formNavigationTest.requests);
     expect(requests.findLast(request => request.op === 'settings.patch')).toMatchObject({ patch: { fontSize: 16, notifications: false, shortcuts: { newThread: 'Ctrl+Alt+N' } } });
-    expect(requests.filter(request => request.op === 'provider.key')).toEqual([{ op: 'provider.key', id: 'local', key: 'fixture-navigation-key', base: expect.objectContaining({ id: 'local', name: '本地模型', provider: 'openai', model: 'gpt-4.1' }) }]);
+    expect(requests.filter(request => request.op === 'provider.key')).toEqual([{ op: 'provider.key', id: 'local-provider', key: 'fixture-navigation-key', base: expect.objectContaining({ id: 'local-provider', name: '本地模型', kind: 'builtin', namespace: 'openai' }) }]);
     expect(await page.evaluate(() => window.formNavigationTest.ui().locale)).toBe('en-US');
   } finally { await page.close(); }
 });
@@ -165,10 +165,16 @@ test('custom model editor keeps long English connection values contained and exp
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   try {
     await page.goto(url + '?locale=en-US&theme=dark');
+    await page.getByRole('button', { name: translate('en-US', '添加提供商'), exact: true }).click();
     await page.getByRole('radio', { name: translate('en-US', '自定义接口'), exact: true }).check();
     await page.getByLabel('Base URL', { exact: true }).fill('https://gateway.example.invalid/team/development/v1');
+    await page.getByRole('button', { name: translate('en-US', '创建提供商'), exact: true }).click();
+    await page.getByRole('button', { name: translate('en-US', '添加模型'), exact: true }).click();
     await page.getByLabel(translate('en-US', '模型 ID'), { exact: true }).fill('workspace-model-with-a-long-service-identifier');
-    await expect(page.locator('.connection-advanced')).not.toHaveAttribute('open', '');
+    await page.getByRole('button', { name: translate('en-US', '添加模型'), exact: true }).click();
+    // Adding a custom model expands its editor; only collapse-to-open when it is still closed.
+    const modelToggle = page.locator('.model-row-toggle').first();
+    if (await modelToggle.getAttribute('aria-expanded') !== 'true') await modelToggle.click();
     await expect(page.locator('.model-key-status')).toHaveText(translate('en-US', '尚未设置密钥'));
     expect(await page.locator('.model-editor').evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
     if (process.env.PI_SETTINGS_REFACTOR_EVIDENCE === '1') {
@@ -176,10 +182,13 @@ test('custom model editor keeps long English connection values contained and exp
       await mkdir(output, { recursive: true });
       await page.screenshot({ path: join(output, 'models-custom-en-dark-1280.png') });
     }
-    await page.locator('.connection-advanced summary').click();
     await expect(page.getByLabel(translate('en-US', '上下文窗口'), { exact: true })).toBeVisible();
+    // A built-in connection keeps its optional endpoint override collapsed until asked for.
+    await page.getByRole('tab', { name: '本地模型' }).click();
+    await expect(page.locator('.connection-advanced')).not.toHaveAttribute('open', '');
     await page.getByRole('button', { name: translate('en-US', '通用'), exact: true }).click();
     await page.getByRole('button', { name: translate('en-US', '模型'), exact: true }).click();
+    await page.getByRole('tab', { name: translate('en-US', '自定义提供商') }).click();
     await expect(page.getByLabel('Base URL', { exact: true })).toHaveValue('https://gateway.example.invalid/team/development/v1');
   } finally { await page.close(); }
 });

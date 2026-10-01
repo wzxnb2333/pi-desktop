@@ -11,7 +11,7 @@ async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-worktree-storage-'));
   const store = new JsonStore(dir); await store.load();
   store.data.projects.push({ id: 'p', name: 'Project', path: dir, trusted: true, createdAt: 1 });
-  store.data.threads.push(threadSchema.parse({ id: 't', projectId: 'p', title: 'Source', cwd: dir, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'ask' }));
+  store.data.threads.push(threadSchema.parse({ id: 't', projectId: 'p', title: 'Source', cwd: dir, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'ask' }));
   const id = crypto.randomUUID();
   store.data.worktrees.push({ id, threadId: 't', projectId: 'p', directoryId: 'p', localPath: dir, path: join(dir, 'worktree'), checkoutPath: join(dir, 'worktree'), branch: 'desktop/test', baseCommit: 'c'.repeat(40), localBaseline: 'a'.repeat(40), worktreeBaseline: 'a'.repeat(40), createdAt: 1, lastUsedAt: 1, status: 'ready' });
   store.data.ui.threads.t = uiThreadSchema.parse({ selectedPath: 'a.txt', openFiles: ['a.txt'], draft: { text: 'Keep draft', attachments: [] } });

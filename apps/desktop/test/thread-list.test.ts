@@ -16,7 +16,7 @@ function thread(id: string, projectId: string, title: string, updatedAt: number,
     createdAt: 1,
     updatedAt,
     archived,
-    providerId: 'fake',
+    modelId: 'fake',
     thinking: 'off',
     policy: 'ask',
   });

@@ -10,7 +10,7 @@ import { mkdtemp } from './fixtures/node-temp.ts';
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-chat-persistence-')), store = new JsonStore(dir); await store.load();
   store.data.projects.push({ id: 'p', name: 'Project', path: join(dir, 'project'), trusted: true, createdAt: 1 });
-  const chat = threadSchema.parse({ id: crypto.randomUUID(), projectId: '', title: 'Chat', cwd: join(dir, 'chat'), createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' });
+  const chat = threadSchema.parse({ id: crypto.randomUUID(), projectId: '', title: 'Chat', cwd: join(dir, 'chat'), createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' });
   await store.save(); return { dir, store, chat, target: { projectId: 'p', directoryId: 'p', cwd: store.data.projects[0].path } };
 }
 

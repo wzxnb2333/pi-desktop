@@ -9,7 +9,7 @@ const records = [0, 1].map(index => subtaskSchema.parse({
   definition: { title: 'Same title', prompt: 'Inspect', environment: 'local' }, context: '', status: 'running', stage: '', createdAt: 10 + index,
 }));
 const tool = (id: string, action: string, text: string, patch: Partial<TimelineItem> = {}): TimelineItem => threadSchema.parse({
-  id: 'parent', projectId: 'p', cwd: 'C:/project', title: 'Parent', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny',
+  id: 'parent', projectId: 'p', cwd: 'C:/project', title: 'Parent', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny',
   items: [{ id, role: 'tool', toolName: 'manage_subtasks', args: JSON.stringify({ action }), text, timestamp: 10, state: 'done', ...patch }],
 }).items[0];
 

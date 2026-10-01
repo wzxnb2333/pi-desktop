@@ -9,7 +9,7 @@ import '../../../src/renderer/src/styles/index.css';
 
 declare global { interface Window { chatRecovery: { calls: DesktopRequest[]; hold: string[]; release(key: string, error?: string): void } } }
 const data = dataSchema.parse({ ...defaultData(), projects: [{ id: 'p', name: 'Project', path: 'C:/project', trusted: true, createdAt: 1 }],
-  threads: ['t', 'other'].map(id => ({ id, projectId: '', title: id, cwd: 'C:/chats/' + id, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' })),
+  threads: ['t', 'other'].map(id => ({ id, projectId: '', title: id, cwd: 'C:/chats/' + id, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' })),
   ui: { activeThreadId: 't', threads: { t: { draft: { text: 'Original draft', attachments: ['image.png'] } }, other: { draft: { text: 'Other draft', attachments: [] } } } },
 });
 const listeners = new Set<(event: DesktopEvent) => void>();

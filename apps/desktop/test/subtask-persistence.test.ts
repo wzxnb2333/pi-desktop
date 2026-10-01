@@ -10,7 +10,7 @@ import { mkdtemp } from './fixtures/node-temp.ts';
 
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-subtask-persistence-')), store = new JsonStore(dir); await store.load();
-  store.data.threads.push(threadSchema.parse({ id: 'p', projectId: '', title: 'Parent', cwd: dir, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' }));
+  store.data.threads.push(threadSchema.parse({ id: 'p', projectId: '', title: 'Parent', cwd: dir, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' }));
   store.data.ui.threads.p = uiThreadSchema.parse({ draft: { text: 'Existing draft', attachments: [] } });
   const record = subtaskSchema.parse({ id: crypto.randomUUID(), parentThreadId: 'p', definition: { title: 'Inspect', prompt: 'Read only', environment: 'local', policy: 'deny' }, context: '', status: 'succeeded', stage: '子任务已完成', result: 'Actual result', createdAt: 1 });
   await store.save(); return { dir, store, record };

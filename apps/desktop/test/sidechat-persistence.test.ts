@@ -10,7 +10,7 @@ import { mkdtemp } from './fixtures/node-temp.ts';
 
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-sidechat-persistence-')), store = new JsonStore(dir); await store.load();
-  const parent = threadSchema.parse({ id: 'p', projectId: '', title: 'Parent', cwd: dir, createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'deny' });
+  const parent = threadSchema.parse({ id: 'p', projectId: '', title: 'Parent', cwd: dir, createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'deny' });
   store.data.threads.push(parent); store.data.ui.threads.p = uiThreadSchema.parse({ draft: { text: 'Parent draft', attachments: ['attachment.txt'] } });
   const side = threadSchema.parse({ ...parent, id: crypto.randomUUID(), title: 'Side', sidechat: captureSidechat(parent), items: [{ id: 'answer', role: 'assistant', text: 'Answer', state: 'done', timestamp: 1 }] });
   await store.save(); return { dir, store, parent, side };

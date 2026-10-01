@@ -29,7 +29,7 @@ import { AutomationsPage } from './automations.tsx';
 import '../../styles/index.css';
 const base = defaultData();
 const job = { id: 'job', name: '日报', projectId: 'p', prompt: '检查', intervalMinutes: 60, enabled: false, nextRunAt: 9000 };
-const thread = (id, status, extra = {}) => threadSchema.parse({ id, title: id, projectId: 'p', cwd: 'C:/project', providerId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2, automationId: 'job', status, ...extra });
+const thread = (id, status, extra = {}) => threadSchema.parse({ id, title: id, projectId: 'p', cwd: 'C:/project', modelId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2, automationId: 'job', status, ...extra });
 let data = { ...base, projects: [projectSchema.parse({ id: 'p', name: '项目', path: 'C:/project', trusted: true, createdAt: 1 })], automations: [job], threads: [thread('completed', 'idle'), thread('failed', 'error'), thread('waiting', 'waiting', { automationId: 'other' }), thread('reviewed', 'idle', { reviewed: true }), thread('deleted', 'idle', { deletedAt: 3 })], ui: { ...base.ui, activeThreadId: 'completed' } };
 const listeners = new Set();
 const calls = [];

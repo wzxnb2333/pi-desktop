@@ -10,7 +10,7 @@ import '../../../src/renderer/src/styles/index.css';
 const params = new URLSearchParams(location.search);
 const scene = params.get('scene');
 const initial = defaultData();
-const data = dataSchema.parse({ ...initial, settings: { ...initial.settings, theme: params.get('theme') || 'light' }, threads: [threadSchema.parse({ id: 't', projectId: 'p', title: '动作 A', cwd: '.', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'auto' }), threadSchema.parse({ id: 't2', projectId: 'p', title: '任务二', cwd: '.', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'auto' })], ui: { ...initial.ui, activeThreadId: 't', threads: JSON.parse(localStorage.getItem('folds') || '{}') } });
+const data = dataSchema.parse({ ...initial, settings: { ...initial.settings, theme: params.get('theme') || 'light' }, threads: [threadSchema.parse({ id: 't', projectId: 'p', title: '动作 A', cwd: '.', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'auto' }), threadSchema.parse({ id: 't2', projectId: 'p', title: '任务二', cwd: '.', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'auto' })], ui: { ...initial.ui, activeThreadId: 't', threads: JSON.parse(localStorage.getItem('folds') || '{}') } });
 let listener: ((event: DesktopEvent) => void) | undefined;
 const bridge: DesktopBridge = {
   async invoke(request) {

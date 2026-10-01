@@ -10,8 +10,8 @@ declare global { interface Window { sidechatRecovery: {
   locale(value: 'zh-CN' | 'en-US'): void; selectThread(id: string): void;
 }; } }
 const params = new URLSearchParams(location.search);
-const parents = ['t', 'other'].map(id => ({ id, projectId: '', title: id, cwd: 'C:/project', createdAt: 1, updatedAt: 1, providerId: 'model', thinking: 'off', policy: 'deny' }));
-const data = dataSchema.parse({ version: 2, projects: [], automations: [],
+const parents = ['t', 'other'].map(id => ({ id, projectId: '', title: id, cwd: 'C:/project', createdAt: 1, updatedAt: 1, modelId: 'model', thinking: 'off', policy: 'deny' }));
+const data = dataSchema.parse({ version: 3, projects: [], automations: [],
   threads: [...parents, ...parents.filter(parent => !params.has('empty') || parent.id !== 't').map(parent => ({ ...parent, id: 'side-' + parent.id,
     sidechat: { parentThreadId: parent.id, parentTitle: parent.title, anchorItemId: '', capturedAt: 1, temporary: true, context: '[]' },
     items: [{ id: 'answer', role: 'assistant', text: 'Side answer ' + parent.id, state: 'done', timestamp: 1 }],

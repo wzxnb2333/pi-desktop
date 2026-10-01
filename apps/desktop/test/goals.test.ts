@@ -7,7 +7,7 @@ import type { Goal } from '../src/shared/goals.ts';
 
 async function until(check: () => boolean) { for (let i = 0; i < 400; i++) { if (check()) return; await delay(5); } assert.fail('Goal did not settle'); }
 function fixture() {
-  const thread = threadSchema.parse({ id: 't', projectId: '', title: 'Goal', cwd: 'unused', createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'deny', plan: [{ text: 'Independent plan', status: 'pending' }] });
+  const thread = threadSchema.parse({ id: 't', projectId: '', title: 'Goal', cwd: 'unused', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'deny', plan: [{ text: 'Independent plan', status: 'pending' }] });
   let run = async () => {}, saveHook = async () => {}, busy = false, saveError = false, calls = 0;
   const errors: unknown[] = [];
   const service = new Goals({ threads: () => [thread], busy: () => busy,

@@ -36,11 +36,13 @@ window.fileEditorTest = {
 const params = new URLSearchParams(location.search);
 if (params.has('staleDirty')) window.fileEditorTest.dirty = true;
 let data = dataSchema.parse({
-  version: 2,
+  version: 3,
   automations: [],
   projects: [{ id: 'p', name: '文件编辑测试', path: 'C:/test/project', trusted: true, createdAt: 1, directories: params.has('directories') ? [{ id: 'extra', name: '附加目录', path: 'C:/test/extra', trusted: true }] : [] }],
-  threads: ['t1', 't2'].map(id => ({ id, projectId: 'p', title: id === 't1' ? '当前任务' : '另一个任务', cwd: 'C:/test/project', createdAt: 1, updatedAt: 1, providerId: 'fake', thinking: 'off', policy: 'ask' })),
-  settings: { theme: params.get('theme') || 'light', providers: [{ id: 'fake', name: '本地测试', provider: 'faux', model: 'fake' }] },
+  threads: ['t1', 't2'].map(id => ({ id, projectId: 'p', title: id === 't1' ? '当前任务' : '另一个任务', cwd: 'C:/test/project', createdAt: 1, updatedAt: 1, modelId: 'fake', thinking: 'off', policy: 'ask' })),
+  settings: { theme: params.get('theme') || 'light', modelId: 'fake',
+    modelProviders: [{ id: 'fake-provider', name: '本地测试', kind: 'builtin', namespace: 'faux', baseUrl: '', api: 'openai-completions', hasKey: false }],
+    models: [{ id: 'fake', provider: 'fake-provider', name: '本地测试', model: 'fake', reasoning: false, contextWindow: 128000, maxTokens: 8192 }] },
   ui: { locale: params.get('locale') || 'zh-CN', activeThreadId: 't1', sidebarWidth: 240, reviewOpen: true, reviewWidth: 520, summaryOpen: false, threads: { t1: { reviewTab: 'files', selectedPath: 'first.txt', openFiles: ['first.txt', 'second.txt'] }, t2: { reviewTab: 'files', selectedPath: 'second.txt', openFiles: ['second.txt'] } } },
 });
 if (params.has('directories')) for (const id of ['t1', 't2']) data.ui.threads[id].directoryViews = { extra: { selectedPath: 'first.txt', openFiles: ['first.txt'] } };

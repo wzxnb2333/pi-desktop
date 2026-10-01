@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import test from 'node:test';
-import { providerSchema } from '../src/shared/contracts.ts';
+import { modelProviderSchema, providerModelSchema } from '../src/shared/contracts.ts';
 import { generateMemories } from '../src/main/memory-generation.ts';
 
 test('memory extraction uses an isolated protocol request and rejects incomplete or tool-bearing output', async () => {
@@ -17,12 +17,13 @@ test('memory extraction uses an isolated protocol request and rejects incomplete
     send({}, finish); response.end('data: [DONE]\n\n');
   });
   await new Promise<void>(done => server.listen(0, '127.0.0.1', done)); const address = server.address(); assert.ok(address && typeof address !== 'string');
-  const provider = providerSchema.parse({ id: 'memory', name: 'Memory', provider: 'memory', model: 'memory', custom: true, reasoning: false, baseUrl: 'http://127.0.0.1:' + address.port + '/v1' });
+  const provider = modelProviderSchema.parse({ id: 'memory-provider', name: 'Memory', kind: 'custom', namespace: 'desktop-memory-provider', baseUrl: 'http://127.0.0.1:' + address.port + '/v1' });
+  const model = providerModelSchema.parse({ id: 'memory', provider: 'memory-provider', name: 'Memory', model: 'memory', reasoning: false });
   const input = { threadId: 't', fingerprint: 'h', messages: [{ id: 'u1', text: 'Use local tests' }] };
   try {
-    assert.deepEqual(await generateMemories(provider, undefined, input, new AbortController().signal), expected);
+    assert.deepEqual(await generateMemories(provider, model, undefined, input, new AbortController().signal), expected);
     assert.equal(requests[0].tools, undefined); assert.deepEqual(requests[0].messages.map(message => message.role), ['system', 'user']); assert.deepEqual(JSON.parse(requests[0].messages[1].content), input.messages);
-    finish = 'length'; await assert.rejects(generateMemories(provider, undefined, input, new AbortController().signal), /有效记忆/);
-    finish = 'stop'; tool = true; await assert.rejects(generateMemories(provider, undefined, input, new AbortController().signal), /有效记忆/);
+    finish = 'length'; await assert.rejects(generateMemories(provider, model, undefined, input, new AbortController().signal), /有效记忆/);
+    finish = 'stop'; tool = true; await assert.rejects(generateMemories(provider, model, undefined, input, new AbortController().signal), /有效记忆/);
   } finally { server.closeAllConnections(); await new Promise<void>(done => server.close(() => done())); }
 });

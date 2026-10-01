@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { type ElectronApplication, _electron as electron, expect, test } from '@playwright/test';
-import { type Bootstrap, defaultData, providerSchema, threadSchema } from '../../src/shared/contracts.ts';
+import { type Bootstrap, defaultData, modelProviderSchema, providerModelSchema, threadSchema } from '../../src/shared/contracts.ts';
 
 let development: Awaited<ReturnType<typeof startDevelopmentSource>>;
 test.beforeAll(async () => {
@@ -86,18 +86,25 @@ test('Windows desktop: streaming, approvals, review, terminals, preview, themes 
     trusted: false,
     createdAt: Date.now(),
   });
-  data.settings.providers.push(
-    providerSchema.parse({
-      id: 'fake',
+  data.settings.modelProviders.push(
+    modelProviderSchema.parse({
+      id: 'fake-provider',
       name: 'Local Test',
-      provider: 'desktop-test',
-      model: 'fake-model',
-      custom: true,
-      reasoning: false,
+      kind: 'custom',
+      namespace: 'desktop-fake-provider',
       baseUrl: `${url}/v1`,
     }),
   );
-  data.settings.providerId = 'fake';
+  data.settings.models.push(
+    providerModelSchema.parse({
+      id: 'fake',
+      provider: 'fake-provider',
+      name: 'Local Test',
+      model: 'fake-model',
+      reasoning: false,
+    }),
+  );
+  data.settings.modelId = 'fake';
   data.settings.theme = 'light';
   data.settings.keepInTray = false;
   data.threads.push(
@@ -108,7 +115,7 @@ test('Windows desktop: streaming, approvals, review, terminals, preview, themes 
       cwd: projectPath,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      providerId: 'fake',
+      modelId: 'fake',
       thinking: 'off',
       policy: 'ask',
     }),
@@ -306,8 +313,12 @@ test('first run registers a project and saves a model key through Windows encryp
     await page.getByRole('button', { name: '添加本地项目' }).click();
     await expect(page.getByRole('heading', { name: '在 新项目 中构建' })).toBeVisible();
     await page.getByRole('button', { name: /配置 API Key 和模型/ }).click();
+    await page.getByRole('button', { name: '添加提供商' }).click();
+    await page.getByLabel('显示名称', { exact: true }).fill('测试提供商');
+    await page.getByRole('button', { name: '创建提供商' }).click();
     await page.getByRole('button', { name: '添加模型' }).click();
-    await page.getByLabel('显示名称', { exact: true }).fill('测试模型');
+    await page.locator('.model-catalog-options').getByRole('checkbox').first().check();
+    await page.getByRole('button', { name: '添加所选模型' }).click();
     await page.getByLabel(/^API Key/).fill('desktop-fake-secret-for-test');
     await page.getByRole('button', { name: '保存设置' }).click();
     await expect(page.getByRole('status')).toContainText('设置已保存');
@@ -315,7 +326,7 @@ test('first run registers a project and saves a model key through Windows encryp
       .poll(
         async () =>
           ((await page.evaluate(() => window.desktop.invoke({ op: 'bootstrap' }))) as Bootstrap).data.settings
-            .providers[0].hasKey,
+            .modelProviders[0].hasKey,
       )
       .toBe(true);
     expect(await readFile(join(storage, 'secrets.json'), 'utf8')).not.toContain(

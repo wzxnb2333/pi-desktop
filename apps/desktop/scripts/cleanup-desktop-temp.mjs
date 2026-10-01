@@ -59,6 +59,10 @@ async function scan(path, base = path) {
 }
 
 const gitIdentities = /^(?:author|committer) (?:Acceptance Test|Desktop Test|Visual Fixture|Test|Workbench test|Scope test|Workflow test|Peer|Peer Test) <(?:test|fixture|scope|workflow|peer)@example\.invalid> [0-9]+ [+-][0-9]{4}$/gm;
+// v3 split the flat model list into providers and models; a legacy document only carries `providers`.
+const KNOWN_DATA_VERSIONS = [1, 2, 3];
+const modelsEmpty = state => (state.settings?.providers?.length ?? 0) === 0
+  && (state.settings?.modelProviders?.length ?? 0) === 0 && (state.settings?.models?.length ?? 0) === 0;
 async function gitRemnants(files) {
   let commits = 0;
   for (const file of files) {
@@ -94,8 +98,8 @@ async function identify(path, prefix, contents) {
   if (!files.length) return 'Empty test tree with links (targets preserved)';
   if (/^pi-(?:acceptance|desktop-e2e|desktop-first|desktop-visual)-$/.test(prefix) && paths.includes('desktop.json')) {
     const state = JSON.parse(await readFile(join(path, 'desktop.json'), 'utf8'));
-    if (![1, 2].includes(state.version)) throw new Error('Unknown desktop profile version');
-    if (prefix === 'pi-desktop-first-' && state.projects?.length === 0 && state.threads?.length === 0 && state.settings?.providers?.length === 0) {
+    if (!KNOWN_DATA_VERSIONS.includes(state.version)) throw new Error('Unknown desktop profile version');
+    if (prefix === 'pi-desktop-first-' && state.projects?.length === 0 && state.threads?.length === 0 && modelsEmpty(state)) {
       const project = await lstat(join(path, '新项目'));
       if (project.isDirectory() && !project.isSymbolicLink()) return 'Empty first-run test profile';
     }
@@ -138,7 +142,7 @@ async function identify(path, prefix, contents) {
       const text = await readFile(file.path, 'utf8');
       if (text === '{broken') continue;
       const state = JSON.parse(text);
-      if (![1, 2].includes(state.version) || state.projects?.length !== 0 || state.threads?.length !== 0 || state.settings?.providers?.length !== 0) throw new Error('Nonempty metadata store');
+      if (!KNOWN_DATA_VERSIONS.includes(state.version) || state.projects?.length !== 0 || state.threads?.length !== 0 || !modelsEmpty(state)) throw new Error('Nonempty metadata store');
     }
     return 'Empty unit test metadata store';
   }

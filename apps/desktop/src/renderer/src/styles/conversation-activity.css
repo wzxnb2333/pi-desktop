@@ -45,7 +45,7 @@
 .tool-resource code, .tool-resource strong, .tool-resource p { overflow-wrap: anywhere; margin: 0; }
 .tool-resource .row { flex-wrap: wrap; }
 .activity-busy { animation: activity-pulse 1.6s ease-in-out infinite; }
-.tool-activity-origin { flex: none; color: var(--accent); font-size: 11px; font-weight: var(--font-weight-medium); }
 .tool-activity[data-tool-kind="harness"] .disclosure-label { color: color-mix(in oklab, var(--accent) 70%, var(--text)); }
+.tool-activity[data-tool-kind="harness"] .disclosure-summary svg { color: var(--accent); }
 @keyframes activity-pulse { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .disclosure-motion, .disclosure-chevron { transition: none; } .activity-busy { animation: none; } }

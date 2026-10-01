@@ -20,8 +20,8 @@ const params = new URLSearchParams(location.search);
 const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
 const page = { url: 'https://example.com/' + 'long/path/'.repeat(30), title: 'A saved page', width: 800, height: 600, scrollX: 0, scrollY: 0, fingerprint: 'a'.repeat(64), elements: [{ id: 0, tag: 'button', label: 'Save', selector: 'button', rect: { x: 10, y: 20, width: 100, height: 40 } }] };
 const saved: BrowserAnnotation = { id: crypto.randomUUID(), createdAt: 1, tabId: 'page', url: page.url, title: page.title, fingerprint: page.fingerprint, viewport: { width: 800, height: 600, scrollX: 0, scrollY: 0 }, mode: 'region', rect: { x: 10, y: 20, width: 100, height: 40 }, comment: 'Existing annotation' };
-let data = dataSchema.parse({ version: 2, projects: [], automations: [],
-  threads: ['t', 'other'].map(id => ({ id, projectId: '', cwd: '.', title: id, createdAt: 1, updatedAt: 1, providerId: '', policy: 'deny', thinking: 'off', browserAnnotations: id === 't' ? [saved] : [] })),
+let data = dataSchema.parse({ version: 3, projects: [], automations: [],
+  threads: ['t', 'other'].map(id => ({ id, projectId: '', cwd: '.', title: id, createdAt: 1, updatedAt: 1, modelId: '', policy: 'deny', thinking: 'off', browserAnnotations: id === 't' ? [saved] : [] })),
   settings: { theme: params.get('theme') || 'light' },
   ui: { locale: params.get('locale') || 'zh-CN', activeThreadId: 't', threads: { t: { draft: { text: 'Existing draft', attachments: [] } } } },
 });

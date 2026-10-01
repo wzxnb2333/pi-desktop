@@ -64,7 +64,7 @@ export async function prepareMessageRevision(storage: string, source: Thread, it
     // Persist even an empty branch so restart-before-send preserves its identity and parent.
     await writeFile(sessionFile, [manager.getHeader(), ...previous].map(value => JSON.stringify(value)).join('\n') + '\n', { flag: 'wx' });
     const thread = threadSchema.parse({ id, projectId: source.projectId, directoryId: source.directoryId, cwd: source.cwd,
-      title: source.title + ' · 分支', providerId: source.providerId, thinking: source.thinking, policy: source.policy, planMode: source.planMode,
+      title: source.title + ' · 分支', modelId: source.modelId, thinking: source.thinking, policy: source.policy, planMode: source.planMode,
       worktreeBranch: source.worktreeBranch, baseCommit: source.baseCommit, workspaceRevision: source.workspaceRevision,
       sessionFile, items: restoreItems(previous), createdAt: Date.now(), updatedAt: Date.now() });
     const ui = uiThreadSchema.parse({ draft: { text: payload.text, attachments: payload.attachments }, contextReferences: payload.context });

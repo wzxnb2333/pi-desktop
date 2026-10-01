@@ -4,7 +4,7 @@ import { threadSchema, timelineSchema } from '../src/shared/contracts.ts';
 import { captureSidechat } from '../src/main/sidechat-context.ts';
 
 test('sidechat captures a bounded immutable point without changing a live parent or copying hidden thinking', () => {
-  const parent = threadSchema.parse({ id: 'parent', projectId: 'p', title: '主任务', cwd: '.', providerId: 'p', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 1,
+  const parent = threadSchema.parse({ id: 'parent', projectId: 'p', title: '主任务', cwd: '.', modelId: 'p', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 1,
     items: [
       timelineSchema.parse({ id: 'first', entryId: 'entry-first', role: 'user', text: 'QUESTION', timestamp: 1 }),
       timelineSchema.parse({ id: 'second', role: 'assistant', text: 'PARTIAL', thinking: 'PRIVATE_REASONING', state: 'running', timestamp: 2 }),

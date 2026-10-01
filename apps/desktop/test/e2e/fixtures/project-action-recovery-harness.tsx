@@ -20,15 +20,17 @@ declare global {
   }
 }
 let data = dataSchema.parse({
-  version: 2, automations: [],
+  version: 3, automations: [],
   projects: [
     { id: 'p', name: '项目动作测试', path: 'C:/project', trusted: true, createdAt: 1,
       directories: [{ id: 'extra', name: '附加目录', path: 'C:/extra', trusted: true }],
       environment: projectEnvironmentSchema.parse({ actions: [{ id: 'check', name: '检查', command: 'echo ORIGINAL' }] }) },
     { id: 'other', name: '其他项目', path: 'C:/other', trusted: true, createdAt: 1 },
   ],
-  threads: ['t1', 't2', 't3'].map(id => ({ id, projectId: id === 't3' ? 'other' : 'p', title: id, cwd: id === 't3' ? 'C:/other' : 'C:/project', createdAt: 1, updatedAt: 1, providerId: 'fake', thinking: 'off', policy: 'ask' })),
-  settings: { theme: 'light', providers: [{ id: 'fake', name: '本地测试', provider: 'faux', model: 'fake' }] },
+  threads: ['t1', 't2', 't3'].map(id => ({ id, projectId: id === 't3' ? 'other' : 'p', title: id, cwd: id === 't3' ? 'C:/other' : 'C:/project', createdAt: 1, updatedAt: 1, modelId: 'fake', thinking: 'off', policy: 'ask' })),
+  settings: { theme: 'light', modelId: 'fake',
+    modelProviders: [{ id: 'fake-provider', name: '本地测试', kind: 'builtin', namespace: 'faux', baseUrl: '', api: 'openai-completions', hasKey: false }],
+    models: [{ id: 'fake', provider: 'fake-provider', name: '本地测试', model: 'fake', reasoning: false, contextWindow: 128000, maxTokens: 8192 }] },
   ui: { locale: 'zh-CN', activeThreadId: 't1', sidebarWidth: 240, reviewOpen: false, summaryOpen: false },
 });
 const listeners = new Set<(event: DesktopEvent) => void>();

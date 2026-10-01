@@ -2,15 +2,16 @@ import type { Settings } from '../shared/contracts.ts';
 
 /**
  * The settings a warm worker keeps depending on. `worker/agent.ts` reads `config.settings.resources`
- * (skill paths), `config.mcp` and `config.provider` + `config.apiKey`, and all four are handed to the
- * process once at `init`, so an edit only reaches a task after its worker is replaced.
+ * (skill paths), `config.mcp` and `config.model` / `config.modelProvider` + `config.apiKey`, and all
+ * of them are handed to the process once at `init`, so an edit only reaches a task after its worker
+ * is replaced.
  *
  * Everything else is read by the main process at the point of use (`terminal` in `terminal.open`,
  * `editor` in `file.open`, theme/fontSize/sendShortcut/keepInTray in the renderer) or is a default for
- * threads that do not exist yet (`policy`, `thinking`, `providerId` — a live thread carries its own
+ * threads that do not exist yet (`policy`, `thinking`, `modelId` — a live thread carries its own
  * copy, and `thread.update` already drops that one worker).
  */
-export const WORKER_SETTING_GROUPS = ['providers', 'resources', 'ignoredSkillPaths', 'mcpServers', 'mcpToolPolicies', 'subtasksEnabled'] as const;
+export const WORKER_SETTING_GROUPS = ['modelProviders', 'models', 'resources', 'ignoredSkillPaths', 'mcpServers', 'mcpToolPolicies', 'subtasksEnabled'] as const;
 export type WorkerSettingGroup = (typeof WORKER_SETTING_GROUPS)[number];
 
 /**

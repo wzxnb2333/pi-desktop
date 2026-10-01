@@ -10,6 +10,7 @@ import { resolveInputContext } from '../worker/input-context.ts';
 import { readProjectFile } from './files.ts';
 import { safeProjectPath } from './policy.ts';
 import { inputCatalog } from './input-catalog.ts';
+import { catalogModel } from '../shared/model-configuration.ts';
 import { modelCatalog } from './model-catalog.ts';
 
 const excluded = new Set(['.git', 'node_modules', 'dist', 'build', '.cache', '.artifacts']);
@@ -56,8 +57,9 @@ export class ComposerService {
     return { reference: refresh || !reference.version ? resolved : reference, content, stale: refresh ? false : stale };
   }
   async preflight(thread: Thread, payload: ComposerPayload): Promise<ComposerPreflight> {
-    const provider = this.data().settings.providers.find(item => item.id === thread.providerId);
-    const builtin = provider && !provider.custom ? modelCatalog().find(item => item.id === provider.provider)?.models.find(item => item.id === provider.model) : undefined;
+    const model = this.data().settings.models.find(item => item.id === thread.modelId);
+    const provider = this.data().settings.modelProviders.find(item => item.id === model?.provider);
+    const builtin = catalogModel(provider, model, modelCatalog());
     const issues: ComposerPreflight['issues'] = [];
     let characters = payload.text.length, contextCharacters = 0, images = 0;
     if (!payload.text.trim() && !payload.attachments.length && !payload.context.length) issues.push({ target: '', message: '请输入消息或添加附件与引用' });
@@ -75,7 +77,7 @@ export class ComposerService {
       catch (error) { issues.push({ target: reference.label, message: error instanceof Error ? error.message : String(error) }); }
     }
     if (characters > 500000 || contextCharacters > 200000) issues.push({ target: '', message: '消息与上下文过大，请减少附件或引用' });
-    return { issues, estimatedTokens: Math.ceil(characters / 2) + images * 1500, contextWindow: builtin?.contextWindow ?? provider?.contextWindow ?? 0, images };
+    return { issues, estimatedTokens: Math.ceil(characters / 2) + images * 1500, contextWindow: builtin?.contextWindow ?? model?.contextWindow ?? 0, images };
   }
   remember(thread: Thread, ui: UiThread | undefined, force = false): void {
     if (!ui) return;

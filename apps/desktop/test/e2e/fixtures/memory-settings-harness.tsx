@@ -10,7 +10,7 @@ import type { RegisterViewGuard } from '../../../src/renderer/src/components/pri
 import '../../../src/renderer/src/styles/index.css';
 
 let data = defaultData();
-data.threads = [threadSchema.parse({ id: 't', title: '记忆来源聊天', projectId: 'p', cwd: 'C:/project', providerId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2 })];
+data.threads = [threadSchema.parse({ id: 't', title: '记忆来源聊天', projectId: 'p', cwd: 'C:/project', modelId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2 })];
 data.ui.activeThreadId = 't';
 let snapshot: MemorySnapshot = { revision: 0, entries: [] };
 const held = new Set<string>(location.search.includes('hold-list') ? ['memory.list'] : []);

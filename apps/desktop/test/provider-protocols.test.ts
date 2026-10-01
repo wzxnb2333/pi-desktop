@@ -4,11 +4,11 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { type Provider, type Thread, providerSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
+import { type ModelProvider, type Thread, modelProviderSchema, providerModelSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
 import type { WorkerConfig, WorkerEvent } from '../src/shared/worker-protocol.ts';
 import { DesktopAgent } from '../src/worker/agent.ts';
 
-const cases: { api: Provider['api']; thinking: Thread['thinking'] }[] = [
+const cases: { api: ModelProvider['api']; thinking: Thread['thinking'] }[] = [
   ...(['openai-completions', 'openai-responses', 'anthropic-messages', 'google-generative-ai'] as const)
     .map((api) => ({ api, thinking: 'off' as const })),
   ...(['low', 'high', 'xhigh', 'max'] as const).flatMap((thinking) =>
@@ -56,9 +56,10 @@ for (const { api, thinking } of cases) {
     const address = server.address();
     assert.ok(address && typeof address !== 'string');
     const config: WorkerConfig = {
-      thread: threadSchema.parse({ id: 't', projectId: 'p', title: 'Protocol', cwd: root, createdAt: 1, updatedAt: 1, providerId: 'test', thinking, policy: 'deny' }),
-      provider: providerSchema.parse({ id: 'test', name: api, provider: 'test-' + api, api, model: 'model', custom: true,
-        reasoning: thinking !== 'off', thinkingLevels: thinking === 'off' ? undefined : ['low', 'high', 'xhigh', 'max'],
+      thread: threadSchema.parse({ id: 't', projectId: 'p', title: 'Protocol', cwd: root, createdAt: 1, updatedAt: 1, modelId: 'test', thinking, policy: 'deny' }),
+      model: providerModelSchema.parse({ id: 'test', provider: 'test-provider', name: api, model: 'model',
+        reasoning: thinking !== 'off', thinkingLevels: thinking === 'off' ? undefined : ['low', 'high', 'xhigh', 'max'] }),
+      modelProvider: modelProviderSchema.parse({ id: 'test-provider', name: api, kind: 'custom', namespace: 'desktop-test-provider', api,
         baseUrl: 'http://127.0.0.1:' + address.port + '/v1' }),
       trusted: false, apiKey: 'protocol-test-key', settings: settingsSchema.parse({}), mcp: [], agentDir: join(root, 'agent'), testMode: true,
     };

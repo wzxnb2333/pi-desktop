@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { mkdtemp } from './fixtures/node-temp.ts';
 import { evaluateAction, resolveAgentFile } from '../src/main/policy.ts';
-import { providerSchema, settingsSchema, threadSchema, type Policy } from '../src/shared/contracts.ts';
+import { modelProviderSchema, providerModelSchema, settingsSchema, threadSchema, type Policy } from '../src/shared/contracts.ts';
 import { DesktopAgent } from '../src/worker/agent.ts';
 import { JsonStore } from '../src/main/store.ts';
 
@@ -48,8 +48,9 @@ for (const mode of ['ask', 'auto', 'full', 'reject'] as const) {
     const agent = new DesktopAgent(event => { if (event.type === 'approval') { approvals++; agent.answer(event.approval.id, mode !== 'reject'); } });
     try {
       await agent.init({ agentDir: join(root, 'private'), trusted: false, testMode: true, mcp: [], apiKey: 'faux',
-        thread: threadSchema.parse({ id: mode, projectId: 'p', title: mode, cwd: project, createdAt: 1, updatedAt: 1, providerId: 'faux', thinking: 'off', policy: (mode === 'reject' ? 'ask' : mode) satisfies Policy }),
-        provider: providerSchema.parse({ id: 'faux', name: 'faux', provider: 'policy-' + mode, model: 'faux', custom: true, reasoning: false, baseUrl: 'http://127.0.0.1:' + address.port + '/v1' }), settings: settingsSchema.parse({}) });
+        thread: threadSchema.parse({ id: mode, projectId: 'p', title: mode, cwd: project, createdAt: 1, updatedAt: 1, modelId: 'faux', thinking: 'off', policy: (mode === 'reject' ? 'ask' : mode) satisfies Policy }),
+        model: providerModelSchema.parse({ id: 'faux', provider: 'faux-provider', name: 'faux', model: 'faux', reasoning: false }),
+        modelProvider: modelProviderSchema.parse({ id: 'faux-provider', name: 'faux', kind: 'custom', namespace: 'desktop-faux-provider', baseUrl: 'http://127.0.0.1:' + address.port + '/v1' }), settings: settingsSchema.parse({}) });
       await agent.prompt('permission probe', []);
       assert.equal(approvals, mode === 'ask' || mode === 'reject' ? 1 : 0);
       assert.equal(reviews, mode === 'auto' ? 1 : 0);
@@ -77,8 +78,9 @@ test('auto approval never silently starts host extensions and a separate consent
     });
     try {
       await agent.init({ agentDir: join(root, 'private'), trusted: true, testMode: true, mcp: [], apiKey: 'faux',
-        thread: threadSchema.parse({ id: String(approved), projectId: 'p', title: 'extension', cwd: project, createdAt: 1, updatedAt: 1, providerId: 'faux', thinking: 'off', policy: 'auto' }),
-        provider: providerSchema.parse({ id: 'faux', name: 'faux', provider: 'policy-extension', model: 'faux', custom: true, reasoning: false, baseUrl: 'http://127.0.0.1:1/v1' }),
+        thread: threadSchema.parse({ id: String(approved), projectId: 'p', title: 'extension', cwd: project, createdAt: 1, updatedAt: 1, modelId: 'faux', thinking: 'off', policy: 'auto' }),
+        model: providerModelSchema.parse({ id: 'faux', provider: 'faux-provider', name: 'faux', model: 'faux', reasoning: false }),
+        modelProvider: modelProviderSchema.parse({ id: 'faux-provider', name: 'faux', kind: 'custom', namespace: 'desktop-faux-provider', baseUrl: 'http://127.0.0.1:1/v1' }),
         settings: settingsSchema.parse({ resources: [{ id: 'test', name: 'test', path: extension, kind: 'extension', enabled: true }] }) });
       assert.equal(confirmations, 1);
       if (approved) assert.equal(await readFile(marker, 'utf8'), 'authorized');

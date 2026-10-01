@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { mkdtemp } from './fixtures/node-temp.ts';
 import { ComposerService, contentVersion, sendFingerprint } from '../src/main/composer.ts';
-import { defaultData, threadSchema, providerSchema, requestSchema, uiThreadSchema } from '../src/shared/contracts.ts';
+import { builtinProvider, modelFromCatalog } from '../src/shared/model-configuration.ts';
+import { defaultData, modelProviderSchema, providerModelSchema, threadSchema, requestSchema, uiThreadSchema } from '../src/shared/contracts.ts';
 import { rememberDraft, fuzzyScore, promptTemplateSchema, composerPayloadSchema, referenceKey } from '../src/shared/composer.ts';
 import { modelCatalog } from '../src/main/model-catalog.ts';
 import { resolveInputContext } from '../src/worker/input-context.ts';
@@ -17,8 +18,9 @@ async function fixture() {
   await mkdir(root); await mkdir(other);
   const data = defaultData();
   data.projects.push({ id: 'p', name: 'main', path: root, trusted: true, createdAt: 1, directories: [{ id: 'other', name: 'extra', path: other, trusted: false }] });
-  data.settings.providers.push(providerSchema.parse({ id: 'local', name: 'local', provider: 'faux', model: 'faux', custom: true }));
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', title: 't', cwd: root, createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'auto' });
+  data.settings.modelProviders.push(modelProviderSchema.parse({ id: 'local-provider', name: 'local', kind: 'custom', namespace: 'desktop-local-provider', baseUrl: 'http://127.0.0.1:1/v1' }));
+  data.settings.models.push(providerModelSchema.parse({ id: 'local', provider: 'local-provider', name: 'local', model: 'faux', reasoning: true, thinkingLevels: ['low', 'high', 'xhigh', 'max'] }));
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', title: 't', cwd: root, createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'auto' });
   data.threads.push(thread);
   const allowed = new Map([['t', new Set<string>()]]);
   return { storage, root, other, data, thread, allowed, service: new ComposerService(() => data, storage, allowed) };
@@ -79,7 +81,8 @@ test('preflight rejects binary and text-only models but accepts image-only input
   const valid = await f.service.preflight(f.thread, { text: '', attachments: [image], context: [] }); assert.deepEqual(valid.issues, []); assert.equal(valid.images, 1); assert.ok(valid.estimatedTokens > 0);
   assert.equal((await f.service.preflight(f.thread, { text: 'a', attachments: [binary], context: [] })).issues.length, 1);
   const provider = modelCatalog().find(item => item.models.some(model => model.imageInput === false))!; const model = provider.models.find(item => item.imageInput === false)!;
-  f.data.settings.providers[0] = providerSchema.parse({ id: 'local', name: 'text', provider: provider.id, model: model.id });
+  f.data.settings.modelProviders[0] = builtinProvider('local-provider', provider.id);
+  f.data.settings.models[0] = { ...modelFromCatalog('local-provider', model), id: 'local', name: 'text' };
   assert.match((await f.service.preflight(f.thread, { text: '', attachments: [image], context: [] })).issues[0].message, /不支持图片/);
 });
 

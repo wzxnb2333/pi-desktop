@@ -5,7 +5,7 @@ import { appearanceFromSettings, appearanceProperties } from '../src/shared/appe
 import { shortcutMatchesQuery } from '../src/shared/shortcuts.ts';
 
 test('theme documents round-trip appearance without providers, secrets or runtime settings', () => {
-  const settings = settingsSchema.parse({ theme: 'dark', fontSize: 16, codeFontSize: 18, uiFontFamily: 'Microsoft YaHei UI', codeFontFamily: 'Cascadia Code', accentColor: '#ABCDEF', backgroundColor: '#222222', foregroundColor: '#eeeeee', providerId: 'private', preventSleep: true });
+  const settings = settingsSchema.parse({ theme: 'dark', fontSize: 16, codeFontSize: 18, uiFontFamily: 'Microsoft YaHei UI', codeFontFamily: 'Cascadia Code', accentColor: '#ABCDEF', backgroundColor: '#222222', foregroundColor: '#eeeeee', modelId: 'private', preventSleep: true });
   const appearance = appearanceFromSettings(settings);
   const document = themeDocumentSchema.parse(JSON.parse(JSON.stringify({ version: 1, appearance })));
   assert.deepEqual(document.appearance, appearance);

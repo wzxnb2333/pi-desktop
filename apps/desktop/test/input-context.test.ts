@@ -48,7 +48,7 @@ test('metadata catalog has usable commands without launching an extension or a w
   const data = defaultData();
   data.settings.resources = [{ id: 's', kind: 'skill', name: 'context-skill', path: skill, enabled: true },
     { id: 'e', kind: 'extension', name: 'never-execute', path: 'missing.mjs', enabled: true }];
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd, title: '', createdAt: 1, updatedAt: 1, providerId: 'local', thinking: 'off', policy: 'deny' });
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd, title: '', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'deny' });
   const catalog = inputCatalog(thread, data.settings, cwd);
   assert.equal(catalog.references.filter(item => item.kind === 'skill').length, 1);
   assert.equal(catalog.references.some(item => item.id === 'write'), false);

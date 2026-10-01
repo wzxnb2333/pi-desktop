@@ -16,7 +16,7 @@ function deferred() { let resolve!: () => void; const promise = new Promise<void
 async function setup(capture?: Source['capture']) {
   const dir = await mkdtemp(join(tmpdir(), 'pi-annotation-recovery-'));
   const store = new JsonStore(dir); await store.load();
-  const thread = threadSchema.parse({ id: 'annotations', projectId: '', cwd: dir, title: 'Annotations', providerId: '', policy: 'deny', thinking: 'off', createdAt: 1, updatedAt: 1 });
+  const thread = threadSchema.parse({ id: 'annotations', projectId: '', cwd: dir, title: 'Annotations', modelId: '', policy: 'deny', thinking: 'off', createdAt: 1, updatedAt: 1 });
   store.data.threads.push(thread); await store.save();
   const source: Source = {
     agentContents: (_thread, tab) => ({ executeJavaScriptInIsolatedWorld: async () => ({ url: 'https://example.com/' + tab, title: tab, width: 800, height: 600, scrollX: 0, scrollY: 0, elements: [], text: 'stable' }) }),

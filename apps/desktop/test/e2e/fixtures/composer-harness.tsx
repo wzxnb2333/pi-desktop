@@ -37,7 +37,7 @@ declare global {
 }
 
 let data: DesktopData = dataSchema.parse({
-  version: 2,
+  version: 3,
   projects: [{ id: 'p1', name: 'pi', path: 'C:/work/pi', trusted: true, createdAt: 1 }],
   threads: [
     {
@@ -47,7 +47,7 @@ let data: DesktopData = dataSchema.parse({
       cwd: 'C:/work/pi',
       createdAt: 1,
       updatedAt: 1,
-      providerId: params.has('noprovider') ? '' : 'fast',
+      modelId: params.has('noprovider') ? '' : 'fast',
       thinking: 'medium',
       policy: 'ask',
     },
@@ -56,9 +56,11 @@ let data: DesktopData = dataSchema.parse({
     promptTemplates: [{ id: 'boundary', name: '边界检查', text: '检查边界与失败恢复' }],
     theme: params.get('theme') === 'dark' ? 'dark' : 'light',
     sendShortcut: params.get('shortcut') === 'ctrl-enter' ? 'ctrl-enter' : 'enter',
-    providers: [
-      { id: 'fast', name: '快速模型', provider: 'faux', model: 'fastr', hasKey: true },
-      { id: 'deep', name: '深度模型特别长以便测试省略号', provider: 'faux', model: 'deep', hasKey: true },
+    modelId: params.has('noprovider') ? '' : 'fast',
+    modelProviders: [{ id: 'faux-provider', name: 'Faux', kind: 'builtin', namespace: 'faux', baseUrl: '', api: 'openai-completions', hasKey: true }],
+    models: [
+      { id: 'fast', provider: 'faux-provider', name: '快速模型', model: 'fastr', reasoning: false, contextWindow: 128000, maxTokens: 8192 },
+      { id: 'deep', provider: 'faux-provider', name: '深度模型特别长以便测试省略号', model: 'deep', reasoning: false, contextWindow: 128000, maxTokens: 8192 },
     ],
   },
   automations: [],
@@ -83,12 +85,12 @@ const bridge: DesktopBridge = {
         if (!thread) throw new Error('任务不存在');
         const { op: _op, id: _id, ...patch } = request;
         const runtime =
-          request.providerId !== undefined ||
+          request.modelId !== undefined ||
           request.thinking !== undefined ||
           request.policy !== undefined ||
           request.planMode !== undefined;
         if (runtime && ['running', 'waiting'].includes(thread.status)) throw new Error('请停止任务后修改运行配置');
-        if (request.providerId !== undefined) log.update = `providerId:${request.providerId}`;
+        if (request.modelId !== undefined) log.update = `modelId:${request.modelId}`;
         if (request.thinking !== undefined) log.update = `thinking:${request.thinking}`;
         if (request.policy !== undefined) log.update = `policy:${request.policy}`;
         if (request.planMode !== undefined) log.update = `planMode:${String(request.planMode)}`;

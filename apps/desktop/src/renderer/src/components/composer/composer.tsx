@@ -86,7 +86,7 @@ export function Composer({ home = false }: { home?: boolean }) {
   const [delivery, setDelivery] = useState<{ id: string; status: string; error?: string; check?: ComposerPreflight }>();
   const [failedImports, setFailedImports] = useState<Array<{ id: string; threadId: string; file: File; error: string }>>([]);
   const [importItems, setImportItems] = useState<Array<{ id: string; threadId: string; name: string }>>([]);
-  const draftKey = JSON.stringify([thread?.id, text, attachments, threadUi.contextReferences, thread?.providerId]);
+  const draftKey = JSON.stringify([thread?.id, text, attachments, threadUi.contextReferences, thread?.modelId]);
   useEffect(() => { setDelivery(previous => previous && ['failed', 'checked', 'accepted'].includes(previous.status) ? undefined : previous); }, [draftKey]);
 
   // Declared before the early return so the hook count never depends on whether a task is selected.
@@ -133,7 +133,7 @@ export function Composer({ home = false }: { home?: boolean }) {
 
   const payload = { text, attachments, context: references, ...(running ? { queue: queueMode } : {}) };
   const send = async () => {
-    if ((!text.trim() && !attachments.length && !references.length) || !thread.providerId || submitting.current || withdrawing || importingRef.current || [...referenceSelections.current.values()].some(item => item.threadId === thread.id)) return;
+    if ((!text.trim() && !attachments.length && !references.length) || !thread.modelId || submitting.current || withdrawing || importingRef.current || [...referenceSelections.current.values()].some(item => item.threadId === thread.id)) return;
     if (text.length > 100000 || attachments.length > 10 || references.length > 20) { setError(tr('每条消息最多 100000 字和 10 个附件；撤回内容已完整保留，请分批发送。')); return; }
     const id = thread.id, value = text;
     submitting.current = true; setPending(true); setDelivery({ id, status: 'checking' });
@@ -170,7 +170,7 @@ export function Composer({ home = false }: { home?: boolean }) {
     else if (command === 'review') { setReviewTab('review'); setReviewOpen(true); }
     else setPanel({ id: thread.id, kind: command });
   };
-  const updateThread = (patch: Partial<Pick<Thread, 'providerId' | 'thinking' | 'policy' | 'planMode'>>) =>
+  const updateThread = (patch: Partial<Pick<Thread, 'modelId' | 'thinking' | 'policy' | 'planMode'>>) =>
     act({ op: 'thread.update', id: thread.id, ...patch });
   const addFiles = async (files: File[]) => {
     if (withdrawing) return;
@@ -339,7 +339,7 @@ export function Composer({ home = false }: { home?: boolean }) {
               size={CONTROL}
               aria-label={sendLabel}
               title={sendLabel}
-              disabled={pending || withdrawing || importing > 0 || addingReference || (!text.trim() && !attachments.length && !references.length) || !thread.providerId}
+              disabled={pending || withdrawing || importing > 0 || addingReference || (!text.trim() && !attachments.length && !references.length) || !thread.modelId}
               onClick={() => void send().catch(() => {})}
             >
               <ReferenceIcon name="send" size={20} />

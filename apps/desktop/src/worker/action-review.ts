@@ -1,30 +1,23 @@
 import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
 import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 import { z } from 'zod';
-import type { Provider } from '../shared/contracts.ts';
+import type { ModelProvider, ProviderModel } from '../shared/contracts.ts';
+import { registerConfiguredModel } from '../shared/model-runtime.ts';
 
 const verdictSchema = z.object({ risk: z.enum(['low', 'high', 'uncertain']), reason: z.string().trim().min(1).max(2000) }).strict();
 export type ActionReview = z.infer<typeof verdictSchema>;
 export interface ActionReviewInput { tool: string; arguments: unknown; cwd: string; userRequest: string }
 
 /** Independent inference only: no agent tools, project instructions, extension loading or shared history. */
-export async function reviewAction(provider: Provider, apiKey: string | undefined, input: ActionReviewInput, signal: AbortSignal): Promise<ActionReview> {
+export async function reviewAction(provider: ModelProvider, configured: ProviderModel, apiKey: string | undefined, input: ActionReviewInput, signal: AbortSignal): Promise<ActionReview> {
   signal.throwIfAborted();
   const content = JSON.stringify(input);
   if (content.length > 24000) return { risk: 'uncertain', reason: '操作内容过长，无法完整审查，需要你手动批准。' };
   const reviewSignal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
   try {
     const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, allowModelNetwork: false, signal: reviewSignal });
-    if (provider.custom) runtime.registerProvider(provider.provider, {
-      baseUrl: provider.baseUrl, api: provider.api, apiKey: 'desktop-runtime', models: [{
-        id: provider.model, name: provider.name, reasoning: provider.reasoning, input: ['text'],
-        contextWindow: provider.contextWindow, maxTokens: provider.maxTokens,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-      }],
-    });
-    else if (provider.baseUrl) runtime.registerProvider(provider.provider, { baseUrl: provider.baseUrl });
-    if (apiKey) await runtime.setRuntimeApiKey(provider.provider, apiKey);
-    const model = runtime.getModel(provider.provider, provider.model);
+    await registerConfiguredModel(runtime, provider, configured, apiKey, ['text']);
+    const model = runtime.getModel(provider.namespace, configured.model);
     if (!model) throw new Error('Reviewer model unavailable');
     const response = await runtime.completeSimple(model, {
       systemPrompt: [
@@ -38,7 +31,7 @@ export async function reviewAction(provider: Provider, apiKey: string | undefine
         'High and uncertain require the user to approve this exact operation. Never expand sandbox, directory or network permissions. Do not infer blanket approval from the task objective.',
       ].join('\n'),
       messages: [{ role: 'user', content, timestamp: Date.now() }],
-    }, { signal: reviewSignal, maxTokens: Math.min(provider.maxTokens, 2048) });
+    }, { signal: reviewSignal, maxTokens: Math.min(configured.maxTokens, 2048) });
     signal.throwIfAborted();
     if (reviewSignal.aborted || response.stopReason !== 'stop' || response.content.some(part => part.type === 'toolCall')) throw new Error('Incomplete review');
     return verdictSchema.parse(JSON.parse(response.content.filter(part => part.type === 'text').map(part => part.text).join('')));

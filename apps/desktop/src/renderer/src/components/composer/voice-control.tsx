@@ -104,7 +104,7 @@ export function VoiceControl({ disabled, target }: { disabled: boolean; target: 
   if (!target) return null;
   return createPortal(<div className="voice-controls" data-voice-phase={phase}>
     <IconButton size="sm" label={tr('本地听写')} disabled={disabled || phase !== 'idle'} onClick={() => start(false)}><Mic size={16} /></IconButton>
-    <IconButton size="sm" label={tr('语音对话')} disabled={disabled || app.running || !app.thread?.providerId || phase !== 'idle'} onClick={() => setConfirm(true)}><AudioLines size={16} /></IconButton>
+    <IconButton size="sm" label={tr('语音对话')} disabled={disabled || app.running || !app.thread?.modelId || phase !== 'idle'} onClick={() => setConfirm(true)}><AudioLines size={16} /></IconButton>
     {!!answer && <IconButton size="sm" label={tr('朗读最近回答')} disabled={phase !== 'idle'} onClick={() => { setError(''); setFeedback(''); const token = ++epoch.current; void read(answer.text, token).then(() => { if (current(token)) stop(); }).catch(reason => fail(reason, token)); }}><Volume2 size={16} /></IconButton>}
     {(phase !== 'idle' || feedback || error) && <div className="voice-session" role="status">
       <span>{phase !== 'idle' ? tr(labels[phase]) : feedback}</span>

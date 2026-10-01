@@ -24,7 +24,7 @@ async function setup() {
   const sourceTree = await snapshots.captureTree('t', source), id = crypto.randomUUID();
   const managed: ManagedWorktree = { id, threadId: 't', projectId: 'p', directoryId: 'p', ...worktree, localPath: source,
     localBaseline: targetTree, worktreeBaseline: targetTree, status: 'ready', createdAt: 1, lastUsedAt: 1 };
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: source, title: 'keep', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'ask' });
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: source, title: 'keep', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'ask' });
   const record: TransferJournal = { version: 2, id: crypto.randomUUID(), threadId: 't', source: await realpath(source), target: await realpath(worktree.path),
     commonDirectory: await realpath(resolve(source, (await gitRun(source, ['rev-parse', '--git-common-dir'])).trim())), sourceTree, targetTree,
     changes: ['a.txt', 'b.txt', 'new.bin'], attempted: ['a.txt'], state: 'prepared', error: '', createdAt: 1,

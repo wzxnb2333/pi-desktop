@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import test from 'node:test';
-import { defaultData, providerSchema, threadSchema, uiThreadSchema } from '../src/shared/contracts.ts';
+import { defaultData, modelProviderSchema, providerModelSchema, threadSchema, uiThreadSchema } from '../src/shared/contracts.ts';
 import { desktopToolSchema } from '../src/shared/worker-protocol.ts';
 import { addHarnessDraftAttachments, appendHarnessDraft, harnessApprovals, harnessArtifacts, harnessContextCatalog, harnessContextReferences, harnessDraftAttachments, harnessDraftHistory, harnessDraftPreflight, harnessDraftState, harnessMessageContext, harnessMessageOptions, harnessQueueRevision, harnessQueuedMessages, harnessQuoteReference, harnessSnapshot, removeHarnessContext, removeHarnessDraftAttachment, replaceHarnessDraftText } from '../src/main/harness-tools.ts';
 import { contentVersion } from '../src/main/composer.ts';
@@ -12,10 +12,11 @@ import { mkdtemp } from './fixtures/node-temp.ts';
 
 function fixture() {
   const data = defaultData();
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', directoryId: 'p', title: 'Current', createdAt: 1, updatedAt: 1, providerId: 'model', thinking: 'off', policy: 'deny' });
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', directoryId: 'p', title: 'Current', createdAt: 1, updatedAt: 1, modelId: 'model', thinking: 'off', policy: 'deny' });
   data.threads.push(thread, { ...thread, id: 'secret-thread', title: 'PRIVATE_OTHER_THREAD' });
   data.projects.push({ id: 'p', name: 'Project', path: 'E:/project', trusted: true, createdAt: 1, directories: [{ id: 'extra', name: 'Extra', path: 'E:/extra', trusted: false }] });
-  data.settings.providers.push(providerSchema.parse({ id: 'model', name: 'Model', provider: 'custom', model: 'm', baseUrl: 'https://PRIVATE_CREDENTIAL_ENDPOINT.invalid', custom: true }));
+  data.settings.modelProviders.push(modelProviderSchema.parse({ id: 'model-provider', name: 'Model', kind: 'custom', namespace: 'desktop-model-provider', baseUrl: 'https://PRIVATE_CREDENTIAL_ENDPOINT.invalid' }));
+  data.settings.models.push(providerModelSchema.parse({ id: 'model', provider: 'model-provider', name: 'Model', model: 'm', reasoning: false }));
   data.ui.threads.t = uiThreadSchema.parse({ draft: { text: 'PRIVATE_UNSENT_DRAFT', attachments: [] } });
   thread.queue = [{ text: 'PRIVATE_QUEUED_MESSAGE', attachments: [], kind: 'followUp' }];
   return { data, thread };
@@ -88,7 +89,7 @@ test('context catalog stays metadata-only, queryable and bounded', () => {
 });
 
 test('message options expose only bounded user and assistant metadata', () => {
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', title: 'Current', createdAt: 1, updatedAt: 1, providerId: 'model', thinking: 'off', policy: 'deny', items: [
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', title: 'Current', createdAt: 1, updatedAt: 1, modelId: 'model', thinking: 'off', policy: 'deny', items: [
     { id: 'u1', role: 'user', text: 'Please inspect README', timestamp: 1 },
     { id: 'tool1', role: 'tool', toolName: 'read', text: 'PRIVATE_TOOL_OUTPUT', timestamp: 2 },
     { id: 'a1', role: 'assistant', text: 'I will inspect README now.', timestamp: 3 },
@@ -102,7 +103,7 @@ test('message options expose only bounded user and assistant metadata', () => {
 });
 
 test('message context returns exact bounded ranges and rejects tool messages', () => {
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', title: 'Current', createdAt: 1, updatedAt: 1, providerId: 'model', thinking: 'off', policy: 'deny', items: [
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', title: 'Current', createdAt: 1, updatedAt: 1, modelId: 'model', thinking: 'off', policy: 'deny', items: [
     { id: 'u1', role: 'user', text: 'Please inspect README', timestamp: 1 },
     { id: 'tool1', role: 'tool', toolName: 'read', text: 'PRIVATE_TOOL_OUTPUT', timestamp: 2 },
   ] });
@@ -115,7 +116,7 @@ test('message context returns exact bounded ranges and rejects tool messages', (
 });
 
 test('quote reference preserves exact text and version without exposing other roles', () => {
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', title: 'Current', createdAt: 1, updatedAt: 1, providerId: 'model', thinking: 'off', policy: 'deny', items: [
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: 'E:/worktree', title: 'Current', createdAt: 1, updatedAt: 1, modelId: 'model', thinking: 'off', policy: 'deny', items: [
     { id: 'u1', role: 'user', text: 'Please inspect README', timestamp: 1 },
     { id: 'tool1', role: 'tool', toolName: 'read', text: 'PRIVATE_TOOL_OUTPUT', timestamp: 2 },
   ] });
@@ -281,7 +282,7 @@ test('artifact view is limited to the current task artifacts and opens the files
   await writeFile(join(root, 'preview.html'), '<h1>Preview</h1>');
   await writeFile(join(root, 'notes.txt'), 'not an artifact');
   const data = defaultData();
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: root, title: 'Current', createdAt: 1, updatedAt: 1, providerId: 'model', thinking: 'off', policy: 'deny', artifacts: ['preview.html'] });
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: root, title: 'Current', createdAt: 1, updatedAt: 1, modelId: 'model', thinking: 'off', policy: 'deny', artifacts: ['preview.html'] });
   data.ui.view = 'thread'; data.ui.activeThreadId = 't'; data.ui.threads.t = uiThreadSchema.parse({});
   const runtime = {
     context: () => ({ windowId: 1, thread, ui: data.ui }),
@@ -305,7 +306,7 @@ test('artifact listing normalizes paths and reports only bounded preview metadat
   const root = await mkdtemp('pi-harness-artifact-list-');
   await writeFile(join(root, 'preview.html'), '<h1>Preview</h1>');
   await writeFile(join(root, 'notes.txt'), 'not a preview');
-  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: root, title: 'Current', createdAt: 1, updatedAt: 1, providerId: 'model', thinking: 'off', policy: 'deny', artifacts: [join(root, 'preview.html'), 'notes.txt', 'missing.pdf'] });
+  const thread = threadSchema.parse({ id: 't', projectId: 'p', cwd: root, title: 'Current', createdAt: 1, updatedAt: 1, modelId: 'model', thinking: 'off', policy: 'deny', artifacts: [join(root, 'preview.html'), 'notes.txt', 'missing.pdf'] });
   const listing = await harnessArtifacts(thread, root);
   assert.deepEqual(listing, {
     version: 1,

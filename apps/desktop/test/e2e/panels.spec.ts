@@ -104,7 +104,7 @@ const thread = threadSchema.parse({
   cwd: 'C:/demo',
   createdAt: 0,
   updatedAt: 0,
-  providerId: 'fake',
+  modelId: 'fake',
   thinking: 'off',
   policy: 'ask',
 });

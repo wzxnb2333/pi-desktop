@@ -13,7 +13,7 @@ const comment: LineComment = { id: 'comment', directoryId: 'p', path: 'README.md
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-review-store-'));
   const store = new JsonStore(dir); await store.load();
-  const thread = threadSchema.parse({ id: 'review', projectId: 'p', title: 'Review', cwd: dir, providerId: '', thinking: 'off', policy: 'deny', createdAt: 1, updatedAt: 1,
+  const thread = threadSchema.parse({ id: 'review', projectId: 'p', title: 'Review', cwd: dir, modelId: '', thinking: 'off', policy: 'deny', createdAt: 1, updatedAt: 1,
     review: { parentThreadId: 'parent', scope: 'uncommitted', ref: '', instructions: '', capturedAt: 1, base: '', target: '', files: [], phase: 'running',
       findings: [{ id: 'finding', priority: 1, title: 'Guard', body: 'Missing guard', path: 'README.md', line: 2, endLine: 2 }] } });
   store.data.threads.push(thread);

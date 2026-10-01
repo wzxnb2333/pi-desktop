@@ -20,8 +20,8 @@ const params = new URLSearchParams(location.search), mode = params.get('surface'
 const image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
 const capture: ArtifactCapture = { id: crypto.randomUUID(), image, width: 800, height: 600, page: 2 };
 const saved: ArtifactAnnotation = { id: crypto.randomUUID(), createdAt: 1, directoryId: 'p', root: 'C:/project', path: 'document.pdf', kind: 'pdf', version: 'a'.repeat(64), resources: {}, imageHash: 'b'.repeat(64), page: 2, width: 800, height: 600, scrollX: 0, scrollY: 0, rect: { x: 10, y: 20, width: 50, height: 40 }, comment: 'Existing artifact' };
-let data = dataSchema.parse({ version: 2, projects: [{ id: 'p', name: 'Project', path: 'C:/project', trusted: true, createdAt: 1 }], automations: [],
-  threads: [{ id: 't', projectId: 'p', title: 'Artifacts', cwd: 'C:/project', createdAt: 1, updatedAt: 1, providerId: '', policy: 'deny', thinking: 'off', artifactAnnotations: [saved] }],
+let data = dataSchema.parse({ version: 3, projects: [{ id: 'p', name: 'Project', path: 'C:/project', trusted: true, createdAt: 1 }], automations: [],
+  threads: [{ id: 't', projectId: 'p', title: 'Artifacts', cwd: 'C:/project', createdAt: 1, updatedAt: 1, modelId: '', policy: 'deny', thinking: 'off', artifactAnnotations: [saved] }],
   settings: { theme: params.get('theme') || 'light' }, ui: { locale: params.get('locale') || 'zh-CN', activeThreadId: 't', threads: { t: { draft: { text: 'Existing draft', attachments: [] } } } },
 });
 const listeners = new Set<(event: DesktopEvent) => void>();

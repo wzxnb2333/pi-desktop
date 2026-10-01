@@ -19,8 +19,8 @@ declare global {
 }
 const params = new URLSearchParams(location.search);
 let data = dataSchema.parse({
-  version: 2, projects: [], automations: [],
-  threads: ['t1', 't2'].map(id => ({ id, projectId: '', title: id, cwd: '', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'ask' })),
+  version: 3, projects: [], automations: [],
+  threads: ['t1', 't2'].map(id => ({ id, projectId: '', title: id, cwd: '', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'ask' })),
   settings: { theme: params.get('theme') || 'light' }, ui: { locale: params.get('locale') || 'zh-CN', activeThreadId: 't1' },
 });
 const listeners = new Set<(event: DesktopEvent) => void>();

@@ -38,6 +38,8 @@ export interface MenuProps {
   heading?: ReactNode;
   content?: ReactNode;
   listClassName?: string;
+  /** Keep the popover open after a choice, for lists that drill into a second level. */
+  closeOnSelect?: boolean;
   onOpenChange?(open: boolean): void;
 }
 
@@ -83,6 +85,7 @@ export function Menu({
   heading,
   content,
   listClassName,
+  closeOnSelect = true,
   onOpenChange,
 }: MenuProps) {
   useLocale();
@@ -284,7 +287,7 @@ export function Menu({
                 onClick={() => {
                   if (option.disabled) return;
                   onChange(option.value);
-                  hide(true);
+                  if (closeOnSelect) hide(true);
                 }}
               >
                 <div className="menu-item-content">

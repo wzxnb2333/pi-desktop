@@ -11,5 +11,5 @@ test('annotation selections use captured geometry and reject missing, overflowin
   assert.throws(() => annotationSelection(page, { mode: 'region', comment: 'overflow', rect: { x: 750, y: 0, width: 100, height: 100 } }), /请选择/);
   assert.equal(annotationSelection(page, { mode: 'region', comment: '注释', rect: { x: 0, y: 0, width: 800, height: 600 } }).mode, 'region');
   assert.equal(requestSchema.safeParse({ op: 'browser.annotationSave', threadId: 't', captureId: crypto.randomUUID(), selection: { mode: 'region', comment: 'test', path: 'C:/secret', rect: { x: 1, y: 1, width: 20, height: 20 } } }).success, false);
-  assert.equal(threadSchema.safeParse({ id: 't', projectId: '', cwd: '.', title: 't', createdAt: 0, updatedAt: 0, providerId: '', thinking: 'off', policy: 'deny', browserAnnotations: [] }).success, true);
+  assert.equal(threadSchema.safeParse({ id: 't', projectId: '', cwd: '.', title: 't', createdAt: 0, updatedAt: 0, modelId: '', thinking: 'off', policy: 'deny', browserAnnotations: [] }).success, true);
 });

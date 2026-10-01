@@ -12,8 +12,8 @@ type Action = 'worktree.start' | 'worktree.recovery' | 'operation.cancel';
 declare global { interface Window { worktreeControls: { calls: DesktopRequest[]; hold: Action[]; release(op: Action, error?: string): void; select(id: string): void; directory(id: string): void; locale(locale: 'zh-CN' | 'en-US'): void; records(records: OperationRecord[]): void; issues(issues: WorktreeRecoveryIssue[]): void; }; } }
 let data = dataSchema.parse({
   settings: {}, automations: [],
-  version: 2, projects: [{ id: 'p', name: 'Project', path: 'C:/project', trusted: true, createdAt: 1, directories: [{ id: 'extra', name: 'Extra', path: 'C:/extra', trusted: true }] }],
-  threads: ['t1', 't2'].map(id => ({ id, projectId: 'p', title: id, cwd: 'C:/project', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', policy: 'ask' })),
+  version: 3, projects: [{ id: 'p', name: 'Project', path: 'C:/project', trusted: true, createdAt: 1, directories: [{ id: 'extra', name: 'Extra', path: 'C:/extra', trusted: true }] }],
+  threads: ['t1', 't2'].map(id => ({ id, projectId: 'p', title: id, cwd: 'C:/project', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', policy: 'ask' })),
   ui: { locale: 'zh-CN', activeThreadId: 't1' },
 });
 const listeners = new Set<(event: DesktopEvent) => void>();

@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test';
-import { defaultData, providerSchema, threadSchema, timelineSchema } from '../../src/shared/contracts.ts';
+import { defaultData, modelProviderSchema, providerModelSchema, threadSchema, timelineSchema } from '../../src/shared/contracts.ts';
 
 /**
  * The size x theme matrix the spec asks for, plus the geometry literals that a pixel baseline
@@ -50,18 +50,25 @@ test.beforeAll(async () => {
     trusted: false,
     createdAt: 1_700_000_000_000,
   });
-  base.settings.providers.push(
-    providerSchema.parse({
-      id: 'fake',
+  base.settings.modelProviders.push(
+    modelProviderSchema.parse({
+      id: 'fake-provider',
       name: 'Local Test',
-      provider: 'desktop-test',
-      model: 'fake-model',
-      custom: true,
-      reasoning: true,
+      kind: 'custom',
+      namespace: 'desktop-fake-provider',
       baseUrl: 'http://127.0.0.1:9/v1',
     }),
   );
-  base.settings.providerId = 'fake';
+  base.settings.models.push(
+    providerModelSchema.parse({
+      id: 'fake',
+      provider: 'fake-provider',
+      name: 'Local Test',
+      model: 'fake-model',
+      reasoning: true,
+    }),
+  );
+  base.settings.modelId = 'fake';
   base.settings.keepInTray = false;
   const at = (offset: number) => 1_700_000_000_000 + offset;
   const item = (part: Parameters<typeof timelineSchema.parse>[0]) => timelineSchema.parse(part);
@@ -73,7 +80,7 @@ test.beforeAll(async () => {
       cwd: projectPath,
       createdAt: at(0),
       updatedAt: at(9000),
-      providerId: 'fake',
+      modelId: 'fake',
       thinking: 'medium',
       policy: 'ask',
       plan: [

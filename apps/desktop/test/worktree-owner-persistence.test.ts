@@ -13,7 +13,7 @@ import { archiveFixture } from './fixtures/worktree-archive.ts';
 async function setup() {
   const dir = await mkdtemp(join(tmpdir(), 'pi-owner-recovery-')), store = new JsonStore(dir); await store.load();
   store.data.projects.push({ id: 'p', name: 'Project', path: dir, trusted: true, createdAt: 1 });
-  const original = threadSchema.parse({ id: 'old', title: 'Original', projectId: 'p', directoryId: 'p', cwd: join(dir, 'checkout'), policy: 'ask', createdAt: 1, updatedAt: 1, providerId: '', thinking: 'off', deletedAt: 2 });
+  const original = threadSchema.parse({ id: 'old', title: 'Original', projectId: 'p', directoryId: 'p', cwd: join(dir, 'checkout'), policy: 'ask', createdAt: 1, updatedAt: 1, modelId: '', thinking: 'off', deletedAt: 2 });
   const record = managedWorktreeSchema.parse({ id: crypto.randomUUID(), threadId: original.id, projectId: 'p', directoryId: 'p', path: original.cwd, checkoutPath: original.cwd, localPath: dir, branch: 'desktop/restored', baseCommit: 'base', localBaseline: 'tree', worktreeBaseline: 'tree', archiveTree: 'archive', archiveHead: 'head', archiveIndex: 'index', status: 'ready', createdAt: 1, lastUsedAt: 2 });
   store.data.threads.push(original); store.data.worktrees.push(record); await store.save();
   return { dir, store, original, record, candidate: threadSchema.parse({ ...original, id: crypto.randomUUID(), title: 'Restored', deletedAt: undefined, worktreeBranch: record.branch, baseCommit: record.baseCommit, workspaceRevision: 1 }) };

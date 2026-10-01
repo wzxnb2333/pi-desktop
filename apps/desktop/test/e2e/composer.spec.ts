@@ -315,7 +315,7 @@ test('one model and effort control supports the native slider and a focused mode
   await expect(lastUpdate()).toHaveText('thinking:high'); await expect(trigger('模型与能力')).toHaveText('快速模型高');
   await activePage.getByRole('button', { name: '模型', exact: true }).click();
   await expect(item('快速模型')).toBeFocused(); await activePage.keyboard.press('ArrowDown'); await activePage.keyboard.press('Enter');
-  await expect(lastUpdate()).toHaveText('providerId:deep'); await expect(trigger('模型与能力')).toBeFocused();
+  await expect(lastUpdate()).toHaveText('modelId:deep'); await expect(trigger('模型与能力')).toBeFocused();
   await expect(trigger('模型与能力')).toContainText('深度模型'); await expect(list()).toHaveCount(0);
   await trigger('模型与能力').click(); await activePage.keyboard.press('Escape');
   await expect(activePage.getByRole('dialog')).toHaveCount(0); await expect(trigger('模型与能力')).toBeFocused();

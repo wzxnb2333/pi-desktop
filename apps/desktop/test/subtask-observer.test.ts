@@ -5,7 +5,7 @@ import { defaultData, threadSchema, type DesktopRequest } from '../src/shared/co
 
 test('child conversations stay observer-only after completion and cannot gain permissions through IPC', () => {
   const data = defaultData();
-  data.threads.push(threadSchema.parse({ id: 'child', subtaskId: crypto.randomUUID(), projectId: 'p', title: 'Child', cwd: 'unused', createdAt: 1, updatedAt: 1, providerId: 'local', policy: 'deny', thinking: 'off' }));
+  data.threads.push(threadSchema.parse({ id: 'child', subtaskId: crypto.randomUUID(), projectId: 'p', title: 'Child', cwd: 'unused', createdAt: 1, updatedAt: 1, modelId: 'local', policy: 'deny', thinking: 'off' }));
   const requests: DesktopRequest[] = [
     { op: 'thread.update', id: 'child', policy: 'full' },
     { op: 'thread.send', id: 'child', text: 'interfere', attachments: [] },

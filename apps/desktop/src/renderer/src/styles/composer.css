@@ -90,6 +90,13 @@
 .composer-model-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .composer-model-effort { color: var(--muted); flex-shrink: 0; }
 .composer-model-popover { width: 248px; }
+.composer-model-option { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; width: 100%; }
+.composer-model-option-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-model-option small { flex: none; color: var(--muted); font-size: var(--font-xs); }
+.composer-model-heading { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.composer-model-heading > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.composer-model-back { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+button.composer-model-back:hover { background: var(--hover); color: var(--text); }
 .menu-heading { padding: 4px 8px 6px; color: var(--muted); font-size: var(--font-xs); }
 .composer-capability-panel { padding: 8px 6px 4px; }
 .composer-capability-heading { display: flex; align-items: center; color: var(--muted); }

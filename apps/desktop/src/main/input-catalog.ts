@@ -13,7 +13,7 @@ export function inputCatalog(thread: Thread, settings: Settings, agentDir: strin
   if (!thread.projectId) tools.splice(0, tools.length, 'update_plan');
   const busy = ['running', 'waiting'].includes(thread.status);
   return {
-    commands: [{ id: 'compact', enabled: !busy && !!thread.providerId }, { id: 'plan', enabled: !busy },
+    commands: [{ id: 'compact', enabled: !busy && !!thread.modelId }, { id: 'plan', enabled: !busy },
       { id: 'stop', enabled: busy }, { id: 'skills', enabled: true },
       { id: 'goal', enabled: !thread.review && !thread.sidechat?.temporary }, { id: 'review', enabled: !!thread.projectId && !busy },
       { id: 'help', enabled: true }, { id: 'templates', enabled: true }, { id: 'history', enabled: true }, { id: 'expand', enabled: true }],

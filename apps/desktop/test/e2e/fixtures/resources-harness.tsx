@@ -23,7 +23,7 @@ data.settings.resources = [
   { id: 'beta', name: 'Beta', kind: 'skill', path: 'C:/shared/beta/SKILL.md', enabled: true },
   { id: 'extension', name: '扩展', kind: 'extension', path: 'C:/shared/extension.mjs', enabled: true },
 ];
-data.threads = [threadSchema.parse({ id: 't', title: '有加载错误的任务', projectId: 'p', cwd: 'C:/project', providerId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2, resourceLoad: { checkedAt: 5, diagnostics: [{ kind: 'extension', type: 'error', path: 'C:/shared/extension.mjs', message: 'RUNTIME_EXTENSION_FAILURE' }] } })];
+data.threads = [threadSchema.parse({ id: 't', title: '有加载错误的任务', projectId: 'p', cwd: 'C:/project', modelId: '', thinking: 'off', policy: 'auto', createdAt: 1, updatedAt: 2, resourceLoad: { checkedAt: 5, diagnostics: [{ kind: 'extension', type: 'error', path: 'C:/shared/extension.mjs', message: 'RUNTIME_EXTENSION_FAILURE' }] } })];
 data.ui.activeThreadId = 't';
 const listeners = new Set<(event: DesktopEvent) => void>();
 const calls: DesktopRequest[] = [];
