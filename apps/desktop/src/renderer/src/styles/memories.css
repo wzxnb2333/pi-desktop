@@ -1,0 +1,11 @@
+.memory-settings { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.memory-settings[hidden] { display: none; }
+.memory-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.memory-toolbar input { flex: 1 1 180px; min-width: 0; }
+.memory-entries { display: grid; gap: 12px; }
+.memory-entry p, .memory-entry code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.memory-entry code { display: block; color: var(--muted); font-size: 11px; }
+.memory-entry .row, .memory-editor .row { flex-wrap: wrap; gap: 8px; }
+.memory-entry, .memory-editor, .memory-generation { padding-block: 16px; }
+.memory-editor textarea { width: 100%; resize: vertical; min-height: 100px; margin-block: 8px; }
+.memory-entry details { margin-block: 12px; font-size: 12px; color: var(--muted); }

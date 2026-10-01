@@ -1,0 +1,16 @@
+.input-picker-tabs { display: flex; gap: 4px; padding: 4px 8px; border-block: 1px solid var(--border); }
+.input-picker-tabs [aria-pressed='true'] { background: var(--selected); }
+.input-picker-row { display: flex; gap: 10px; align-items: center; text-align: left; padding: 8px 10px; min-width: 0; flex-shrink: 0; border: 0; border-radius: 10px; background: transparent; color: inherit; }
+.input-picker-row:hover, .input-picker-row:focus-visible { background: var(--selected); }
+.input-picker-row > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.input-picker-row small { display: block; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.input-picker-row:disabled { opacity: .45; }
+.input-folder-heading { display: flex; gap: 4px; align-items: center; padding: 4px 8px; }
+.input-folder-heading > span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.input-picker-note { margin: 4px 8px; }
+.composer-context { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 8px; }
+.composer-context:empty { display: none; }
+.composer-context .attachment { max-width: 220px; }
+.project-directory-manager { padding: 12px; }
+.project-directory-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.project-directory-row p { overflow-wrap: anywhere; color: var(--muted); }

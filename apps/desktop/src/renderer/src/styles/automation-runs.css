@@ -1,0 +1,6 @@
+.automation-run { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+.automation-run .row { flex-wrap: wrap; }
+.automation-run time, .automation-run small { font-size: 12px; color: var(--muted); }
+.automation-run p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.automation-editor-fields :is(select, input, textarea) { min-width: 0; max-width: 100%; }
+.automation-editor-fields .field-row { min-width: 0; }

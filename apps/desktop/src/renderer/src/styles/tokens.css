@@ -1,0 +1,172 @@
+/* Shared Pi geometry, typography and interaction defaults.
+ * Palette and version-sensitive radii belong only to codex-26915-theme.css.
+ * Captured components follow 26.915; uncaptured geometry is a Pi adaptation. */
+:root {
+  color-scheme: light;
+  --font-size: 14px; /* user preference slot (12-20), not a reference token; §2 ports it as "no" */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", menlo, consolas, "Liberation Mono", monospace;
+  --font-ui-small: 13px;
+  --font-ui-weight: 430;
+  --thread-content-max-width: 48rem;
+  font-family: var(--font-sans);
+  font-weight: var(--font-ui-weight);
+  /*
+   * The reference expresses geometry in rem against a 16px root, so the root stays at 16px and the
+   * user's font-size setting is applied to body instead. Swapping these would shrink every ported
+   * metric by 12.5%.
+   */
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+
+  /* --- spacing base ------------------------------------------------------- */
+  /* Every ported `calc(var(--spacing) * N)` below resolves against this; it is the only multiplier
+   * the reference uses for its inline metrics. */
+  --spacing: .25rem; /* codex: --spacing */
+
+  /* --- radius ------------------------------------------------------------- */
+  /* The reference stores `<name>-base` and multiplies by `--corner-radius-scale`. That scale is
+   * pinned to 1 (its only non-1 declaration sits behind `@supports (corner-shape: supershape)`,
+   * false in Chromium), so Pi lands the final values and drops both the `-base` tier and the scale. */
+  --radius-2xs: .125rem; /* codex: --radius-2xs-base */
+  --radius-xs: .25rem; /* codex: --radius-xs-base */
+  --radius-sm: .375rem; /* codex: --radius-sm-base */
+  --radius-pill: 9999px; /* codex: --radius-full / root --radius-token-row */
+  /* The root-level 9999px does not apply to sidebar rows: `.sidebar-navigation` re-declares 10px and
+   * that is the value actually painted, so Pi needs both names. */
+  --radius-row: 10px; /* codex: --radius-token-row (.sidebar-navigation) */
+  --radius-composer-single: calc(var(--spacing) * 5.5); /* codex: --radius-token-composer-single-line (22px pill) */
+
+  /* --- borders ------------------------------------------------------------ */
+  --border-width-hairline: .5px; /* codex: --border-width-hairline */
+  /* Pi abstraction: the reference has no `--border-width`; its 1px rings are baked into
+   * `box-shadow: 0 0 0 1px`. Centralising the constant does not contradict the reference. */
+  --border-width: 1px;
+
+  /* --- heights and inline padding ----------------------------------------- */
+  --height-toolbar: 46px; /* codex: --height-toolbar (desktop value; the browser branch's calc is a nonDesktopOverride) */
+  --height-toolbar-sm: 36px; /* codex: --height-toolbar-sm */
+  --height-toolbar-pane: 40px; /* codex: --height-toolbar-pane */
+  /* Reference formula is `calc(--text-base * 1.5 + --padding-row-y * 2)` = 21 + 10 on electron. Pi
+   * declines `--text-base` (it belongs to the parallel px ladder, §1.3), so the resolved 31px lands. */
+  --height-row: 31px; /* codex: --height-token-nav-row (:is(browser,chrome-extension,electron) body) */
+  --height-row-nav: 30px; /* codex: --height-token-nav-row (.sidebar-navigation) */
+  --height-settings-row: 4rem; /* codex: --height-token-settings-row */
+  --height-mode-switch: 32px; /* codex: --height-token-mode-switch (.sidebar-navigation) */
+  /* Declared as a formula on purpose: `--padding-row-y * 2` plus `--height-row` must stay checkable
+   * against each other. A later `:root` re-declaration of 4px loses to this body-scoped one on
+   * specificity (0-1-0 < 0-3-1), so 5px is the effective value. */
+  --padding-row-y: calc(var(--spacing) * 1.25); /* codex: --padding-row-y */
+  --padding-row-x: calc(var(--spacing) * 2); /* codex: --padding-row-x */
+  --padding-panel: calc(var(--spacing) * 5); /* codex: --padding-panel-base (the `:root` `*3` re-declaration is overridden by this body rule the same way) */
+  --padding-toolbar: calc(var(--spacing) * 4); /* codex: --padding-toolbar */
+
+  /* --- controls ----------------------------------------------------------- */
+  --control-size-4xs: 1.25rem; /* codex: --control-size-4xs */
+  --control-size-3xs: 1.375rem; /* codex: --control-size-3xs */
+  --control-size-2xs: 1.5rem; /* codex: --control-size-2xs */
+  --control-size-xs: 1.625rem; /* codex: --control-size-xs */
+  --control-size-sm: 1.75rem; /* codex: --control-size-sm */
+  --control-size-md: 2rem; /* codex: --control-size-md */
+  --control-size-lg: 2.25rem; /* codex: --control-size-lg */
+  --control-size-xl: 2.5rem; /* codex: --control-size-xl */
+  --control-gutter-2xs: .375rem; /* codex: --control-gutter-2xs */
+  --control-gutter-xs: .5rem; /* codex: --control-gutter-xs */
+  --control-gutter-sm: .625rem; /* codex: --control-gutter-sm */
+  --control-gutter-md: .75rem; /* codex: --control-gutter-md */
+  --control-icon-size-xs: .875rem; /* codex: --control-icon-size-xs */
+  --control-icon-size-sm: 1rem; /* codex: --control-icon-size-sm */
+  --control-icon-size-md: 1.125rem; /* codex: --control-icon-size-md */
+  --control-icon-size-lg: 1.25rem; /* codex: --control-icon-size-lg */
+  --control-size-composer: calc(var(--spacing) * 7); /* codex: --spacing-token-button-composer (28px send-button diameter) */
+
+  /* --- type (rem design-language ladder only) ------------------------------ */
+  /* The reference runs two parallel ladders: `--text-*` in px, rewritten per window type, and
+   * `--font-text-*` in rem. Pi keeps only the rem one, so no window-type conditionals come along. */
+  --font-2xs: .625rem; /* codex: --font-text-2xs-size */
+  --font-2xs-lh: .875rem; /* codex: --font-text-2xs-line-height */
+  --font-xs: .75rem; /* codex: --font-text-xs-size */
+  --font-xs-lh: 1.125rem; /* codex: --font-text-xs-line-height */
+  --font-sm: .875rem; /* codex: --font-text-sm-size */
+  --font-sm-lh: 1.25rem; /* codex: --font-text-sm-line-height */
+  --font-md: 1rem; /* codex: --font-text-md-size */
+  --font-md-lh: 1.5rem; /* codex: --font-text-md-line-height */
+  --font-lg: 1.125rem; /* codex: --font-text-lg-size */
+  --font-lg-lh: 1.8125rem; /* codex: --font-text-lg-line-height */
+  --font-weight-normal: 400; /* codex: --font-weight-normal (every --font-text-*-weight resolves here) */
+  --font-weight-medium: 500; /* codex: --font-weight-medium */
+  /* Sub-12px sizes need the tracking or they read tighter than the reference. */
+  --tracking-wide: .025em; /* codex: --tracking-wide (--font-text-{xs,2xs}-tracking) */
+  --tracking-normal: 0em; /* codex: --tracking-normal (--font-text-{sm,md,lg}-tracking) */
+
+  /* --- menu --------------------------------------------------------------- */
+  --menu-gutter: calc(var(--spacing) * 1.5); /* codex: --menu-gutter */
+  --menu-radius: var(--radius-2xl);
+  --menu-item-bg: color-mix(in oklab, var(--text) 8%, transparent); /* codex: --menu-item-background-color -> --alpha-08, with --alpha-base = --color-text */
+  --menu-item-padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3); /* codex: --menu-item-padding */
+  --menu-item-gap: calc(var(--spacing) * 1.5); /* codex: --menu-item-gap */
+  --menu-separator-gutter: var(--menu-gutter) calc(-1 * var(--menu-gutter)); /* codex: --menu-separator-gutter */
+  --menu-row-content-gap: calc(var(--spacing) * 2); /* codex: --spacing-menu-row-content (desktop value; browser branch is a nonDesktopOverride) */
+
+  /* --- elevation ---------------------------------------------------------- */
+  /* One ladder only. `--elevation-N00-geo` + `--shadow-alpha-N00` + `--shadow-100..400` are the
+   * reference's theme-varying twin of `--shadow-sm..2xl`; §4 forbids shipping both, and recommends
+   * this one, so the 12 other names are deliberately absent. */
+  --shadow-sm: 0px 1px 2px -1px #00000014; /* codex: --shadow-sm */
+  --shadow-md: 0px 2px 4px -1px #00000014; /* codex: --shadow-md */
+  --shadow-lg: 0px 4px 8px -2px #0000001a; /* codex: --shadow-lg */
+  --shadow-xl: 0px 8px 16px -4px #0000001f; /* codex: --shadow-xl */
+  --shadow-2xl: 0px 16px 32px -8px #00000030; /* codex: --shadow-2xl */
+  --shadow-card: 0px 4px 16px 0px #0000000d; /* codex: --shadow-card */
+  --shadow-tooltip: 0 8px 18px #0f172a33; /* codex: --shadow-tooltip */
+  --shadow-hairline: 0 0 0 var(--border-width-hairline) #0000001a; /* codex: --shadow-hairline */
+  /* `--color-border-strong` itself is not ported (Pi has one border tier); §3 has its resolved
+   * light/dark pair inlined here instead. `--elevation-popover`/`--elevation-sidebar` consume the
+   * stroke through var(), so overriding just this one line re-themes all three. */
+  --elevation-stroke: 0 0 0 var(--border-width-hairline) rgba(26, 28, 31, .12); /* codex: --elevation-stroke = 0 0 0 .5px --color-border-strong */
+  --elevation-sidebar: var(--elevation-stroke), 0 3px 7.5px #00000008, 0 0 16px #00000005; /* codex: --elevation-sidebar */
+  /*
+   * A light-side identity value is required so the name always resolves: a consumer composes this as
+   * `box-shadow: var(--elevation-composer), var(--elevation-composer-inner)`, and `none` is not valid
+   * inside a comma-separated shadow list (it would invalidate the whole declaration), so the neutral
+   * element is a fully transparent zero-size shadow. Dark appends the real inset after
+   * `--elevation-composer`, which is how §1.7 maps the reference's `-dark` suffix.
+   */
+  --elevation-composer-inner: 0 0 #0000; /* codex: --elevation-composer-dark */
+
+  /* --- motion ------------------------------------------------------------- */
+  --duration-fast: .15s; /* codex: --transition-duration-basic */
+  --duration-slow: .3s; /* codex: --transition-duration-relaxed */
+  --ease-basic: ease; /* codex: --transition-ease-basic */
+}
+
+/* Narrow windows trade the composer's long bloom for a shorter one. This is a media query in the
+ * reference too, so it must not be folded into the default value above. */
+@media not all and (width >= 40rem) {
+  :root {
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --menu-item-bg: color-mix(in oklab, var(--text) 10%, transparent); /* codex: --menu-item-background-color -> --alpha-10 */
+  --shadow-hairline: 0 0 0 var(--border-width-hairline) #ffffff1f; /* codex: --shadow-hairline-color (dark) */
+  --elevation-stroke: 0 0 0 var(--border-width-hairline) rgba(255, 255, 255, .16); /* codex: --app-color-border-heavy dark = color-mix(in oklab, --white 16%, transparent) */
+  --elevation-composer-inner: inset 0 0 1px 0 #fff3; /* codex: --elevation-composer-dark */
+}
+
+/*
+ * Third copy of the dark values, verbatim. The reference has no equivalent: it only ships
+ * `[data-theme="light"|"dark"]`. This block exists because Pi also has a "follow the OS" setting, and
+ * if these drift from the block above, system mode and dark mode render differently.
+ */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --menu-item-bg: color-mix(in oklab, var(--text) 10%, transparent);
+    --shadow-hairline: 0 0 0 var(--border-width-hairline) #ffffff1f;
+    --elevation-stroke: 0 0 0 var(--border-width-hairline) rgba(255, 255, 255, .16);
+    --elevation-composer-inner: inset 0 0 1px 0 #fff3;
+  }
+}

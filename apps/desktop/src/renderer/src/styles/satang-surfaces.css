@@ -1,0 +1,73 @@
+/* Geometry from the 26.915 pinned terminal, preview and management captures.
+ * Settings owns its frame and controls in settings.css. */
+.terminal-tabs.panel-strip,
+.browser-tabs.panel-strip {
+  padding: 0 8px;
+  gap: 4px;
+  border-bottom: 0;
+}
+.terminal-tabs.panel-strip { height: 40px; background: var(--bg); }
+.browser-tabs.panel-strip { height: 46px; background: var(--bg); }
+.terminal-tabs [role=tab],
+.browser-tabs [role=tab] {
+  display: block;
+  width: 156px;
+  min-width: 0;
+  height: 28px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 12.5px;
+  font-size: 13px;
+  line-height: 18.5714px;
+  font-weight: 430;
+  text-align: left;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.terminal-tabs [role=tab].active,
+.browser-tabs [role=tab].active { box-shadow: none; background: var(--bg); }
+.terminal-tabs [role=tab] { display: flex; align-items: center; gap: 8px; }
+.terminal-tabs [role=tab] svg { flex: none; }
+.terminal-tabs [role=tab].active { background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
+.terminal-tabs [role=tab] .terminal-tab-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: inherit; color: inherit; }
+.browser-tabs [role=tab] { display: flex; align-items: center; gap: 8px; }
+.browser-tabs [role=tab] svg { flex: none; }
+.browser-tabs [role=tab] .browser-tab-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; font: inherit; color: inherit; }
+.browser-tabs [role=tab].active { background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
+.terminal-surface { padding: 8px 0 12px 16px; }
+.preview-toolbar.panel-strip { padding: 0 8px; gap: 1px; }
+.preview-toolbar input {
+  height: 28px;
+  margin-inline: 35px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 430;
+  text-align: center;
+}
+.preview-toolbar input:focus { text-align: left; }
+.preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(288px, 100%);
+  padding: 32px 16px;
+  text-align: center;
+}
+.preview-empty h2 { margin: 0 0 8px; font-size: 16px; line-height: 24px; font-weight: 500; color: var(--text); }
+.preview-empty p { margin: 0; font-size: 13px; line-height: 18.5714px; }
+.management-page {
+  padding: 66px 20px 20px;
+  scrollbar-gutter: stable;
+}
+.management-page::-webkit-scrollbar { width: 10px; }
+.page-heading h1 { line-height: 28.8px; }
+.management-page > :not(.page-heading) { max-width: 768px; margin-inline: auto; }
+@media (max-height: 540px) {
+  .management-page { padding-top: 20px; }
+}

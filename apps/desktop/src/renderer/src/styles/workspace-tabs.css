@@ -1,0 +1,35 @@
+/* One strip owns tool and web tabs. Session/file tabs stay inside their tool. */
+.workspace-tab-header.panel-strip { display: flex; gap: 4px; height: 46px; min-height: 46px; padding: 6px 8px; overflow: hidden; }
+.workspace-tab-header > .workspace-tabs { display: flex; flex: 1 1 0; min-width: 0; gap: 4px; height: 34px; padding: 0; border: 0; overflow-x: auto; scrollbar-width: none; }
+.workspace-tabs::-webkit-scrollbar { display: none; }
+.workspace-tabs .tab-item { display: flex; align-items: center; flex: 0 1 200px; min-width: 90px; height: 32px; border: 1px solid transparent; border-radius: 8px; padding: 0 4px; }
+.workspace-tabs .tab-item[data-selected="true"] { background: var(--hover); border-color: var(--border); }
+.workspace-tabs .tab-item > [role="tab"] { display: flex; align-items: center; flex: 1; gap: 7px; min-width: 0; height: 28px; padding: 0 5px; border: 0; border-radius: 5px; background: transparent; box-shadow: none; font-size: var(--font-xs); font-weight: 500; }
+.workspace-tabs [role="tab"] > svg { flex-shrink: 0; }
+.workspace-tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workspace-tabs .tab-close { display: grid; place-items: center; flex-shrink: 0; width: 22px; height: 22px; min-height: 0; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--muted); opacity: 0; pointer-events: none; }
+.workspace-tabs .tab-item:hover .tab-close, .workspace-tabs .tab-item:focus-within .tab-close { opacity: 1; pointer-events: auto; }
+.workspace-tabs .tab-close:hover { background: var(--hover); color: var(--text); }
+.workspace-tab-actions { display: flex; align-items: center; flex-shrink: 0; gap: 2px; }
+.review-tool-content { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.review-tool-content > .preview-panel { min-width: 0; }
+.review-tool-content > .preview-panel[hidden] { display: none; }
+.review-tool-content > .terminal-panel { flex: 1; min-width: 0; border-top: 0; }
+/* A changing search count must not resize xterm and clear its current selection. */
+.review-tool-content .terminal-find:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; }
+.review-tool-content .terminal-find > input { grid-area: 1 / 1; min-width: 0; width: 100%; }
+.review-tool-content .terminal-find > button:nth-of-type(1) { grid-area: 1 / 2; }
+.review-tool-content .terminal-find > button:nth-of-type(2) { grid-area: 1 / 3; }
+.review-tool-content .terminal-find > .icon-button { grid-area: 1 / 4; }
+.review-tool-content .terminal-find > [role="status"] { grid-area: 2 / 1 / auto / -1; min-height: 18px; }
+.review-tool-content > .review-findings { flex: 1; min-height: 0; overflow: auto; }
+.workspace-tab-header [role="tab"] > .workspace-tab-title { font-size: inherit; color: inherit; }
+.workspace-tool-actions { display: flex; justify-content: flex-end; padding: 2px 8px; }
+.preview-surface { position: relative; overflow: hidden; }
+.preview-snapshot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+.tool-launcher { align-self: start; width: 100%; padding: 28px 16px; color: var(--text); }
+.tool-launcher h2 { margin: 0 8px 14px; font-size: var(--font-xs); font-weight: 600; }
+.tool-launcher > button { display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; min-height: 38px; margin: 3px 0; padding: 8px 12px; border: 0; border-radius: 8px; text-align: left; background: transparent; font-size: var(--font-xs); }
+.tool-launcher > button:hover { background: var(--hover); }
+.tool-launcher > button svg { flex-shrink: 0; color: var(--muted); }
+@media (hover: none) { .workspace-tabs .tab-close { opacity: 1; pointer-events: auto; } }

@@ -1,0 +1,120 @@
+/* Single runtime theme owner. Codex MSIX 26.915.4065.0 / app 26.915.31945.
+ * Values: Satang spec/tokens.css and the same-version welcome DOM + opaque captures.
+ * Native backdrop: reference-scenes.json composition evidence, not the 26.917 theme.
+ * Dialog/approval/loading slots without a valid old scene are Pi adaptations of these tokens.
+ * See docs/desktop/codex-26915-reference-manifest.json for source hashes and exclusions. */
+:root {
+  --bg: rgb(255, 255, 255);
+  --sidebar: rgb(240, 243, 249);
+  --window-menu: var(--sidebar);
+  --panel: var(--bg);
+  --settings-card-background: rgb(255, 255, 255);
+  --settings-switch-background: rgb(58, 131, 247);
+  --surface: rgb(255, 255, 255);
+  --text: rgb(26, 28, 31);
+  --muted: color(srgb 0.101961 0.109804 0.121569 / .65);
+  --tertiary: rgba(26, 28, 31, .494);
+  --hover: rgba(26, 28, 31, .055);
+  --selected: oklab(.22559 -.00131416 -.00642684 / .05);
+  --border: rgba(26, 28, 31, .08);
+  --border-strong: rgba(26, 28, 31, .118);
+  --accent: rgb(44, 103, 197);
+  --accent-soft: color-mix(in srgb, var(--accent) 15%, transparent);
+  --danger: rgb(186, 38, 35);
+  --success: rgb(0, 162, 64);
+  /* Both 26.915 captures use an independent dark terminal output surface. */
+  --terminal-background: rgb(24, 24, 24);
+  --terminal-foreground: rgb(223, 223, 223);
+  --terminal-selection: rgb(75, 75, 75);
+  --user-message: var(--selected);
+  --diff-added: rgba(0, 162, 64, .15);
+  --diff-removed: rgba(186, 38, 35, .15);
+  --composer-background: oklab(.999994 .0000455678 .0000200868 / .864706);
+  --elevation-composer: rgba(0, 0, 0, .04) 0 0 0 1px, rgba(0, 0, 0, .04) 0 2px 8px, rgba(0, 0, 0, .024) 0 4px 80px 8px;
+  --elevation-popover: 0 0 0 .5px var(--border-strong), 0 3px 7.5px rgba(0, 0, 0, .04), 0 0 20px rgba(0, 0, 0, .05);
+  --popup-background: color-mix(in srgb, var(--surface) 90%, transparent);
+  --popup-menu-shadow: 0 0 0 .5px var(--border), 0 8px 16px -4px rgba(0, 0, 0, .12);
+  --popup-dialog-shadow: 0 0 0 .5px var(--border), 0 4px 8px -2px rgba(0, 0, 0, .1);
+  --popup-tooltip-shadow: 0 8px 18px rgba(15, 23, 42, .2);
+  --tooltip-background: var(--surface);
+  --popup-description: var(--tertiary);
+  --dialog-button-radius: 12.5px;
+  --dialog-close-color: color-mix(in oklab, var(--text) 80%, transparent);
+  --dialog-close-icon-size: 16px;
+  --dialog-cancel-background: var(--composer-background);
+  --dialog-danger-background: color-mix(in oklab, var(--danger) 10%, transparent);
+  --dialog-danger-color: var(--danger);
+  --dialog-cancel-hover: var(--hover);
+  --dialog-danger-hover: color-mix(in oklab, var(--danger) 20%, transparent);
+  --dialog-focus-shadow: 0 0 0 2px var(--accent);
+  --markdown-border: var(--border-strong);
+  --markdown-table-divider: rgba(26, 28, 31, .047);
+  --markdown-code-background: var(--hover);
+  --markdown-code-font: ui-monospace, SFMono-Regular, "SF Mono", menlo, consolas, "Liberation Mono", monospace;
+  --activity-file-color: var(--tertiary);
+  --activity-diff-description: color-mix(in oklab, var(--text) 40%, transparent);
+  --activity-diff-background: color-mix(in oklab, var(--text) 4%, transparent);
+  --approval-background: var(--surface);
+  --approval-foreground: var(--text);
+  --approval-border: var(--border);
+  --approval-muted: var(--tertiary);
+  --approval-eyebrow: var(--muted);
+  --approval-allow-background: var(--text);
+  --approval-allow-foreground: var(--surface);
+  --approval-deny-background: var(--composer-background);
+  --approval-allow-hover: color-mix(in oklab, var(--text) 80%, transparent);
+  --approval-deny-hover: var(--hover);
+  --radius-md: 10px;
+  --radius-lg: 12.5px;
+  --radius-xl: 15px;
+  --radius-2xl: 20px;
+  --radius-3xl: 25px;
+  --radius-4xl: 30px;
+  --radius-button: 12.5px;
+}
+:root[data-theme="dark"] {
+  --settings-card-background: rgb(35, 35, 35);
+  --bg: rgb(24, 24, 24);
+  --sidebar: rgb(29, 32, 38);
+  --surface: rgb(45, 45, 45);
+  --text: rgb(255, 255, 255);
+  --muted: color(srgb 1 1 1 / .65);
+  --tertiary: rgba(255, 255, 255, .498);
+  --hover: rgba(255, 255, 255, .08);
+  --selected: oklab(.999994 .0000455678 .0000200868 / .05);
+  --border: rgba(255, 255, 255, .082);
+  --border-strong: rgba(255, 255, 255, .157);
+  --accent: rgb(131, 195, 255);
+  --danger: rgb(250, 66, 62);
+  --success: rgb(64, 201, 119);
+  --diff-added: rgba(64, 201, 119, .23);
+  --diff-removed: rgba(250, 66, 62, .23);
+  --composer-background: rgba(54, 54, 54, .96);
+  --elevation-composer: rgba(255, 255, 255, .2) 0 0 1px 0 inset;
+  --dialog-cancel-background: rgba(255, 255, 255, .03);
+  --markdown-table-divider: rgba(255, 255, 255, .043);
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --settings-card-background: rgb(35, 35, 35);
+    --bg: rgb(24, 24, 24);
+    --sidebar: rgb(29, 32, 38);
+    --surface: rgb(45, 45, 45);
+    --text: rgb(255, 255, 255);
+    --muted: color(srgb 1 1 1 / .65);
+    --tertiary: rgba(255, 255, 255, .498);
+    --hover: rgba(255, 255, 255, .08);
+    --selected: oklab(.999994 .0000455678 .0000200868 / .05);
+    --border: rgba(255, 255, 255, .082);
+    --border-strong: rgba(255, 255, 255, .157);
+    --accent: rgb(131, 195, 255);
+    --danger: rgb(250, 66, 62);
+    --success: rgb(64, 201, 119);
+    --diff-added: rgba(64, 201, 119, .23);
+    --diff-removed: rgba(250, 66, 62, .23);
+    --composer-background: rgba(54, 54, 54, .96);
+    --elevation-composer: rgba(255, 255, 255, .2) 0 0 1px 0 inset;
+    --dialog-cancel-background: rgba(255, 255, 255, .03);
+    --markdown-table-divider: rgba(255, 255, 255, .043);
+  }
+}

@@ -1,0 +1,507 @@
+{
+  "schemaVersion": 1,
+  "version": "26.915.4065.0",
+  "scope": "Captured palette positioning, panel, input and row styles. Pi commands, result counts and search snippets remain functional adaptations.",
+  "samples": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "height": 940,
+      "pinned": true,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/palette/light/1440x940.dom-styles.json",
+      "sha256": "841a4485527f14bba67f708b2749dd3e088e0a7e7f3c0ce12bc60e26b7145627",
+      "measurements": {
+        "dialog": {
+          "node": 1137,
+          "rect": {
+            "x": 460,
+            "y": 218,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+          }
+        },
+        "panel": {
+          "node": 1138,
+          "rect": {
+            "x": 460,
+            "y": 218,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "4px",
+            "paddingRight": "4px",
+            "paddingBottom": "4px",
+            "paddingLeft": "4px",
+            "borderRadius": "20px",
+            "borderTopWidth": "1px",
+            "boxShadow": "rgba(0, 0, 0, 0.19) 0px 16px 32px -8px"
+          }
+        },
+        "input": {
+          "node": 1142,
+          "rect": {
+            "x": 465,
+            "y": 223,
+            "w": 510,
+            "h": 33
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "6px",
+            "paddingRight": "10px",
+            "paddingBottom": "6px",
+            "paddingLeft": "10px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "list": {
+          "node": 1143,
+          "rect": {
+            "x": 465,
+            "y": 260,
+            "w": 510,
+            "h": 440
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "row": {
+          "node": 1150,
+          "rect": {
+            "x": 465,
+            "y": 290.56,
+            "w": 510,
+            "h": 31
+          },
+          "css": {
+            "backgroundColor": "rgba(26, 28, 31, 0.055)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "5px",
+            "paddingRight": "8px",
+            "paddingBottom": "5px",
+            "paddingLeft": "8px",
+            "borderRadius": "12.5px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "width": 1000,
+      "height": 700,
+      "pinned": false,
+      "file": ".artifacts/reference/26.915.4065.0/palette/light-1000x700.dom-styles.json",
+      "sha256": "0433f758b8b880ab6ae1acaeb4a51813fb9d3043f202cca8017517e617117d0d",
+      "measurements": {
+        "dialog": {
+          "node": 839,
+          "rect": {
+            "x": 240,
+            "y": 98,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+          }
+        },
+        "panel": {
+          "node": 840,
+          "rect": {
+            "x": 240,
+            "y": 98,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "4px",
+            "paddingRight": "4px",
+            "paddingBottom": "4px",
+            "paddingLeft": "4px",
+            "borderRadius": "20px",
+            "borderTopWidth": "1px",
+            "boxShadow": "rgba(0, 0, 0, 0.19) 0px 16px 32px -8px"
+          }
+        },
+        "input": {
+          "node": 844,
+          "rect": {
+            "x": 245,
+            "y": 103,
+            "w": 510,
+            "h": 33
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "6px",
+            "paddingRight": "10px",
+            "paddingBottom": "6px",
+            "paddingLeft": "10px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "list": {
+          "node": 845,
+          "rect": {
+            "x": 245,
+            "y": 140,
+            "w": 510,
+            "h": 440
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "row": {
+          "node": 852,
+          "rect": {
+            "x": 245,
+            "y": 170.5625,
+            "w": 510,
+            "h": 31
+          },
+          "css": {
+            "backgroundColor": "rgba(26, 28, 31, 0.055)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "5px",
+            "paddingRight": "8px",
+            "paddingBottom": "5px",
+            "paddingLeft": "8px",
+            "borderRadius": "12.5px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "height": 940,
+      "pinned": true,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/palette/dark2/1440x940.dom-styles.json",
+      "sha256": "de9ac2a5a3d7369c78ca1fadb92952bea8f7b8669f3dd6c2a070297c9c3797eb",
+      "measurements": {
+        "dialog": {
+          "node": 1137,
+          "rect": {
+            "x": 460,
+            "y": 218,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+          }
+        },
+        "panel": {
+          "node": 1138,
+          "rect": {
+            "x": 460,
+            "y": 218,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgb(45, 45, 45)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "4px",
+            "paddingRight": "4px",
+            "paddingBottom": "4px",
+            "paddingLeft": "4px",
+            "borderRadius": "20px",
+            "borderTopWidth": "1px",
+            "boxShadow": "rgba(0, 0, 0, 0.19) 0px 16px 32px -8px"
+          }
+        },
+        "input": {
+          "node": 1142,
+          "rect": {
+            "x": 465,
+            "y": 223,
+            "w": 510,
+            "h": 33
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "6px",
+            "paddingRight": "10px",
+            "paddingBottom": "6px",
+            "paddingLeft": "10px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "list": {
+          "node": 1143,
+          "rect": {
+            "x": 465,
+            "y": 260,
+            "w": 510,
+            "h": 440
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "row": {
+          "node": 1150,
+          "rect": {
+            "x": 465,
+            "y": 290.56,
+            "w": 510,
+            "h": 31
+          },
+          "css": {
+            "backgroundColor": "rgba(255, 255, 255, 0.08)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "5px",
+            "paddingRight": "8px",
+            "paddingBottom": "5px",
+            "paddingLeft": "8px",
+            "borderRadius": "12.5px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1000,
+      "height": 700,
+      "pinned": false,
+      "file": ".artifacts/reference/26.915.4065.0/palette/dark-1000x700.dom-styles.json",
+      "sha256": "359ba695cda5d9721195a5adeecb3bff0b22f09c74c0eaa05ea6cb76f57762cd",
+      "measurements": {
+        "dialog": {
+          "node": 839,
+          "rect": {
+            "x": 240,
+            "y": 98,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+          }
+        },
+        "panel": {
+          "node": 840,
+          "rect": {
+            "x": 240,
+            "y": 98,
+            "w": 520,
+            "h": 487
+          },
+          "css": {
+            "backgroundColor": "rgb(45, 45, 45)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "4px",
+            "paddingRight": "4px",
+            "paddingBottom": "4px",
+            "paddingLeft": "4px",
+            "borderRadius": "20px",
+            "borderTopWidth": "1px",
+            "boxShadow": "rgba(0, 0, 0, 0.19) 0px 16px 32px -8px"
+          }
+        },
+        "input": {
+          "node": 844,
+          "rect": {
+            "x": 245,
+            "y": 103,
+            "w": 510,
+            "h": 33
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "6px",
+            "paddingRight": "10px",
+            "paddingBottom": "6px",
+            "paddingLeft": "10px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "list": {
+          "node": 845,
+          "rect": {
+            "x": 245,
+            "y": 140,
+            "w": 510,
+            "h": 440
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        },
+        "row": {
+          "node": 852,
+          "rect": {
+            "x": 245,
+            "y": 170.5625,
+            "w": 510,
+            "h": 31
+          },
+          "css": {
+            "backgroundColor": "rgba(255, 255, 255, 0.08)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "fontWeight": "430",
+            "lineHeight": "21px",
+            "paddingTop": "5px",
+            "paddingRight": "8px",
+            "paddingBottom": "5px",
+            "paddingLeft": "8px",
+            "borderRadius": "12.5px",
+            "borderTopWidth": "0px",
+            "boxShadow": "none"
+          }
+        }
+      }
+    }
+  ]
+}

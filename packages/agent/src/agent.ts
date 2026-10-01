@@ -171,6 +171,17 @@ class PendingMessageQueue {
 	clear(): void {
 		this.messages = [];
 	}
+
+	snapshot(): AgentMessage[] {
+		return this.messages.slice();
+	}
+
+	replace(expected: readonly AgentMessage[], next: readonly AgentMessage[]): boolean {
+		if (expected.length !== this.messages.length || expected.some((item, index) => item !== this.messages[index]))
+			return false;
+		this.messages = next.slice();
+		return true;
+	}
 }
 
 type ActiveRun = {
@@ -323,6 +334,19 @@ export class Agent {
 	/** Returns true when either queue still contains pending messages. */
 	hasQueuedMessages(): boolean {
 		return this.steeringQueue.hasItems() || this.followUpQueue.hasItems();
+	}
+
+	/** A snapshot can be exchanged only while every item is still pending. */
+	getPendingMessages(kind: "steer" | "followUp"): readonly AgentMessage[] {
+		return (kind === "steer" ? this.steeringQueue : this.followUpQueue).snapshot();
+	}
+
+	replacePendingMessages(
+		kind: "steer" | "followUp",
+		expected: readonly AgentMessage[],
+		next: readonly AgentMessage[],
+	): boolean {
+		return (kind === "steer" ? this.steeringQueue : this.followUpQueue).replace(expected, next);
 	}
 
 	/** Active abort signal for the current run, if any. */

@@ -1,0 +1,1091 @@
+{
+  "schemaVersion": 1,
+  "source": "satang_code",
+  "version": "26.915.4065.0",
+  "appVersion": "26.915.31945",
+  "scope": "Pinned 240px sidebar. Geometry and style only, no captured task or account text. Localized labels and Pi actions are not source pixel claims.",
+  "sources": [
+    {
+      "file": "src/renderer/src/shell/MenuBar.tsx",
+      "sha256": "d92621597698518ab80e105862844dc0bbe0649230b1ac50a848235144574bc1"
+    },
+    {
+      "file": "src/renderer/src/shell/LeftPanelHeader.tsx",
+      "sha256": "946036587e34e1c76872d65c6b91b1172796b35b4f1b30d698cacd50ecf4f0a7"
+    },
+    {
+      "file": "src/renderer/src/surfaces/sidebar/index.tsx",
+      "sha256": "a00b0261cb469e57a3926da4bf0c321136886dc9fdf3063cf6c7926c076ae9b4"
+    },
+    {
+      "file": "src/renderer/src/styles/sidebar.css",
+      "sha256": "5623a7108e0f20f6d605ff450819f380ef0a3ff13ca5e65c848a46032845dc96"
+    }
+  ],
+  "samples": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/sidebar/light/1440x940.dom-styles.json",
+      "sha256": "cfe2aa215b117b9a611b4517dbc8473fbff39d17b80f7515cd500dd40c458ec7",
+      "image": ".artifacts/reference/26.915.4065.0/pinned/sidebar/light/1440x940.png",
+      "imageSha256": "306f13684e0314315b52e6c912ef289262469930a1be477ac9cd7801c135957e",
+      "measurements": {
+        "titlebar": {
+          "node": 361,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1440,
+            "h": 36
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "toggle": {
+          "node": 364,
+          "rect": {
+            "x": 6,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "back": {
+          "node": 368,
+          "rect": {
+            "x": 38,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "forward": {
+          "node": 372,
+          "rect": {
+            "x": 70,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "brand": {
+          "node": 391,
+          "rect": {
+            "x": 8,
+            "y": 44,
+            "w": 86.28,
+            "h": 32
+          },
+          "css": {
+            "borderRadius": "15px",
+            "fontSize": "17px",
+            "lineHeight": "24px",
+            "fontWeight": "500",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "search": {
+          "node": 401,
+          "rect": {
+            "x": 204,
+            "y": 48,
+            "w": 24,
+            "h": 24
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "section": {
+          "node": 460,
+          "rect": {
+            "x": 8,
+            "y": 223,
+            "w": 224,
+            "h": 25
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "project": {
+          "node": 488,
+          "rect": {
+            "x": 8,
+            "y": 252,
+            "w": 224,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "thread": {
+          "node": 529,
+          "rect": {
+            "x": 8,
+            "y": 283,
+            "w": 224,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "footer": {
+          "node": 837,
+          "rect": {
+            "x": 0,
+            "y": 894,
+            "w": 240,
+            "h": 46
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "profile": {
+          "node": 840,
+          "rect": {
+            "x": 8,
+            "y": 902,
+            "w": 184,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "newTask": {
+          "node": 410,
+          "rect": {
+            "x": 8,
+            "y": 84,
+            "w": 192,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "primary": {
+          "node": 429,
+          "rect": {
+            "x": 8,
+            "y": 115,
+            "w": 224,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "navText": {
+          "node": 430,
+          "rect": {
+            "x": 16,
+            "y": 119.5,
+            "w": 208,
+            "h": 21
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "projectText": {
+          "node": 495,
+          "rect": {
+            "x": 40,
+            "y": 252.5,
+            "w": 192,
+            "h": 29
+          },
+          "css": {
+            "borderRadius": "10px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/sidebar/light/1000x700.dom-styles.json",
+      "sha256": "719ee67be07a3343946637865ae2c254a15ddc332cee2179aebf413377b6d1cd",
+      "image": ".artifacts/reference/26.915.4065.0/pinned/sidebar/light/1000x700.png",
+      "imageSha256": "f434ec4f40262d0347be1d26e453e223cc339a5c267bfce9f6c4fd9bf62c9533",
+      "measurements": {
+        "titlebar": {
+          "node": 361,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1000,
+            "h": 36
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "toggle": {
+          "node": 364,
+          "rect": {
+            "x": 6,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "back": {
+          "node": 368,
+          "rect": {
+            "x": 38,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "forward": {
+          "node": 372,
+          "rect": {
+            "x": 70,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "brand": {
+          "node": 391,
+          "rect": {
+            "x": 8,
+            "y": 44,
+            "w": 86.28,
+            "h": 32
+          },
+          "css": {
+            "borderRadius": "15px",
+            "fontSize": "17px",
+            "lineHeight": "24px",
+            "fontWeight": "500",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "search": {
+          "node": 401,
+          "rect": {
+            "x": 204,
+            "y": 48,
+            "w": 24,
+            "h": 24
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": "430",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "section": {
+          "node": 460,
+          "rect": {
+            "x": 8,
+            "y": 223,
+            "w": 214,
+            "h": 25
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "project": {
+          "node": 488,
+          "rect": {
+            "x": 8,
+            "y": 252,
+            "w": 214,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "thread": {
+          "node": 529,
+          "rect": {
+            "x": 8,
+            "y": 283,
+            "w": 214,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "footer": {
+          "node": 837,
+          "rect": {
+            "x": 0,
+            "y": 654,
+            "w": 240,
+            "h": 46
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "profile": {
+          "node": 840,
+          "rect": {
+            "x": 8,
+            "y": 662,
+            "w": 184,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "newTask": {
+          "node": 410,
+          "rect": {
+            "x": 8,
+            "y": 84,
+            "w": 192,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "primary": {
+          "node": 429,
+          "rect": {
+            "x": 8,
+            "y": 115,
+            "w": 214,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(26, 28, 31)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "navText": {
+          "node": 430,
+          "rect": {
+            "x": 16,
+            "y": 119.5,
+            "w": 198,
+            "h": 21
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "projectText": {
+          "node": 495,
+          "rect": {
+            "x": 40,
+            "y": 252.5,
+            "w": 182,
+            "h": 29
+          },
+          "css": {
+            "borderRadius": "10px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.22559 -0.00131416 -0.00642684 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/sidebar/dark2/1440x940.dom-styles.json",
+      "sha256": "cdcc7256a9fe50514a00866d2a483b53fa9b0bf50ca0d57b4380a195a0876c83",
+      "image": ".artifacts/reference/26.915.4065.0/pinned/sidebar/dark2/1440x940.png",
+      "imageSha256": "0388b6172de98c3a03875634400ecbb98547ca6cfaf67378e19658a416c13cfd",
+      "measurements": {
+        "titlebar": {
+          "node": 361,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1440,
+            "h": 36
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "toggle": {
+          "node": 364,
+          "rect": {
+            "x": 6,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "back": {
+          "node": 368,
+          "rect": {
+            "x": 38,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "forward": {
+          "node": 372,
+          "rect": {
+            "x": 70,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "brand": {
+          "node": 391,
+          "rect": {
+            "x": 8,
+            "y": 44,
+            "w": 86.28,
+            "h": 32
+          },
+          "css": {
+            "borderRadius": "15px",
+            "fontSize": "17px",
+            "lineHeight": "24px",
+            "fontWeight": "500",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "search": {
+          "node": 401,
+          "rect": {
+            "x": 204,
+            "y": 48,
+            "w": 24,
+            "h": 24
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "section": {
+          "node": 460,
+          "rect": {
+            "x": 8,
+            "y": 223,
+            "w": 224,
+            "h": 25
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "project": {
+          "node": 488,
+          "rect": {
+            "x": 8,
+            "y": 252,
+            "w": 224,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "thread": {
+          "node": 529,
+          "rect": {
+            "x": 8,
+            "y": 283,
+            "w": 224,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "footer": {
+          "node": 837,
+          "rect": {
+            "x": 0,
+            "y": 894,
+            "w": 240,
+            "h": 46
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "profile": {
+          "node": 840,
+          "rect": {
+            "x": 8,
+            "y": 902,
+            "w": 184,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "newTask": {
+          "node": 410,
+          "rect": {
+            "x": 8,
+            "y": 84,
+            "w": 192,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "primary": {
+          "node": 429,
+          "rect": {
+            "x": 8,
+            "y": 115,
+            "w": 224,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "navText": {
+          "node": 430,
+          "rect": {
+            "x": 16,
+            "y": 119.5,
+            "w": 208,
+            "h": 21
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "projectText": {
+          "node": 495,
+          "rect": {
+            "x": 40,
+            "y": 252.5,
+            "w": 192,
+            "h": 29
+          },
+          "css": {
+            "borderRadius": "10px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/sidebar/dark2/1000x700.dom-styles.json",
+      "sha256": "e09f48da972167acccb285d045d38e374387fb1cd8bfcc57c0d1139242f12452",
+      "image": ".artifacts/reference/26.915.4065.0/pinned/sidebar/dark2/1000x700.png",
+      "imageSha256": "8865afacea418849f4b6cc0fcd5406937936e6c084ce23a7fb0d9bfb7d0dc0f7",
+      "measurements": {
+        "titlebar": {
+          "node": 361,
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1000,
+            "h": 36
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "toggle": {
+          "node": 364,
+          "rect": {
+            "x": 6,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "back": {
+          "node": 368,
+          "rect": {
+            "x": 38,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "forward": {
+          "node": 372,
+          "rect": {
+            "x": 70,
+            "y": 4,
+            "w": 28,
+            "h": 28
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "brand": {
+          "node": 391,
+          "rect": {
+            "x": 8,
+            "y": 44,
+            "w": 86.28,
+            "h": 32
+          },
+          "css": {
+            "borderRadius": "15px",
+            "fontSize": "17px",
+            "lineHeight": "24px",
+            "fontWeight": "500",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "search": {
+          "node": 401,
+          "rect": {
+            "x": 204,
+            "y": 48,
+            "w": 24,
+            "h": 24
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": "430",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "section": {
+          "node": 460,
+          "rect": {
+            "x": 8,
+            "y": 223,
+            "w": 214,
+            "h": 25
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "project": {
+          "node": 488,
+          "rect": {
+            "x": 8,
+            "y": 252,
+            "w": 214,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "thread": {
+          "node": 529,
+          "rect": {
+            "x": 8,
+            "y": 283,
+            "w": 214,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "footer": {
+          "node": 837,
+          "rect": {
+            "x": 0,
+            "y": 654,
+            "w": 240,
+            "h": 46
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "profile": {
+          "node": 840,
+          "rect": {
+            "x": 8,
+            "y": 662,
+            "w": 184,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "newTask": {
+          "node": 410,
+          "rect": {
+            "x": 8,
+            "y": 84,
+            "w": 192,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "primary": {
+          "node": 429,
+          "rect": {
+            "x": 8,
+            "y": 115,
+            "w": 214,
+            "h": 30
+          },
+          "css": {
+            "borderRadius": "12.5px",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "color": "rgb(255, 255, 255)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "navText": {
+          "node": 430,
+          "rect": {
+            "x": 16,
+            "y": 119.5,
+            "w": 198,
+            "h": 21
+          },
+          "css": {
+            "borderRadius": "0px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        },
+        "projectText": {
+          "node": 495,
+          "rect": {
+            "x": 40,
+            "y": 252.5,
+            "w": 182,
+            "h": 29
+          },
+          "css": {
+            "borderRadius": "10px",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "color": "oklab(0.999994 0.0000455678 0.0000200868 / 0.85)",
+            "backgroundColor": "rgba(0, 0, 0, 0)"
+          }
+        }
+      }
+    }
+  ]
+}

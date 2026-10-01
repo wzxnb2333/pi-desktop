@@ -1,0 +1,43 @@
+/* Satang 26.915 Review: captured toolbar, two-row header and file-tree boundary.
+ * The diff renderer and Git commands remain Pi's live implementation.
+ */
+.review-tabs.panel-strip { height: 46px; min-height: 46px; padding: 0 8px; gap: 4px; }
+.review-tabs [role="tab"] { height: 28px; border-radius: 12.5px; padding: 4px 8px; font-size: 13px; line-height: 18.5714px; font-weight: 430; }
+.review-changes { display: flex; min-height: 0; overflow: hidden; }
+.git-workbench { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; }
+.git-review-header { flex: none; padding: 0 8px; border-bottom: 1px solid var(--border); }
+.git-review-header-row { display: flex; align-items: center; gap: 4px; min-width: 0; height: 40px; color: var(--muted); font-size: 13px; }
+.git-review-header .branch-row { padding: 0; flex-wrap: nowrap; }
+.git-review-header .branch-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 430; }
+.git-upstream { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: 4px; font-size: 12px; }
+.git-review-header button, .git-review-header select { flex: none; height: 28px; padding: 0 8px; border: 0; border-radius: 12.5px; background: transparent; font-size: 13px; line-height: 18px; }
+.git-review-header button:hover { background: var(--hover); }
+.git-review-header .git-controls-toggle { margin-left: auto; background: var(--selected); white-space: nowrap; }
+.git-file-count { white-space: nowrap; font-size: 12px; }
+.git-review-view-actions { display: flex; margin-left: auto; gap: 4px; }
+.git-review-view-actions button { display: flex; align-items: center; justify-content: center; width: 28px; padding: 0; color: var(--muted); }
+.git-review-body { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.git-review-primary { flex: 1; min-width: 0; overflow: auto; padding-bottom: 12px; }
+.git-review-primary > .file-toolbar { height: 32px; flex-wrap: nowrap; padding: 4px 8px 4px 12px; gap: 8px; margin-bottom: 2px; border: 0; font-size: 14px; line-height: 21px; }
+.git-review-primary > .file-toolbar > button { flex: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; background: transparent; border-radius: 10px; color: var(--muted); }
+.git-review-primary > .file-toolbar > button:hover { background: var(--hover); }
+.git-review-primary > .file-toolbar > span { padding-left: 4px; white-space: nowrap; direction: rtl; text-align: left; }
+.git-review-primary > .file-toolbar > span bdi { direction: ltr; }
+.git-review-empty { display: flex; min-height: 220px; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 24px 12px; color: var(--muted); text-align: center; }
+.git-review-empty p { margin: 0; font-size: 13px; }
+.git-review-files { display: flex; flex-direction: column; width: 250px; max-width: 60%; min-width: 0; flex: none; border-left: 1px solid var(--border); }
+.git-review-filter { display: flex; flex: none; height: 37px; padding: 8px 8px 1px; }
+.git-review-filter label { display: flex; gap: 4px; align-items: center; width: 100%; min-width: 0; height: 28px; border: 1px solid var(--border); border-radius: 12.5px; background: rgba(255, 255, 255, 0.96); }
+:root[data-theme="dark"] .git-review-filter label { background: rgba(255, 255, 255, 0.03); }
+.git-review-filter svg { flex: none; margin-left: 8px; color: var(--muted); }
+.git-review-filter input { width: 100%; min-width: 0; height: 100%; padding: 0 6px 0 0; border: 0; background: transparent; font-size: 14px; line-height: 18px; }
+.git-review-filter label:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.git-review-filter input:focus-visible { outline: none; }
+.git-review-files .changed-files { flex: 1; min-height: 0; padding: 0 8px 8px; overflow: auto; }
+.git-review-files .git-file-row { gap: 2px; min-height: 30px; }
+.git-review-files .git-file-row > button:first-child { display: block; padding: 5px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.git-review-files .git-file-row > button:not(:first-child) { flex: none; padding: 4px; font-size: 12px; }
+.git-review-files .hint { margin: 12px 4px; font-size: 12px; }
+.git-controls[hidden] { display: none; }
+.git-controls { padding: 4px; border-bottom: 1px solid var(--border); }
+.git-operation-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; font-size: 12px; }

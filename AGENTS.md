@@ -28,7 +28,10 @@
 
 ## Commands
 
-- After code changes (not docs): `npm run check` (full output, no tail). Fix all errors, warnings, and infos before committing. Does not run tests.
+- Daily desktop development uses targeted tests: `npm run desktop:test:target -- <module>` (unit + browser UI), `--level native` for Electron/main/IPC changes, or `--file test/e2e/<file>.spec.ts --grep '<case>'` for one regression. Use `npm run desktop:test:list` and `--dry-run` to inspect selections. See `docs/desktop/targeted-tests.md`.
+- Run changed behavior and directly affected dependencies only. Do not automatically run `desktop:test`, unfiltered `desktop:test:nonvisual`, or every previously edited suite after each change. Broaden only for relevant failures, demonstrated cross-module impacts, CI, or explicitly requested full acceptance. Desktop test-runner changes need runner tests and representative targeted commands, not all feature suites; adding a targeted test entry does not itself require the root full check.
+- After code changes (not docs), run the check for the affected scope: desktop-only changes use `npm run desktop:check`; shared package changes use `npm run check:quick`. If both scopes changed, run both. Keep full output, no tail. These commands do not run tests.
+- Run `npm run check` for dependency or lockfile changes, package exports/import boundaries, check-script changes, and full acceptance. CI and pre-commit continue using this full check. Fix all errors, warnings, and infos before committing.
 - Never run `npm run build` or `npm test` unless requested by the user.
 - Never run the full vitest suite directly: it includes e2e tests that activate when endpoint/auth env vars are present. For all non-e2e tests, run `./test.sh` from the repo root. Otherwise run specific tests from the package root:
   - Vitest: `node "$(git rev-parse --show-toplevel)/node_modules/vitest/dist/cli.js" --run test/specific.test.ts`

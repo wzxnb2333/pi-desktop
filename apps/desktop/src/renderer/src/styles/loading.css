@@ -1,0 +1,27 @@
+/* Pi loading adaptation: no valid 26.915 loading capture is available. */
+.loading {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+.loading-titlebar {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 46px;
+  -webkit-app-region: drag;
+}
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 16px;
+}
+.loading .pi-logo { width: 56px; height: 56px; margin: 0; flex-shrink: 0; }
+.loading p { margin: 0; max-width: 32rem; overflow-wrap: anywhere; text-align: center; }

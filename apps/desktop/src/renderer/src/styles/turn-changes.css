@@ -1,0 +1,24 @@
+.turn-changes { margin: 14px 0; min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 12px; }
+.turn-changes-heading { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 10px 12px; }
+.turn-changes-heading > div { min-width: 0; flex: 1; }
+.turn-changes-heading strong { display: block; font-size: 13px; font-weight: 600; }
+.turn-changes-heading > button { flex-shrink: 0; border: 1px solid var(--border); border-radius: 14px; padding: 3px 9px; font-size: 12px; }
+.turn-changes-icon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 9px; background: var(--bg); color: var(--muted); }
+.turn-change-counts { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.turn-change-counts .added { color: var(--success, #21864c); }
+.turn-change-counts .removed { color: var(--danger); }
+.turn-change-partial, .turn-change-directory { color: var(--muted); }
+.turn-changes-files { border-top: 1px solid var(--border); background: var(--bg); }
+.turn-change-row { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 34px; padding: 6px 12px; border: 0; border-radius: 0; background: transparent; text-align: left; font-size: 12px; }
+.turn-change-row:hover, .turn-change-row[aria-expanded=true] { background: var(--hover); }
+.turn-change-row > svg { flex-shrink: 0; color: var(--muted); }
+.turn-change-path { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.turn-change-preview { border-block: 1px solid var(--border); background: var(--bg); min-width: 0; }
+.turn-change-note { margin: 0; padding: 8px 12px; font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.turn-edit-record { min-width: 0; }
+.turn-edit-record > small { display: block; padding: 6px 12px; color: var(--muted); border-top: 1px solid var(--border); }
+.turn-edit-record > p { padding: 8px 12px; }
+.turn-edit-record > .diff, .turn-written-content { margin: 0; max-height: 280px; overflow: auto; font: 12px/1.6 var(--font-mono); }
+.turn-written-content { padding: 8px 12px; white-space: pre; }
+.turn-changes-more { display: flex; align-items: center; justify-content: flex-start; gap: 6px; width: 100%; min-height: 32px; padding: 6px 12px; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; font-size: 12px; text-align: left; }
+@media (max-width: 700px) { .turn-changes-heading { gap: 6px; padding: 8px; } .turn-changes-icon { width: 28px; height: 28px; } .turn-change-row { padding-inline: 8px; } }

@@ -1,0 +1,333 @@
+import { taskAction } from './fixtures/task-actions.ts';
+import { startDevelopmentSource } from './fixtures/development-source.ts';
+import { execFileSync } from 'node:child_process';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, cleanupTemporaryDirectories } from './fixtures/temp-paths.ts';
+import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { type ElectronApplication, _electron as electron, expect, test } from '@playwright/test';
+import { type Bootstrap, defaultData, providerSchema, threadSchema } from '../../src/shared/contracts.ts';
+
+let development: Awaited<ReturnType<typeof startDevelopmentSource>>;
+test.beforeAll(async () => {
+  development = await startDevelopmentSource();
+});
+test.afterAll(async () => {
+  await development?.server.close();
+});
+test.afterAll(cleanupTemporaryDirectories);
+
+test('Windows desktop: streaming, approvals, review, terminals, preview, themes and restart', async () => {
+  const storage = await mkdtemp(join(tmpdir(), 'pi-desktop-e2e-'));
+  const projectPath = join(storage, 'demo-project');
+  await mkdir(projectPath);
+  execFileSync('git', ['init', '-b', 'main', projectPath]);
+  execFileSync('git', ['-C', projectPath, 'config', 'core.autocrlf', 'false']);
+  execFileSync('git', ['-C', projectPath, 'config', 'user.name', 'Desktop Test']);
+  execFileSync('git', ['-C', projectPath, 'config', 'user.email', 'test@example.invalid']);
+  await writeFile(join(projectPath, 'README.md'), '# 示例项目\n');
+  execFileSync('git', ['-C', projectPath, 'add', '--', 'README.md']);
+  execFileSync('git', ['-C', projectPath, 'commit', '-m', 'initial']);
+  let toolSent = false;
+  const server = createServer(async (request, response) => {
+    if (request.method === 'GET') {
+      response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      response.end('<h1>Pi 本地预览</h1>');
+      return;
+    }
+    for await (const _chunk of request) {
+      /* consume request */
+    }
+    response.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    const send = (delta: object, finish: string | null = null) =>
+      response.write(
+        `data: ${JSON.stringify({ id: 'fake', object: 'chat.completion.chunk', created: 1, model: 'fake-model', choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`,
+      );
+    send({ role: 'assistant' });
+    if (!toolSent) {
+      toolSent = true;
+      send({ content: '我会先创建示例文件，然后检查本地执行环境。' });
+      send({
+        tool_calls: [
+          {
+            index: 0,
+            id: 'create-file',
+            type: 'function',
+            function: {
+              name: 'powershell',
+              arguments: JSON.stringify({
+                command:
+                  "Set-Content -LiteralPath 'hello.txt' -Value 'Hello Pi Desktop'; Write-Output 'DESKTOP_COMMAND_OK'",
+              }),
+            },
+          },
+        ],
+      });
+      send({}, 'tool_calls');
+    } else {
+      send({
+        content:
+          '已完成示例任务。\n\n- 在项目中创建了 `hello.txt`\n- PowerShell 已执行\n- 可在右侧 Review 面板查看文件差异\n\n这是本地假供应商的测试回复。',
+      });
+      send({}, 'stop');
+    }
+    response.end('data: [DONE]\n\n');
+  });
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('No server');
+  const url = `http://127.0.0.1:${address.port}`;
+  const data = defaultData();
+  data.projects.push({
+    id: 'project',
+    name: '示例项目',
+    path: projectPath,
+    trusted: false,
+    createdAt: Date.now(),
+  });
+  data.settings.providers.push(
+    providerSchema.parse({
+      id: 'fake',
+      name: 'Local Test',
+      provider: 'desktop-test',
+      model: 'fake-model',
+      custom: true,
+      reasoning: false,
+      baseUrl: `${url}/v1`,
+    }),
+  );
+  data.settings.providerId = 'fake';
+  data.settings.theme = 'light';
+  data.settings.keepInTray = false;
+  data.threads.push(
+    threadSchema.parse({
+      id: 'thread',
+      title: '新任务',
+      projectId: 'project',
+      cwd: projectPath,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      providerId: 'fake',
+      thinking: 'off',
+      policy: 'ask',
+    }),
+  );
+  await writeFile(join(storage, 'desktop.json'), JSON.stringify(data));
+  const env = {
+    ...process.env,
+    PI_DESKTOP_USER_DATA: storage,
+    ELECTRON_RENDERER_URL: development.url,
+  } as Record<string, string>;
+  delete env.ELECTRON_RUN_AS_NODE;
+  const launch = () =>
+    electron.launch({
+      args: [resolve('out/main/index.js')],
+      env,
+      timeout: 30000,
+    });
+  let application: ElectronApplication | undefined;
+  const errors: string[] = [];
+  try {
+    application = await launch();
+    const page = await application.firstWindow();
+    expect(page.url()).toContain(development.url);
+    page.on('pageerror', (error) => errors.push(error.message));
+    await expect(page.getByRole('heading', { name: '在 示例项目 中构建' })).toBeVisible();
+    await expect(page.getByLabel('向 Pi 发送消息')).toBeEnabled();
+    await page.getByLabel('向 Pi 发送消息').fill('请创建示例文件并检查 PowerShell。');
+    await page.getByRole('button', { name: '发送消息', exact: true }).click();
+    await expect(page.getByLabel('待审批操作')).toBeVisible();
+    await page.getByRole('button', { name: '允许这一次' }).click();
+    await expect(page.getByText('已完成示例任务。', { exact: false })).toBeVisible();
+    await expect
+      .poll(async () => readFile(join(projectPath, 'hello.txt'), 'utf8'))
+      .toContain('Hello Pi Desktop');
+    await taskAction(page, '查看变更');
+    await page.getByLabel('刷新 Git').click();
+    await page
+      .getByRole('button', { name: /hello.txt/ })
+      .first()
+      .click();
+    await expect(page.locator('.diff')).toContainText('+Hello Pi Desktop');
+    await taskAction(page, '集成终端');
+    await page.getByRole('button', { name: /在当前项目启动/ }).click();
+    await page.locator('.xterm-helper-textarea').fill('Write-Output TERMINAL_OK');
+    await page.locator('.xterm-helper-textarea').press('Enter');
+    await expect
+      .poll(async () =>
+        ((await page.evaluate(() => window.desktop.invoke({ op: 'bootstrap' }))) as Bootstrap).terminals
+          .map((t) => t.output)
+          .join(''),
+      )
+      .toContain('TERMINAL_OK');
+    await page.getByLabel('新建终端').click();
+    await expect(page.locator('.terminal-tabs>button').filter({ hasText: 'PowerShell' })).toHaveCount(2);
+    await page.getByLabel('终止终端').click();
+    await expect(page.locator('.terminal-tabs')).toContainText('已退出');
+    await page.getByLabel('隐藏终端').click();
+    await taskAction(page, '浏览器预览');
+    await page.getByLabel('预览地址').fill(url);
+    await page.getByRole('button', { name: '打开', exact: true }).click();
+    await expect
+      .poll(async () =>
+        application!.evaluate(
+          ({ webContents }, target) =>
+            webContents.getAllWebContents().some((contents) => contents.getURL() === `${target}/`),
+          url,
+        ),
+      )
+      .toBe(true);
+    await expect
+      .poll(async () =>
+        application!.evaluate(
+          ({ BrowserWindow }) =>
+            BrowserWindow.getAllWindows()[0].contentView.children.at(-1)?.getBounds().width || 0,
+        ),
+      )
+      .toBeGreaterThan(100);
+    await page.getByLabel('隐藏浏览器').click();
+    await page.keyboard.press('Control+,');
+    await expect(page.locator('.settings-page h1')).toHaveText('模型');
+    await page.getByRole('button', { name: '外观', exact: true }).click();
+    await page.getByLabel('主题', { exact: true }).selectOption('dark');
+    await page.getByRole('button', { name: '保存设置' }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.getByRole('button', { name: '返回工作台' }).click();
+    await page.locator('.thread-row').first().click();
+    await taskAction(page, '查看变更');
+    await page.getByRole('tab', { name: '变更', exact: true }).click();
+    await page
+      .getByRole('button', { name: /hello.txt/ })
+      .first()
+      .click();
+    await expect(page.locator('.diff')).toContainText('+Hello Pi Desktop');
+    await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1050, 720));
+    await expect(page.getByLabel('向 Pi 发送消息')).toBeVisible();
+    await page.keyboard.press('Control+Shift+P');
+    await expect(page.getByRole('dialog').getByRole('combobox', { name: '搜索命令或最近任务' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await page.getByLabel('任务更多操作', { exact: true }).click();
+    await page.getByRole('menuitem', { name: '归档', exact: true }).click();
+    await expect(page.locator('.thread-row')).toHaveCount(0);
+    await page.getByLabel('本地工作区操作').click();
+    await page.getByRole('menuitem', { name: /已归档任务/ }).click();
+    await expect(page.locator('.thread-row')).toHaveCount(1);
+    await page.getByLabel('任务更多操作', { exact: true }).click();
+    await page.getByRole('menuitem', { name: '恢复归档任务', exact: true }).click();
+    await page.getByLabel('本地工作区操作').click();
+    await page.getByRole('menuitem', { name: /查看活跃任务/ }).click();
+    await page.getByRole('separator', { name: '调整侧栏宽度' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.sidebar')).toHaveCSS('width', '285px');
+    await page.getByRole('button', { name: '新标签', exact: true }).click();
+    await page.locator('.tool-launcher').getByRole('button', { name: '文件', exact: true }).click();
+    await taskAction(page, '集成终端');
+    await expect(page.getByLabel('隐藏终端')).toBeVisible();
+    const savedLayout = ((await page.evaluate(() => window.desktop.invoke({ op: 'bootstrap' }))) as Bootstrap)
+      .data.ui;
+    expect(savedLayout.threads.thread.reviewTab).toBe('terminal');
+    expect(savedLayout.threads.thread.panelTabs).toEqual(expect.arrayContaining([{ id: 'tool:files', kind: 'files' }, { id: 'tool:terminal', kind: 'terminal' }]));
+    expect(savedLayout.threads.thread.terminalOpen).toBe(true);
+    await page.evaluate(() =>
+      window.desktop.invoke({
+        op: 'automation.save',
+        automation: {
+          id: 'restart-job',
+          name: '重启检查',
+          projectId: 'project',
+          prompt: '检查项目',
+          intervalMinutes: 60,
+          enabled: true,
+          nextRunAt: Date.now() - 1000,
+        },
+      }),
+    );
+    await application.close();
+    const offline = JSON.parse(await readFile(join(storage, 'desktop.json'), 'utf8')) as Bootstrap['data'];
+    offline.automations.find(job => job.id === 'restart-job')!.nextRunAt = Date.now() - 1000;
+    await writeFile(join(storage, 'desktop.json'), JSON.stringify(offline));
+    application = await launch();
+    const restoredPage = await application.firstWindow();
+    restoredPage.on('pageerror', (error) => errors.push(error.message));
+    await expect(restoredPage.locator('.sidebar')).toHaveCSS('width', '285px');
+    const restoredLayout = (
+      (await restoredPage.evaluate(() => window.desktop.invoke({ op: 'bootstrap' }))) as Bootstrap
+    ).data.ui;
+    expect(restoredLayout.sidebarWidth).toBe(savedLayout.sidebarWidth);
+    expect(restoredLayout.reviewWidth).toBe(savedLayout.reviewWidth);
+    expect(restoredLayout.terminalHeight).toBe(savedLayout.terminalHeight);
+    // A bottom-following anchor offset changes when the window is restored at its default size.
+    const { scroll: beforeScroll, ...beforeLayout } = savedLayout.threads.thread;
+    const { scroll: afterScroll, ...afterLayout } = restoredLayout.threads.thread;
+    expect(afterLayout).toEqual(beforeLayout);
+    expect(afterScroll?.follow).toBe(beforeScroll?.follow);
+    await expect.poll(() => restoredPage.locator('.timeline').evaluate(node => node.scrollHeight - node.scrollTop - node.clientHeight)).toBeLessThanOrEqual(1);
+    await expect
+      .poll(
+        async () =>
+          ((await restoredPage.evaluate(() => window.desktop.invoke({ op: 'bootstrap' }))) as Bootstrap).data
+            .automations[0]?.lastThreadId,
+      )
+      .toBeTruthy();
+    await expect(restoredPage.locator('.thread-row')).toHaveCount(2);
+    await expect(restoredPage.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await restoredPage.getByRole('button', { name: /待审阅/ }).click();
+    await expect(restoredPage.getByRole('heading', { name: '待审阅', exact: true })).toBeVisible();
+    await expect(restoredPage.getByRole('button', { name: '查看结果' })).toHaveCount(1);
+    expect(errors).toEqual([]);
+  } finally {
+    await application?.close();
+    await new Promise<void>((r) => server.close(() => r()));
+  }
+});
+
+test('first run registers a project and saves a model key through Windows encryption', async () => {
+  const storage = await mkdtemp(join(tmpdir(), 'pi-desktop-first-'));
+  const projectPath = join(storage, '新项目');
+  await mkdir(projectPath);
+  const env = {
+    ...process.env,
+    PI_DESKTOP_USER_DATA: storage,
+    ELECTRON_RENDERER_URL: development.url,
+  } as Record<string, string>;
+  delete env.ELECTRON_RUN_AS_NODE;
+  const application = await electron.launch({
+    args: [resolve('out/main/index.js')],
+    env,
+  });
+  try {
+    const page = await application.firstWindow();
+    expect(page.url()).toContain(development.url);
+    await expect(page.getByRole('heading', { name: '开始你的下一个想法' })).toBeVisible();
+    await application.evaluate(({ dialog }, folder) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
+    }, projectPath);
+    await page.getByRole('button', { name: '添加本地项目' }).click();
+    await expect(page.getByRole('heading', { name: '在 新项目 中构建' })).toBeVisible();
+    await page.getByRole('button', { name: /配置 API Key 和模型/ }).click();
+    await page.getByRole('button', { name: '添加模型' }).click();
+    await page.getByLabel('显示名称', { exact: true }).fill('测试模型');
+    await page.getByLabel(/^API Key/).fill('desktop-fake-secret-for-test');
+    await page.getByRole('button', { name: '保存设置' }).click();
+    await expect(page.getByRole('status')).toContainText('设置已保存');
+    await expect
+      .poll(
+        async () =>
+          ((await page.evaluate(() => window.desktop.invoke({ op: 'bootstrap' }))) as Bootstrap).data.settings
+            .providers[0].hasKey,
+      )
+      .toBe(true);
+    expect(await readFile(join(storage, 'secrets.json'), 'utf8')).not.toContain(
+      'desktop-fake-secret-for-test',
+    );
+    await page.getByRole('button', { name: '外观', exact: true }).click();
+    await page.getByLabel('主题', { exact: true }).selectOption('dark');
+    await page.getByRole('button', { name: '保存设置' }).click();
+    await page.getByRole('button', { name: '返回工作台' }).click();
+    await page.locator('.thread-row').first().click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  } finally {
+    await application.close();
+  }
+});

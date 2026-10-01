@@ -1,0 +1,228 @@
+/*
+ * Chrome shared by the settings and management pages. Page-level geometry comes from the ported
+ * tokens; `--height-settings-row` is applied by `.field-row` in utilities.css, so the stacks below
+ * only add separators, control widths and the helper-text column.
+ */
+.settings-page,
+.management-page {
+  overflow: auto;
+  padding: var(--padding-panel);
+  flex: 1;
+}
+.page-heading {
+  width: 100%;
+  margin-inline: auto;
+  margin-bottom: 32px;
+  max-width: 48rem;
+}
+.page-heading h1 {
+  margin-bottom: 6px;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 400;
+}
+.page-heading p {
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+}
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--control-gutter-md);
+  margin: 0 0 var(--padding-panel);
+  max-width: 60rem;
+}
+.section-heading > div {
+  min-width: 0;
+}
+.section-heading h2 {
+  margin: 0 0 var(--spacing);
+}
+.section-heading .hint {
+  margin: 0;
+}
+.hint {
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  color: var(--muted);
+  margin: 18px 0;
+}
+
+/* --- field rows ----------------------------------------------------------- */
+.field-stack {
+  max-width: 60rem;
+  border-top: var(--border-width) solid var(--border);
+}
+.field-stack .field-row + .field-row {
+  border-top: var(--border-width) solid var(--border);
+}
+.field-stack .field-row-label {
+  padding-block: var(--padding-row-y);
+}
+.field-stack .field-row-hint {
+  overflow-wrap: anywhere;
+}
+/* The control column is a fixed share of the row so a long helper sentence never shoves it around. */
+.field-row-control {
+  width: clamp(10rem, 34%, 20rem);
+  justify-content: flex-end;
+}
+.field-row-control > input,
+.field-row-control > select,
+.field-block > input,
+.field-block > textarea,
+.field-block > select {
+  width: 100%;
+}
+.field-row-control input[type="checkbox"] {
+  width: var(--control-size-2xs);
+  height: var(--control-size-2xs);
+  padding: 0;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.field-row-control input[type="number"] {
+  width: 9rem;
+}
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  padding: calc(var(--padding-row-y) * 2) 0;
+  max-width: 60rem;
+}
+.field-block label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+  font-weight: var(--font-weight-medium);
+}
+.field-block small {
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  font-weight: var(--font-weight-normal);
+}
+.code-input {
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  line-height: 1.7;
+}
+
+/* --- cards ---------------------------------------------------------------- */
+.config-card {
+  padding: var(--padding-panel);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-lg);
+  margin: 0 0 var(--padding-panel);
+  background: var(--panel);
+  max-width: 60rem;
+}
+.config-card h2 {
+  margin-bottom: var(--control-gutter-md);
+}
+.config-card h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--control-gutter-xs);
+  margin-bottom: var(--control-gutter-md);
+}
+.config-card .badge {
+  font-weight: var(--font-weight-normal);
+}
+.config-card .field-stack {
+  border-top: 0;
+}
+.config-card > .row {
+  margin-top: var(--control-gutter-md);
+}
+.empty-card {
+  border: var(--border-width) dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+  max-width: 60rem;
+}
+.empty-card h3 {
+  margin-top: 20px;
+  color: var(--text);
+}
+.empty-card p {
+  margin: 0;
+}
+
+/* --- feedback ------------------------------------------------------------- */
+/*
+ * One status line per page, announced through `role="status"`. Success takes the accent colour and
+ * a refusal the danger colour: the refusal is a real outcome the user has to act on (a task is
+ * running), not a transient confirmation.
+ */
+.form-feedback {
+  min-height: var(--font-sm-lh);
+  margin: var(--control-gutter-md) 0 0;
+  max-width: 60rem;
+  color: var(--accent);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.form-feedback[data-error] {
+  color: var(--danger);
+}
+.resource-path {
+  overflow-wrap: anywhere;
+}
+
+.automation-editor-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.automations-page .automation-entry {
+  border-bottom: var(--border-width) solid var(--border);
+}
+.automations-page .automation-entry .field-row-control,
+.inbox-page .field-row-control {
+  width: auto;
+  flex-wrap: wrap;
+  max-width: 65%;
+}
+.automations-page .automation-history {
+  padding-block: var(--padding-row-y);
+}
+.inbox-page .page-heading .row {
+  flex-wrap: wrap;
+}
+.inbox-page .page-heading .hint {
+  margin: 0;
+}
+
+/* Plugin-owned MCP controls adapt the existing compact management tokens. */
+.plugins-section .plugin-card[hidden] { display: none; }
+.plugin-mcp-settings {
+  border-top: var(--border-width) solid var(--border);
+  margin-top: var(--control-gutter-md);
+  padding-top: var(--control-gutter-md);
+  min-width: 0;
+}
+.plugin-mcp-settings > h4 { margin: 0 0 var(--control-gutter-xs); font-size: var(--font-sm); font-weight: var(--font-weight-medium); }
+.plugin-mcp-settings > details { margin-block: var(--control-gutter-sm); }
+.mcp-secret-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.mcp-secret-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto;
+  gap: var(--control-gutter-xs);
+  margin-bottom: var(--control-gutter-xs);
+}
+.mcp-secret-row > input { min-width: 0; width: 100%; height: var(--control-size-md); padding: var(--spacing) var(--control-gutter-xs); font-size: var(--font-sm); }
+.mcp-secret-fields > .row, .mcp-secret-status { flex-wrap: wrap; }
+.mcp-secret-status > .hint { margin: 0; }

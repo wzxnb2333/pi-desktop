@@ -1,0 +1,542 @@
+.badge {
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 2px 5px;
+  font-size: var(--font-2xs);
+  line-height: var(--font-2xs-lh);
+  letter-spacing: var(--tracking-wide);
+  color: var(--muted);
+}
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/*
+ * Button variants.
+ *
+ * `.primary`, `.subtle` and `.danger` existed as loose classes before the primitive did, and other
+ * surfaces still apply them by hand (`<button className="subtle danger">`). They are kept as the
+ * variant vocabulary instead of being renamed, so `<Button variant="primary">` and
+ * `<button className="primary">` resolve to the same rules and no call site had to be rewritten.
+ * `.danger` stays a plain colour modifier rather than a button-only rule, because it is also applied
+ * to `.notice`.
+ */
+.primary {
+  background: var(--text); /* §3: the reference's inverted primary pair is --text on the background, no new colour name */
+  color: var(--bg);
+  border-color: var(--text);
+}
+.primary:hover:not(:disabled) {
+  background: var(--muted);
+}
+.subtle {
+  border: 0;
+  background: none;
+}
+.danger {
+  color: var(--danger);
+}
+.ghost {
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+
+/* --- primitives ----------------------------------------------------------- */
+
+/*
+ * The reference sizes controls from one axis, `--control-size-*`, so `min-height` is used rather than
+ * `height`: a wrapped or two-line label can grow past it instead of being clipped. The gutter ladder
+ * stops at `--control-gutter-md` (`-lg`/`-xl` are declined), so `lg` shares `md`.
+ */
+.btn {
+  min-height: var(--control-size-md);
+  padding: 0 var(--control-gutter-md);
+  border-radius: var(--radius-button);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+  transition:
+    background var(--duration-fast) var(--ease-basic),
+    color var(--duration-fast) var(--ease-basic),
+    border-color var(--duration-fast) var(--ease-basic);
+}
+button.btn-xs {
+  min-height: var(--control-size-xs);
+  padding: 0 var(--control-gutter-2xs);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+}
+button.btn-sm {
+  min-height: var(--control-size-sm);
+  padding: 0 var(--control-gutter-xs);
+}
+button.btn-md {
+  min-height: var(--control-size-md);
+  padding: 0 var(--control-gutter-md);
+}
+button.btn-lg {
+  min-height: var(--control-size-lg);
+  padding: 0 var(--control-gutter-md);
+  font-size: var(--font-md);
+  line-height: var(--font-md-lh);
+}
+.btn-icon {
+  padding: 0;
+  gap: 0;
+}
+button.btn-icon.btn-4xs {
+  min-height: var(--control-size-4xs);
+  width: var(--control-size-4xs);
+}
+button.btn-icon.btn-2xs {
+  min-height: var(--control-size-2xs);
+  width: var(--control-size-2xs);
+}
+/*
+ * The sizes `ButtonSize` actually allows. Without these, `size` on an IconButton emitted
+ * `btn-icon btn-sm` and nothing matched, so it silently fell back to shell.css's 30x30 box.
+ */
+button.btn-icon.btn-xs {
+  min-height: var(--control-size-xs);
+  width: var(--control-size-xs);
+}
+button.btn-icon.btn-sm {
+  min-height: var(--control-size-sm);
+  width: var(--control-size-sm);
+}
+button.btn-icon.btn-md {
+  min-height: var(--control-size-md);
+  width: var(--control-size-md);
+}
+button.btn-icon.btn-lg {
+  min-height: var(--control-size-lg);
+  width: var(--control-size-lg);
+}
+
+/*
+ * `shell.css` owns the default `.icon-button` box (30x30) and is imported after this sheet, so the
+ * explicit sizes have to win on specificity rather than on order; otherwise the opt-in size would
+ * silently lose for every host that already has a `.icon-button` rule.
+ */
+button.icon-button.btn-xs {
+  width: var(--control-size-xs);
+  height: var(--control-size-xs);
+  border-radius: var(--radius-button);
+}
+button.icon-button.btn-xs svg {
+  width: var(--control-icon-size-xs);
+  height: var(--control-icon-size-xs);
+}
+button.icon-button.btn-sm {
+  width: var(--control-size-sm);
+  height: var(--control-size-sm);
+  border-radius: var(--radius-button);
+}
+button.icon-button.btn-sm svg {
+  width: var(--control-icon-size-sm);
+  height: var(--control-icon-size-sm);
+}
+button.icon-button.btn-md {
+  width: var(--control-size-md);
+  height: var(--control-size-md);
+  border-radius: var(--radius-button);
+}
+button.icon-button.btn-md svg {
+  width: var(--control-icon-size-md);
+  height: var(--control-icon-size-md);
+}
+button.icon-button.btn-lg {
+  width: var(--control-size-lg);
+  height: var(--control-size-lg);
+  border-radius: var(--radius-button);
+}
+button.icon-button.btn-lg svg {
+  width: var(--control-icon-size-lg);
+  height: var(--control-icon-size-lg);
+}
+
+/* --- menu ----------------------------------------------------------------- */
+.menu {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+.menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--menu-item-gap);
+  min-height: var(--control-size-md);
+  min-width: 0;
+  color: var(--text);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-button);
+  padding: 0 var(--control-gutter-sm);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+}
+.menu-trigger-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: start;
+}
+.menu-trigger svg {
+  color: var(--muted);
+}
+.menu-list {
+  position: absolute;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  margin: 1px;
+  padding: 4px;
+  border-radius: var(--menu-radius);
+  background: var(--popup-background);
+  box-shadow: var(--popup-menu-shadow);
+  backdrop-filter: blur(8px);
+  font-size: 16px;
+  line-height: 24px;
+  user-select: none;
+  overflow: auto;
+}
+.menu-list[data-align="start"] {
+  inset-inline-start: 0;
+}
+.menu-list[data-align="end"] {
+  inset-inline-end: 0;
+}
+.menu-list[data-side="top"] {
+  bottom: calc(100% + var(--menu-gutter));
+}
+.menu-list[data-side="bottom"] {
+  top: calc(100% + var(--menu-gutter));
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: normal;
+  flex-shrink: 0;
+  /* The items are real buttons, so the element skin in `base.css` has to be cancelled here or every
+   * row renders as its own bordered box inside the popover. */
+  border: 0;
+  background: transparent;
+  width: 100%;
+  text-align: start;
+  padding: var(--padding-row-y) var(--padding-row-x);
+  border-radius: var(--radius-xl);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-ui-weight);
+  line-height: calc(1.25 / .875);
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.menu-item:hover:not([aria-disabled="true"]),
+.menu-item:focus:not([aria-disabled="true"]) {
+  background: var(--hover);
+}
+.menu-item[aria-disabled="true"] {
+  opacity: .5;
+  cursor: default;
+}
+.menu-item-content {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+}
+.menu-item-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.menu-item-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+.menu-item-indicator {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.menu-item-indicator svg {
+  display: block;
+}
+
+/* --- tooltip -------------------------------------------------------------- */
+.tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  width: fit-content;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  background: var(--tooltip-background);
+  color: var(--text);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-ui-weight);
+  line-height: 18px;
+  letter-spacing: -.15px;
+  text-align: center;
+  max-width: min(20rem, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  white-space: normal;
+  overflow-wrap: break-word;
+  box-shadow: var(--popup-tooltip-shadow);
+  user-select: none;
+  pointer-events: none;
+}
+.tooltip-content { display: flex; gap: 8px; align-items: center; }
+.tooltip-label { min-width: 0; }
+
+/* --- dialog --------------------------------------------------------------- */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  font-size: var(--font-ui-small);
+  line-height: 1.5;
+  background: #00000022;
+}
+.dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 520px;
+  max-width: 92vw;
+  overflow: hidden;
+  border-radius: var(--radius-3xl);
+  background: var(--popup-background);
+  box-shadow: var(--popup-dialog-shadow);
+  backdrop-filter: blur(24px);
+}
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 21px;
+}
+.dialog-section { display: flex; flex-direction: column; width: 100%; padding-top: 12px; }
+.dialog-section:first-child { padding-top: 0; }
+.dialog-header { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.dialog-heading { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; align-self: stretch; }
+.dialog-title {
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -.36px;
+}
+.dialog :where(h2, p) { margin: 0; }
+.dialog-title h2, .dialog-description > p {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+.dialog-description {
+  color: var(--popup-description);
+  font-size: 14px;
+  line-height: 21px;
+  white-space: pre-wrap;
+}
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+}
+.dialog-actions .btn {
+  display: flex;
+  justify-content: normal;
+  min-height: 0;
+  padding: 6px 16px;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--dialog-button-radius);
+  background: var(--dialog-cancel-background);
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: var(--font-ui-weight);
+  user-select: none;
+  transition: none;
+}
+.dialog-actions .btn:hover:not(:disabled) { background: var(--dialog-cancel-hover); }
+.dialog-actions .btn.danger { border-color: transparent; background: var(--dialog-danger-background); color: var(--dialog-danger-color); }
+.dialog-actions .btn.danger:hover:not(:disabled) { background: var(--dialog-danger-hover); }
+.dialog-actions .btn.primary { background: var(--text); color: var(--bg); }
+.dialog-actions .btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 80%, transparent); }
+.dialog-actions .btn:disabled { opacity: .4; }
+.dialog-actions .btn:focus-visible { outline: none; box-shadow: var(--dialog-focus-shadow); }
+.dialog-close {
+  display: inline-block;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: 0;
+  border-radius: 4px;
+  padding: 4px;
+  background: transparent;
+  color: var(--dialog-close-color);
+  line-height: 1;
+  gap: normal;
+}
+.dialog-close svg { display: block; width: var(--dialog-close-icon-size); height: var(--dialog-close-icon-size); }
+.dialog-close:focus-visible { outline: none; box-shadow: var(--dialog-focus-shadow); }
+
+/* Feature forms share desktop control sizing, not the search palette's fixed 504px viewport.
+ * The content wrapper owns scrolling so long forms cannot disappear under overflow:hidden. */
+.dialog-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 64px);
+  border-radius: 20px;
+  font-size: var(--font-ui-small);
+  line-height: 1.5;
+  font-weight: var(--font-ui-weight);
+}
+.dialog-panel > div { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.dialog-panel :where(h2) { font-size: 15px; line-height: 22px; font-weight: 600; }
+.dialog-panel :where(p) { line-height: inherit; }
+.dialog-panel :where(button) {
+  min-height: var(--control-size-sm);
+  padding: 4px var(--control-gutter-sm);
+  font-size: inherit;
+  line-height: 18px;
+  white-space: normal;
+}
+.dialog-panel :where(button > svg) { width: var(--control-icon-size-sm); height: var(--control-icon-size-sm); }
+.dialog-panel :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  padding: 6px 8px;
+  font-size: inherit;
+  line-height: 20px;
+}
+.dialog-panel :where(input[type='checkbox'], input[type='radio']) { width: 14px; height: 14px; margin: 0; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@supports (corner-shape: superellipse(1.5)) {
+  .menu-item, .tooltip { corner-shape: superellipse(1.5); }
+}
+
+/* --- tabs ----------------------------------------------------------------- */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--menu-item-gap);
+  min-width: 0;
+}
+.tabs button {
+  border: 0;
+  background: none;
+  border-radius: var(--radius-md);
+  padding: 0 var(--control-gutter-sm);
+  min-height: var(--control-size-sm);
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+}
+.tabs button.active {
+  background: var(--selected);
+  color: var(--text);
+  font-weight: var(--font-weight-medium);
+}
+
+/* --- field row ------------------------------------------------------------ */
+/*
+ * `--height-settings-row` is the reference's two-line settings row, so the row reserves the height
+ * rather than padding it. The title and hint are `span`s on purpose: `management.css` styles
+ * `label small`, and an element selector there would outrank a class selector on the same node.
+ */
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--control-gutter-md);
+  min-height: var(--height-settings-row);
+}
+.field-row-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+}
+.field-row-title {
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+  font-weight: var(--font-weight-medium);
+}
+.field-row-hint {
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+}
+.field-row-control {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing);
+}
+
+.muted {
+  color: var(--muted);
+}
+/*
+ * design-tokens.md §2: `--selected` and `--hover` both resolve to 5% of `--text` in the light theme,
+ * so a fill alone cannot show selection. The reference separates the two with a stroke or a weight
+ * rather than a stronger alpha, so the stroke is applied here instead of re-tuning the token.
+ * Only `.selected` gets it: the remaining `.active` rules live in sheets this package does not own.
+ */
+.changed-files button.selected {
+  box-shadow: var(--elevation-stroke);
+}
+.flex-spacer {
+  flex: 1;
+}
+.text-link {
+  color: var(--accent);
+  border: 0;
+  background: none;
+  padding: 0;
+  display: inline;
+  white-space: normal;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.wide-button {
+  width: calc(100% - 20px);
+  margin: 10px;
+  justify-content: flex-start;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

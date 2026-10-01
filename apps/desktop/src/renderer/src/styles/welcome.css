@@ -1,0 +1,152 @@
+/* Project home geometry: Satang's pinned Codex 26.915.4065.0 welcome captures.
+ * The reference measures a 768px dock column with 16px gutters, a 13px inset
+ * utility bar, a 56px mark, and equal flex bases separated by 96px hero padding.
+ * Pi keeps its own name, project data and model setup flow. */
+.main[data-home] { border-inline-start: 1px solid var(--border); border-start-start-radius: 12.5px; }
+.timeline.timeline-empty { padding: 0; }
+.welcome {
+  --text: #1a1c1f;
+  --home-utility-surface: #f6f6f6;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: fit-content;
+  padding: 24px 10px 0;
+}
+.welcome-hero {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  flex: 1 1 0;
+  min-height: fit-content;
+  padding-bottom: 96px;
+}
+.welcome-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: min(100%, 768px);
+  min-width: 0;
+  padding-inline: 20px;
+  text-align: center;
+}
+.welcome-logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  font: 48px/1 Georgia, serif;
+  color: var(--text);
+  opacity: .3;
+}
+.welcome h1 {
+  max-width: 100%;
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+.welcome h1 .menu { display: inline; }
+.welcome-heading-suffix { white-space: nowrap; }
+.welcome button.welcome-project {
+  display: inline;
+  height: auto;
+  max-width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  white-space: normal;
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.welcome-project .menu-trigger-label { display: inline; white-space: normal; overflow-wrap: anywhere; }
+.welcome-project > svg { display: none; }
+.welcome-heading > p { margin: 0; color: var(--muted); font-size: 13px; }
+.welcome-dock {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: 1 0 0;
+  min-width: 0;
+  min-height: fit-content;
+}
+.welcome .composer-area { max-width: 768px; padding: 6px 16px 16px; }
+.welcome-setup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 58px);
+  max-width: 710px;
+  margin: 6px auto 9px;
+  padding: 16px 12px 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  background: var(--bg);
+  box-shadow: var(--shadow-card);
+}
+.welcome-setup > div { flex: 1; min-width: 0; }
+.welcome-setup h2 { margin: 0; font-size: 13px; line-height: 18.5714px; font-weight: 700; }
+.welcome-setup p { margin: 0; color: var(--muted); font-size: 13px; line-height: 21.125px; }
+.welcome-setup > .btn { flex: 0 0 auto; border-radius: 999px; }
+.welcome-start-actions { display: flex; justify-content: center; padding: 6px 16px 32px; }
+.welcome-start .welcome-hero { padding-bottom: 48px; }
+.composer-home-utility {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 42px;
+  padding: 5px 4px 9px;
+  margin: 0 13px -4px;
+  border-radius: 20px 20px 0 0;
+  background: var(--home-utility-surface);
+  font-size: 13px;
+  line-height: 18px;
+}
+.composer-home-utility > .menu { min-width: 0; }
+.composer-home-utility > .menu:first-child { flex: 0 1 auto; }
+.home-project { max-width: 200px; }
+.home-project .menu-trigger-label { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.home-project .menu-trigger-label > span { overflow: hidden; text-overflow: ellipsis; }
+.home-location, .home-branch { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.home-location { flex-shrink: 0; }
+.home-branch { flex: 1; overflow: hidden; }
+.home-branch > span { overflow: hidden; text-overflow: ellipsis; }
+.composer-home-utility .home-worktree { border: 0; background: none; padding-inline: 8px; font-size: 13px; }
+.composer-home-utility > .menu:last-child { margin-left: auto; flex-shrink: 0; }
+.home-options { color: var(--muted); }
+.composer-area[data-home-composer] .composer { position: relative; }
+.composer-area[data-home-composer] .composer-actions { gap: 5px; }
+.composer-area[data-home-composer] .composer-submit-controls { margin-left: 0; }
+.composer-area[data-home-composer] .composer-menu-policy { max-width: 140px; font-size: 13px; }
+.composer-area[data-home-composer] .composer-menu-model { max-width: 180px; }
+
+/* Container rules cover both small windows and a narrow conversation beside a panel. */
+@container (max-width: 560px) {
+  .composer-home-utility { gap: 3px; }
+  .home-project { max-width: 140px; }
+  .composer-home-utility .home-worktree { max-width: 120px; overflow: hidden; }
+  .composer-area[data-home-composer] .composer-menu-model { max-width: 110px; }
+  .composer-area[data-home-composer] .composer-menu-policy { max-width: 100px; }
+  .welcome-setup { flex-wrap: wrap; }
+  .welcome-setup > .btn { margin-left: auto; }
+}
+@container (max-width: 420px) {
+  .composer-home-utility { height: auto; min-height: 42px; flex-wrap: wrap; }
+  .welcome-hero { padding-bottom: 48px; }
+}
+:root[data-theme=dark] .welcome { --text: #fff; --muted: rgb(255 255 255 / .65); --home-utility-surface: rgb(255 255 255 / .03); }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme=system] .welcome { --text: #fff; --muted: rgb(255 255 255 / .65); --home-utility-surface: rgb(255 255 255 / .03); }
+}

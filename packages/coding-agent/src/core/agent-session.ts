@@ -1734,6 +1734,53 @@ export class AgentSession {
 		return { steering, followUp };
 	}
 
+	/** Atomically edit, reorder, or remove messages that are still pending. */
+	revisePendingMessages(
+		kind: "steer" | "followUp",
+		expected: readonly string[],
+		next: readonly { index: number; text?: string }[],
+	): boolean {
+		const labels = kind === "steer" ? this._steeringMessages : this._followUpMessages;
+		const pending = this.agent.getPendingMessages(kind);
+		if (
+			expected.length !== labels.length ||
+			pending.length !== labels.length ||
+			expected.some((text, index) => text !== labels[index])
+		)
+			return false;
+		if (
+			pending.some(
+				(message, index) =>
+					message.role !== "user" ||
+					(typeof message.content === "string"
+						? message.content
+						: message.content
+								.filter((part) => part.type === "text")
+								.map((part) => part.text)
+								.join("\n")) !== expected[index],
+			)
+		)
+			return false;
+		if (
+			new Set(next.map((item) => item.index)).size !== next.length ||
+			next.some((item) => item.index < 0 || item.index >= pending.length)
+		)
+			return false;
+		const replacements = next.map((item) => {
+			const original = pending[item.index];
+			if (item.text === undefined || original.role !== "user") return original;
+			const images =
+				typeof original.content === "string" ? [] : original.content.filter((part) => part.type === "image");
+			return { ...original, content: [{ type: "text" as const, text: item.text }, ...images] };
+		});
+		if (!this.agent.replacePendingMessages(kind, pending, replacements)) return false;
+		const updated = next.map((item) => item.text ?? labels[item.index]);
+		if (kind === "steer") this._steeringMessages = updated;
+		else this._followUpMessages = updated;
+		this._emitQueueUpdate();
+		return true;
+	}
+
 	/** Number of pending messages (includes both steering and follow-up) */
 	get pendingMessageCount(): number {
 		return this._steeringMessages.length + this._followUpMessages.length;

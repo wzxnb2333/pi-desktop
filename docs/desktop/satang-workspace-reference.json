@@ -1,0 +1,499 @@
+{
+  "schemaVersion": 1,
+  "version": "26.915.4065.0",
+  "scope": "Valid earlier normal conversation DOM supplies CSS values. Capture pane widths differ; absolute coordinates and narrow-width pixels are not claimed. Persistent folds, turn metadata, complete scrollable plans and real Pi state remain functional adaptations.",
+  "samples": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/workspace/light-1440x940.dom-styles.json",
+      "sha256": "a19846e54f81067b46928a3ac5bf2800e8036895a4c9c9e2c022f724c80969c5",
+      "measurements": {
+        "scroll": {
+          "node": 600,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "32px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "857px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "column": {
+          "node": 603,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "16px",
+            "paddingBottom": "32px",
+            "paddingLeft": "16px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "768px",
+            "maxHeight": "none",
+            "height": "3824.38px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "bubble": {
+          "node": 617,
+          "css": {
+            "backgroundColor": "rgb(0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "10px",
+            "paddingRight": "16px",
+            "paddingBottom": "10px",
+            "paddingLeft": "16px",
+            "borderRadius": "22px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "70%",
+            "maxHeight": "none",
+            "height": "42.75px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "userMarkdown": {
+          "node": 623,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "lineHeight": "22.75px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "22.75px",
+            "whiteSpace": "pre-wrap",
+            "boxShadow": "none"
+          }
+        },
+        "activity": {
+          "node": 643,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "10px",
+            "borderTopWidth": "0px",
+            "gap": "4px",
+            "maxWidth": "100%",
+            "maxHeight": "none",
+            "height": "21px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "plan": {
+          "node": 753,
+          "css": {
+            "backgroundColor": "oklab(0.999994 0.0000455678 0.0000200868 / 0.5)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "12.5px",
+            "borderTopWidth": "1px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "200px",
+            "height": "200px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "planHeader": {
+          "node": 755,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "8px",
+            "paddingRight": "12px",
+            "paddingBottom": "8px",
+            "paddingLeft": "12px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "8px",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "40px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "planTitle": {
+          "node": 756,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "fontSize": "14px",
+            "lineHeight": "17.5px",
+            "fontWeight": "400",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "8px",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "17.5px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "planBody": {
+          "node": 782,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "12px",
+            "paddingRight": "16px",
+            "paddingBottom": "12px",
+            "paddingLeft": "16px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "2087.75px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "notice": {
+          "node": 686,
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "paddingTop": "16px",
+            "paddingRight": "12px",
+            "paddingBottom": "16px",
+            "paddingLeft": "20px",
+            "borderRadius": "25px",
+            "borderTopWidth": "0px",
+            "gap": "12px",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "179.875px",
+            "whiteSpace": "normal",
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(26, 28, 31, 0.118) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.05) 0px 0px 2px 0px, rgba(0, 0, 0, 0.02) 0px 4px 6px 0px"
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/workspace/dark-1440x940.dom-styles.json",
+      "sha256": "fa3ab65c9eddd258d893a5e29f9444d353ac5c9290371209719525aad1ebbb16",
+      "measurements": {
+        "scroll": {
+          "node": 600,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "32px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "857px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "column": {
+          "node": 603,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "16px",
+            "paddingBottom": "32px",
+            "paddingLeft": "16px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "768px",
+            "maxHeight": "none",
+            "height": "3379.12px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "bubble": {
+          "node": 620,
+          "css": {
+            "backgroundColor": "rgba(50, 50, 50, 0.85)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "10px",
+            "paddingRight": "16px",
+            "paddingBottom": "10px",
+            "paddingLeft": "16px",
+            "borderRadius": "22px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "70%",
+            "maxHeight": "none",
+            "height": "42.75px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "userMarkdown": {
+          "node": 626,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "lineHeight": "22.75px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "22.75px",
+            "whiteSpace": "pre-wrap",
+            "boxShadow": "none"
+          }
+        },
+        "activity": {
+          "node": 646,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "10px",
+            "borderTopWidth": "0px",
+            "gap": "4px",
+            "maxWidth": "100%",
+            "maxHeight": "none",
+            "height": "21px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "plan": {
+          "node": 663,
+          "css": {
+            "backgroundColor": "oklab(0.297161 0.0000135154 0.00000594556 / 0.5)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "12.5px",
+            "borderTopWidth": "1px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "200px",
+            "height": "200px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "planHeader": {
+          "node": 665,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "8px",
+            "paddingRight": "12px",
+            "paddingBottom": "8px",
+            "paddingLeft": "12px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "8px",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "40px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "planTitle": {
+          "node": 666,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "fontSize": "14px",
+            "lineHeight": "17.5px",
+            "fontWeight": "400",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "8px",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "17.5px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "planBody": {
+          "node": 692,
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "12px",
+            "paddingRight": "16px",
+            "paddingBottom": "12px",
+            "paddingLeft": "16px",
+            "borderRadius": "0px",
+            "borderTopWidth": "0px",
+            "gap": "normal",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "1545.25px",
+            "whiteSpace": "normal",
+            "boxShadow": "none"
+          }
+        },
+        "notice": {
+          "node": 952,
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "13px",
+            "lineHeight": "18.5714px",
+            "fontWeight": "430",
+            "paddingTop": "16px",
+            "paddingRight": "12px",
+            "paddingBottom": "16px",
+            "paddingLeft": "20px",
+            "borderRadius": "25px",
+            "borderTopWidth": "0px",
+            "gap": "12px",
+            "maxWidth": "none",
+            "maxHeight": "none",
+            "height": "539px",
+            "whiteSpace": "normal",
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(255, 255, 255, 0.157) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.05) 0px 0px 2px 0px, rgba(0, 0, 0, 0.02) 0px 4px 6px 0px"
+          }
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "file": "src/renderer/src/surfaces/workspace/index.tsx",
+      "sha256": "29e6a79deac895614af132ccc65e60da9f2958bc16fe99fdae6006697a0a32ef"
+    },
+    {
+      "file": "src/renderer/src/surfaces/workspace/parts.tsx",
+      "sha256": "3cde65b01f5533cda195fdbedf9ec8667aff68ec6fc626cfdba57121325fb31f"
+    },
+    {
+      "file": "src/renderer/src/styles/workspace.css",
+      "sha256": "4c62efe58c27cd5c63ef161ef5f12baab24a4a9ef93f989711996c47d567da12"
+    }
+  ],
+  "unavailable": [
+    {
+      "surface": "approval",
+      "file": "src/renderer/src/surfaces/approval/index.tsx",
+      "sha256": "ad9739df5649e4244e9b34d2d4dc364993122de17d52a53a1a26f120ef0adcc2",
+      "specFile": "spec/surfaces/approval.json",
+      "reached": false,
+      "captures": [],
+      "status": "Source entry is a placeholder; no measured signed-in state. Keep functional Pi states; do not copy invented-v1 backups."
+    },
+    {
+      "surface": "emptyloading",
+      "file": "src/renderer/src/surfaces/emptyloading/index.tsx",
+      "sha256": "149741b34100637bc24252cfe1e21366db872776ac0d4df44b497153540a7739",
+      "specFile": "spec/surfaces/emptyloading.json",
+      "reached": false,
+      "captures": [],
+      "status": "Source entry is a placeholder; no measured signed-in state. Keep functional Pi states; do not copy invented-v1 backups."
+    }
+  ]
+}

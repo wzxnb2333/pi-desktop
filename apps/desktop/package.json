@@ -1,0 +1,83 @@
+{
+  "name": "@pi-desktop/app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pi Desktop Windows 工作台",
+  "author": "Pi Desktop contributors",
+  "license": "MIT",
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsgo --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:ui": "playwright test",
+    "test:nonvisual": "playwright test -c playwright.nonvisual.config.ts",
+    "test:target": "node ../../scripts/desktop-test-target.mjs",
+    "package:win": "npm run build && electron-builder --win nsis --x64",
+    "package:dir": "npm run build && electron-builder --dir --win --x64"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "0.86.1",
+    "@earendil-works/pi-coding-agent": "0.86.1",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
+    "highlight.js": "11.11.2",
+    "lucide-react": "1.47.0",
+    "node-pty": "1.1.0",
+    "pdfjs-dist": "6.3.289",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-markdown": "10.1.0",
+    "rehype-highlight": "7.0.2",
+    "remark-gfm": "4.0.1",
+    "sherpa-onnx-node": "1.13.8",
+    "typebox": "1.3.27",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "44.4.2",
+    "electron-builder": "26.15.3",
+    "electron-vite": "5.0.0",
+    "vite": "7.3.6"
+  },
+  "build": {
+    "appId": "dev.pi.desktop",
+    "productName": "Pi Desktop",
+    "directories": {
+      "output": "../../.artifacts/desktop"
+    },
+    "files": [
+      "out/**/*",
+      "resources/**/*",
+      "package.json",
+      "!**/*.pdb"
+    ],
+    "asarUnpack": [
+      "**/*.node",
+      "**/node-pty/**",
+      "**/*.wasm"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "resources/icon.ico",
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "npmRebuild": false
+  }
+}

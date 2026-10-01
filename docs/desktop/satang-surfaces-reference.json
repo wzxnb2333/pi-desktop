@@ -1,0 +1,847 @@
+{
+  "schemaVersion": 1,
+  "version": "26.915.4065.0",
+  "scope": "Captured auxiliary-panel chrome and settings geometry. Pi controls and content remain functional adaptations.",
+  "samples": [
+    {
+      "surface": "settings",
+      "theme": "light",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/settings/light/1440x940.dom-styles.json",
+      "sha256": "e255a14fc7da3191314d808bb5c56b48ffff2b31fc4e064d4664527017f197a6",
+      "measurements": {
+        "frame": {
+          "node": 668,
+          "rect": {
+            "x": 451.5,
+            "y": 148,
+            "w": 768,
+            "h": 1570.92
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "heading": {
+          "node": 673,
+          "rect": {
+            "x": 451.5,
+            "y": 148,
+            "w": 768,
+            "h": 28.8
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "lineHeight": "28.8px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "card": {
+          "node": 679,
+          "rect": {
+            "x": 451.5,
+            "y": 254.8,
+            "w": 768,
+            "h": 155.13
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "20px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "settings",
+      "theme": "light",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/settings/light/1000x700.dom-styles.json",
+      "sha256": "b5b9149dcf839d3418ac04a814e6bb5822dc7120f0d8a8aec20bb51e1c23e325",
+      "measurements": {
+        "frame": {
+          "node": 668,
+          "rect": {
+            "x": 261,
+            "y": 148,
+            "w": 709,
+            "h": 1570.92
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "heading": {
+          "node": 673,
+          "rect": {
+            "x": 261,
+            "y": 148,
+            "w": 709,
+            "h": 28.8
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "lineHeight": "28.8px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "card": {
+          "node": 679,
+          "rect": {
+            "x": 261,
+            "y": 254.8,
+            "w": 709,
+            "h": 155.13
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "20px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "settings",
+      "theme": "dark",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/settings/dark2/1440x940.dom-styles.json",
+      "sha256": "9af7b1b939a2eabc4f1c536ccdd4fa173f6466a411c7ceaab0fd9c40d77fe5c4",
+      "measurements": {
+        "frame": {
+          "node": 668,
+          "rect": {
+            "x": 451.5,
+            "y": 148,
+            "w": 768,
+            "h": 1570.92
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "heading": {
+          "node": 673,
+          "rect": {
+            "x": 451.5,
+            "y": 148,
+            "w": 768,
+            "h": 28.8
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "lineHeight": "28.8px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "card": {
+          "node": 679,
+          "rect": {
+            "x": 451.5,
+            "y": 254.8,
+            "w": 768,
+            "h": 155.13
+          },
+          "css": {
+            "backgroundColor": "rgb(35, 35, 35)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "20px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "settings",
+      "theme": "dark",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/settings/dark2/1000x700.dom-styles.json",
+      "sha256": "9a72f51cefed5ec802ecc61339a6a41a98174587de3cec8d0ae27c2cab38e5ea",
+      "measurements": {
+        "frame": {
+          "node": 668,
+          "rect": {
+            "x": 261,
+            "y": 148,
+            "w": 709,
+            "h": 1570.92
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "heading": {
+          "node": 673,
+          "rect": {
+            "x": 261,
+            "y": 148,
+            "w": 709,
+            "h": 28.8
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "lineHeight": "28.8px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "card": {
+          "node": 679,
+          "rect": {
+            "x": 261,
+            "y": 254.8,
+            "w": 709,
+            "h": 155.13
+          },
+          "css": {
+            "backgroundColor": "rgb(35, 35, 35)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "20px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "terminal",
+      "theme": "light",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/terminal/light/1440x940.dom-styles.json",
+      "sha256": "c1414110a0cc4486a7bcafcf18fe5d6cf5d07c5c331d386a0486a6a133bb8256",
+      "measurements": {
+        "strip": {
+          "node": 1136,
+          "rect": {
+            "x": 241,
+            "y": 661,
+            "w": 1199,
+            "h": 40
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1147,
+          "rect": {
+            "x": 257,
+            "y": 671.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "terminal",
+      "theme": "light",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/terminal/light/1000x700.dom-styles.json",
+      "sha256": "6d220fcaadf07d12df52c8fe6ef52bda031c766a208ddcbeccb0a1e9acb51496",
+      "measurements": {
+        "strip": {
+          "node": 1136,
+          "rect": {
+            "x": 241,
+            "y": 421,
+            "w": 759,
+            "h": 40
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1147,
+          "rect": {
+            "x": 257,
+            "y": 431.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "terminal",
+      "theme": "dark",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/terminal/dark2/1440x940.dom-styles.json",
+      "sha256": "42681bf26099eaa31a628a3490aa752bd81840b6cfb990f39fcbb32968310539",
+      "measurements": {
+        "strip": {
+          "node": 1136,
+          "rect": {
+            "x": 241,
+            "y": 661,
+            "w": 1199,
+            "h": 40
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1147,
+          "rect": {
+            "x": 257,
+            "y": 671.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "terminal",
+      "theme": "dark",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/terminal/dark2/1000x700.dom-styles.json",
+      "sha256": "5f2315f82ff4d8b53cc967f66bec5d8f2808660c1802d818a6cd319abdb3667e",
+      "measurements": {
+        "strip": {
+          "node": 1136,
+          "rect": {
+            "x": 241,
+            "y": 421,
+            "w": 759,
+            "h": 40
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1147,
+          "rect": {
+            "x": 257,
+            "y": 431.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "preview",
+      "theme": "light",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/preview/light/1440x940.dom-styles.json",
+      "sha256": "265690e946c736e2b88810b357246d8a9ffff3a12f0849616251c5ccd6dc54c8",
+      "measurements": {
+        "strip": {
+          "node": 1139,
+          "rect": {
+            "x": 593,
+            "y": 36,
+            "w": 847,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1151,
+          "rect": {
+            "x": 609,
+            "y": 49.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "address": {
+          "node": 1214,
+          "rect": {
+            "x": 723,
+            "y": 87.5,
+            "w": 645,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "emptyHeading": {
+          "node": 1247,
+          "rect": {
+            "x": 958.28,
+            "y": 527.72,
+            "w": 116.42,
+            "h": 24
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "500",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "preview",
+      "theme": "light",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/preview/light/1000x700.dom-styles.json",
+      "sha256": "5c8838a98cf1dbf80d5d2099770ae3c15d56ebee4e6c55b241cae664c8b81812",
+      "measurements": {
+        "strip": {
+          "node": 1137,
+          "rect": {
+            "x": 593,
+            "y": 36,
+            "w": 407,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1149,
+          "rect": {
+            "x": 609,
+            "y": 49.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "address": {
+          "node": 1212,
+          "rect": {
+            "x": 723,
+            "y": 87.5,
+            "w": 205,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "emptyHeading": {
+          "node": 1245,
+          "rect": {
+            "x": 738.28,
+            "y": 407.72,
+            "w": 116.42,
+            "h": 24
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "500",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "preview",
+      "theme": "dark",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/preview/dark2/1440x940.dom-styles.json",
+      "sha256": "fbc4605ce81a52cbe9cc3c43750697f21e16dd5d258ea255df98b8f6b5dd85bb",
+      "measurements": {
+        "strip": {
+          "node": 1139,
+          "rect": {
+            "x": 593,
+            "y": 36,
+            "w": 847,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1151,
+          "rect": {
+            "x": 609,
+            "y": 49.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "address": {
+          "node": 1214,
+          "rect": {
+            "x": 723,
+            "y": 87.5,
+            "w": 645,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "emptyHeading": {
+          "node": 1247,
+          "rect": {
+            "x": 958.28,
+            "y": 527.72,
+            "w": 116.42,
+            "h": 24
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "500",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "surface": "preview",
+      "theme": "dark",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/pinned/preview/dark2/1000x700.dom-styles.json",
+      "sha256": "90d1986b90b8890c2c0106184bc0cd55e9eef8a4d93521ad0c6b626d08d2d5f1",
+      "measurements": {
+        "strip": {
+          "node": 1137,
+          "rect": {
+            "x": 593,
+            "y": 36,
+            "w": 407,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "fontSize": "16px",
+            "fontWeight": "430",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "tab": {
+          "node": 1149,
+          "rect": {
+            "x": 609,
+            "y": 49.72,
+            "w": 140,
+            "h": 18.56
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18.5714px",
+            "paddingTop": "0px",
+            "paddingRight": "20px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "address": {
+          "node": 1212,
+          "rect": {
+            "x": 723,
+            "y": 87.5,
+            "w": 205,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "13px",
+            "fontWeight": "430",
+            "lineHeight": "18px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "emptyHeading": {
+          "node": 1245,
+          "rect": {
+            "x": 738.28,
+            "y": 407.72,
+            "w": 116.42,
+            "h": 24
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "fontSize": "16px",
+            "fontWeight": "500",
+            "lineHeight": "24px",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,340 @@
+/*
+ * The sidebar is the reference's `.sidebar-navigation` scope, so every row in it is one metric family:
+ * 30px tall (`--height-row-nav`), 8px of inline padding (`--padding-row-x`), 10px corner
+ * (`--radius-row`). A row is 30px because its text line is 20px (`--font-sm-lh`) and
+ * `--padding-row-y` is 5px: 20 + 5 + 5, which is exactly the reference's own arithmetic.
+ *
+ * The pane's width is deliberately absent: `lib/layout.ts` clamps it against the live viewport
+ * (clamp(240, 275, min(520, 100vw - 320))) and hands the result over as an inline size, so repeating
+ * it here would create a second source of truth.
+ */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  flex-shrink: 0;
+  min-height: 0;
+  padding: var(--control-gutter-xs) var(--control-gutter-2xs) var(--spacing);
+  background: var(--sidebar);
+  /*
+   * The docked edge of `--elevation-sidebar`, which is `var(--elevation-stroke)` plus two soft shadows.
+   * The shadows would paint a halo on the two stationary sides of a pane that is flush against the
+   * workbench, so only its stroke is expressed here, as a hairline border. Pi has one border tier
+   * (`--color-border-strong` is not ported), so the colour is `--border`, and
+   * `--border-width-hairline` keeps it at the reference's weight on a high DPI display.
+   */
+  border-right: var(--border-width-hairline) solid var(--border);
+  overflow: hidden;
+}
+
+/* --- rows ----------------------------------------------------------------- */
+.sidebar button.nav-row,
+.sidebar .project-row,
+.sidebar .thread-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing);
+  height: var(--height-row-nav);
+  min-height: var(--height-row-nav);
+  border: 0;
+  border-radius: var(--radius-row);
+  background: none;
+  color: var(--text);
+  text-align: start;
+  font-size: var(--font-ui-small);
+  line-height: calc(13px * 1.428571);
+}
+.sidebar button.nav-row {
+  justify-content: flex-start;
+  padding: var(--padding-row-y) var(--padding-row-x);
+}
+/* The task row's extra leading inset is the indent under the project header's chevron column. */
+.sidebar .project-row {
+  padding: 0 var(--padding-row-x);
+}
+.sidebar .thread-row {
+  padding: 0 var(--padding-row-x) 0 calc(var(--padding-row-x) + var(--control-size-4xs));
+}
+.sidebar .thread-main,
+.sidebar .project-name {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  /* `.btn`'s min-height would otherwise outgrow the row this button sits inside. */
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: none;
+  gap: var(--spacing);
+  justify-content: flex-start;
+  text-align: start;
+  font-size: var(--font-ui-small);
+  line-height: calc(13px * 1.428571);
+}
+.sidebar .thread-main:hover:not(:disabled),
+.sidebar .project-name:hover:not(:disabled) {
+  /* The fill belongs to the row so it covers the dot and the trailing action as well. */
+  background: none;
+}
+.sidebar .truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar .row-hint,
+.sidebar .row-count {
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: var(--font-2xs);
+  line-height: var(--font-2xs-lh);
+  letter-spacing: var(--tracking-wide);
+}
+.sidebar .new-thread {
+  font-weight: var(--font-weight-medium);
+}
+
+/*
+ * Hover versus selected.
+ *
+ * `--hover` and `--selected` are both 5% of `--text` in the light theme (design-tokens.md §2), so a
+ * fill cannot tell them apart. The reference separates them with a stroke and a weight rather than a
+ * stronger alpha; `--elevation-stroke` is the shipped primitive for that, and `utilities.css` gives
+ * `.selected` the same treatment.
+ */
+.sidebar .thread-row:hover:not(.selected),
+.sidebar .thread-row:focus-within:not(.selected),
+.sidebar .project-row:hover,
+.sidebar .project-row:focus-within,
+.sidebar button.nav-row:hover:not(:disabled) {
+  background: var(--hover);
+}
+.sidebar .thread-row.selected {
+  background: var(--selected);
+  box-shadow: var(--elevation-stroke);
+  font-weight: var(--font-weight-medium);
+}
+.sidebar .project-row.current {
+  font-weight: var(--font-weight-medium);
+}
+/*
+ * interfaces.md 已知遗留 hands the sidebar's share of the `.active` fix to this sheet. These rules
+ * used to resolve to `--hover` (shell.css's `.icon-button.active`, and the footer rule this sheet
+ * replaced), which in the light theme is the same 5% as `--selected`, so "this is the current view"
+ * read as "the pointer is over it". Same separation as `.selected`: the shipped stroke plus a weight,
+ * no new colour name.
+ */
+.sidebar button.nav-row.active,
+.sidebar button.icon-button.active {
+  background: var(--selected);
+  box-shadow: var(--elevation-stroke);
+  color: var(--text);
+  font-weight: var(--font-weight-medium);
+}
+
+/* --- icon buttons --------------------------------------------------------- */
+.sidebar .icon-button {
+  flex-shrink: 0;
+  width: var(--control-size-2xs);
+  height: var(--control-size-2xs);
+  border-radius: var(--radius-row);
+  color: var(--muted);
+}
+.sidebar .icon-button svg {
+  width: var(--control-icon-size-xs);
+  height: var(--control-icon-size-xs);
+}
+/*
+ * Row actions appear when the row is interacted with, like the reference's `visibility: 'interaction'`
+ * item meta. Opacity rather than `display` or `visibility`: those would take the control out of the tab
+ * order and out of the accessibility tree while it is still the row's only archive affordance.
+ */
+.sidebar .thread-row > .tooltip-anchor > .icon-button,
+.sidebar .project-row > .tooltip-anchor:last-child > .icon-button {
+  opacity: 0;
+}
+.sidebar .thread-row:hover > .tooltip-anchor > .icon-button,
+.sidebar .thread-row:focus-within > .tooltip-anchor > .icon-button,
+.sidebar .project-row:hover > .tooltip-anchor:last-child > .icon-button,
+.sidebar .project-row:focus-within > .tooltip-anchor:last-child > .icon-button {
+  opacity: 1;
+}
+@media (hover: none) {
+  /* Nothing hovers on a touch device, so the actions have to stay put. */
+  .sidebar .thread-row > .tooltip-anchor > .icon-button,
+  .sidebar .project-row > .tooltip-anchor:last-child > .icon-button {
+    opacity: 1;
+  }
+}
+
+/* --- search, sections, list ---------------------------------------------- */
+.sidebar .primary-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  margin-bottom: var(--control-gutter-xs);
+}
+.sidebar .section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing);
+  min-height: var(--control-size-2xs);
+  padding: 0 var(--padding-row-x);
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  letter-spacing: var(--tracking-wide);
+  font-weight: var(--font-weight-medium);
+}
+.sidebar .project-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+.sidebar .project-group {
+  display: flex;
+  flex-direction: column;
+}
+.sidebar .sidebar-empty {
+  padding: var(--control-gutter-md) var(--padding-row-x);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+}
+
+/* --- footer --------------------------------------------------------------- */
+/* The settings row pushes its "本地" badge to the far edge, as before the sidebar rebuild. */
+.sidebar-footer .local-dot {
+  margin-left: auto;
+}
+.sidebar .sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  /* `--border-width-hairline`: a 1px rule reads heavier than the reference on a high DPI display. */
+  border-top: var(--border-width-hairline) solid var(--border);
+  padding-top: var(--spacing);
+}
+
+/* Version-pinned component layout; this file is the sole runtime owner. */
+/* Codex 26.915 pinned sidebar captures: 32px heading, 30px rows and 46px footer.
+ * Width remains the user's persisted, clamped panel width. See satang-b02.md. */
+.satang-sidebar {
+  --text: #1a1c1f;
+  --sidebar-label: color-mix(in oklab, var(--text) 85%, transparent);
+  --sidebar-current: rgb(26 28 31 / .055);
+  padding: 8px 0 0;
+  gap: 0;
+  border-right: 0;
+  box-shadow: none;
+}
+.satang-sidebar .sidebar-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 32px;
+  margin: 0 8px 8px;
+  padding-right: 4px;
+}
+.satang-sidebar .sidebar-brand {
+  height: 32px; min-height: 0; gap: 4px; padding: 2px 8px;
+  border: 1px solid transparent; border-radius: 15px;
+  background: transparent; color: var(--sidebar-label); font-size: 17px; line-height: 24px;
+}
+.satang-sidebar .sidebar-brand .menu-trigger-label { font-weight: 600; }
+.satang-sidebar .sidebar-heading .icon-button { width: 24px; height: 24px; border-radius: 10px; }
+.satang-sidebar .sidebar-heading .icon-button svg { width: 16px; height: 16px; }
+.satang-sidebar .sidebar-new-task { position: relative; display: flex; align-items: center; flex-shrink: 0; height: 30px; margin-inline: 8px; border-radius: 12.5px; }
+.satang-sidebar .sidebar-new-task:hover, .satang-sidebar .sidebar-new-task:focus-within { background: var(--hover); }
+.satang-sidebar .sidebar-new-task .new-thread { flex: 1; min-width: 0; padding-right: 36px; background: transparent; }
+.satang-sidebar .new-thread > svg { flex-shrink: 0; }
+.satang-sidebar .new-thread-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Both actions keep their geometry: hovering changes opacity, never row width or text insets. */
+.satang-sidebar .sidebar-new-task > .tooltip-anchor { position: absolute; right: 4px; top: 3px; width: 24px; height: 24px; }
+.satang-sidebar .sidebar-quick-chat { width: 24px; height: 24px; min-height: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--sidebar-label); opacity: 0; }
+.satang-sidebar .new-thread .row-hint { min-width: 0; max-width: 72px; overflow: hidden; text-overflow: ellipsis; opacity: 0; }
+.satang-sidebar .sidebar-new-task:hover .sidebar-quick-chat,
+.satang-sidebar .sidebar-new-task:focus-within .sidebar-quick-chat,
+.satang-sidebar .sidebar-new-task:hover .row-hint,
+.satang-sidebar .sidebar-new-task:focus-within .row-hint { opacity: 1; }
+@media (hover: none) { .satang-sidebar .sidebar-quick-chat { opacity: 1; } }
+.satang-sidebar .sidebar-scroll { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 1px 0 8px; }
+.satang-sidebar .sidebar-scroll::-webkit-scrollbar { width: 10px; }
+.satang-sidebar .primary-nav { gap: 1px; margin: 0 8px 16px; }
+.satang-sidebar button.nav-row, .satang-sidebar .project-row, .satang-sidebar .thread-row,
+.satang-sidebar .thread-main, .satang-sidebar .project-name, .satang-sidebar .recent-thread {
+  height: 30px; min-height: 30px; border-radius: 12.5px; gap: 8px;
+  font-size: 14px; line-height: 21px; font-weight: 430; color: var(--sidebar-label);
+}
+.satang-sidebar button.nav-row { padding: 4.5px 8px; }
+.satang-sidebar .section-label {
+  height: 25px; min-height: 25px; margin-inline: 8px; padding: 0 8px; gap: 4px;
+  font-size: 14px; line-height: 21px; letter-spacing: normal;
+  color: var(--tertiary);
+}
+.satang-sidebar .section-label > span:first-child { flex: 1; }
+.satang-sidebar .project-filter { position: relative; display: grid; place-items: center; flex: none; width: 24px; height: 24px; }
+.satang-sidebar .project-filter svg { pointer-events: none; }
+.satang-sidebar .project-filter select {
+  position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0;
+  border: 0; border-radius: 6px; appearance: none; color: transparent; background: transparent;
+}
+.satang-sidebar .project-filter option { color: var(--text); background: var(--bg); }
+.satang-sidebar .project-filter[data-filtered] { color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+.satang-sidebar .project-list { flex: none; overflow: visible; padding: 4px 8px 0; }
+.satang-sidebar .project-group { padding-bottom: 1px; }
+.satang-sidebar .project-row { padding: 0; gap: 0; }
+.satang-sidebar .project-row > .tooltip-anchor:first-child,
+.satang-sidebar .project-row > .tooltip-anchor:first-child .icon-button { width: 32px; height: 30px; }
+.satang-sidebar .project-row > .tooltip-anchor:first-child svg { width: 16px; height: 16px; }
+.satang-sidebar .project-folder-icon { display: grid; place-items: center; }
+.satang-sidebar .project-collapse-icon { display: none; }
+.satang-sidebar .project-row:hover .project-folder-icon,
+.satang-sidebar .project-row:focus-within .project-folder-icon { display: none; }
+.satang-sidebar .project-row:hover .project-collapse-icon,
+.satang-sidebar .project-row:focus-within .project-collapse-icon { display: grid; place-items: center; }
+.satang-sidebar .thread-row { position: relative; padding: 0 5px 0 32px; }
+.satang-sidebar .thread-row { margin-top: 1px; }
+.satang-sidebar .thread-row:last-child { margin-bottom: 8px; }
+.satang-sidebar .thread-main { padding-right: 70px; }
+.satang-sidebar .thread-indicator { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 7px; height: 7px; border-radius: 50%; background: #3485e4; opacity: 1; pointer-events: none; }
+.satang-sidebar .thread-indicator.error { background: var(--danger); }
+.satang-sidebar .thread-row > .tooltip-anchor { position: absolute; right: 46px; }
+.satang-sidebar .thread-row [data-thread-menu] { position: absolute; right: 20px; opacity: 0; }
+.satang-sidebar .thread-row:hover [data-thread-menu],
+.satang-sidebar .thread-row:focus-within [data-thread-menu] { opacity: 1; }
+.satang-sidebar [data-thread-menu] button { width: 24px; height: 24px; min-height: 0; padding: 0; border: 0; border-radius: 10px; background: transparent; }
+.satang-sidebar [data-thread-menu] button > svg { display: none; }
+.satang-sidebar .thread-row.selected, .satang-sidebar .recent-thread.selected,
+.satang-sidebar button.nav-row.active { background: var(--sidebar-current); box-shadow: none; }
+.satang-sidebar .sidebar-recents { margin-bottom: 16px; }
+.satang-sidebar .recents-heading { border: 0; background: transparent; justify-content: flex-start; font-weight: 500; }
+.satang-sidebar .recent-list { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
+.satang-sidebar .recent-thread { position: relative; display: flex; justify-content: space-between; text-align: left; padding: 4.5px 24px 4.5px 8px; border: 0; background: transparent; }
+.satang-sidebar .sidebar-footer {
+  flex-shrink: 0; flex-direction: row; align-items: center; gap: 8px;
+  height: 46px; padding: 0 8px; border-top: 1px solid var(--border);
+}
+.satang-sidebar .sidebar-footer > .menu { flex: 1; min-width: 0; }
+.satang-sidebar .sidebar-profile {
+  width: 100%; height: 30px; min-height: 0; padding: 5px 8px; border: 0; border-radius: 12.5px;
+  background: transparent; font-size: 14px; line-height: 20px; color: var(--sidebar-label);
+}
+.satang-sidebar .sidebar-profile .menu-trigger-label { display: inline-flex; align-items: center; gap: 8px; }
+.satang-sidebar .sidebar-profile > svg { display: none; }
+.satang-sidebar .sidebar-avatar { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--sidebar-current); font: 16px/18px Georgia, serif; }
+.satang-sidebar .sidebar-footer .icon-button { width: 32px; height: 32px; }
+.satang-sidebar .sidebar-footer .icon-button svg { width: 18px; height: 18px; }
+.dialog .statusbar { padding: 8px 0; background: none; font-size: 12px; flex-wrap: wrap; }
+@media (hover: none) {
+  .satang-sidebar .thread-row [data-thread-menu] { opacity: 1; }
+  .satang-sidebar .thread-main { padding-right: 70px; }
+}
+:root[data-theme="dark"] .satang-sidebar { --text: #fff; --sidebar-current: rgb(255 255 255 / .08); }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .satang-sidebar { --text: #fff; --sidebar-current: rgb(255 255 255 / .08); }
+}

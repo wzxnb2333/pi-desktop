@@ -1,4 +1,14 @@
 node_modules/
+build/
+.cache/
+.temp/
+logs/
+out/
+.env.*
+!.env.example
+test-results/
+playwright-report/
+.superpowers/
 dist/
 .artifacts/
 *.log

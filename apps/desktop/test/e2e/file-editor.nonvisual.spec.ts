@@ -1,0 +1,78 @@
+import { taskAction } from './fixtures/task-actions.ts';
+import { readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { acceptanceApp } from './fixtures/acceptance-app.ts';
+import { startDevelopmentSource } from './fixtures/development-source.ts';
+
+let development: Awaited<ReturnType<typeof startDevelopmentSource>>;
+let fixture: Awaited<ReturnType<typeof acceptanceApp>>;
+test.beforeAll(async () => { development = await startDevelopmentSource(); });
+test.afterAll(async () => { await development?.server.close(); });
+test.beforeEach(async () => { fixture = await acceptanceApp(development.url); });
+test.afterEach(async () => {
+  const errors = [...fixture.errors];
+  await fixture.close();
+  await expect(stat(fixture.storage)).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(errors).toEqual([]);
+});
+
+test('native file save keeps Windows newlines and BOM without leaving a false unsaved state', async () => {
+  const path = join(fixture.project, 'windows.txt');
+  await writeFile(path, '\ufeff原始内容\r\n第二行\r\n');
+  const page = fixture.page;
+  if (!await page.locator('.review-pane').isVisible()) await taskAction(page, '查看变更');
+  await page.getByRole('button', { name: '新标签', exact: true }).click();
+  await page.locator('.tool-launcher').getByRole('button', { name: '文件', exact: true }).click();
+  await page.getByRole('treeitem', { name: 'windows.txt', exact: true }).click();
+  const editor = page.getByLabel('文件内容 windows.txt', { exact: true });
+  await expect(editor).toContainText('原始内容');
+  await editor.fill('保存后的内容\n第二行\n');
+  await page.getByRole('button', { name: '保存 *', exact: true }).click();
+  await expect.poll(() => readFile(path, 'utf8')).toBe('\ufeff保存后的内容\r\n第二行\r\n');
+  await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
+  await expect(page.locator('.file-toolbar [role=status]')).toHaveText('已保存到磁盘');
+  await expect(page.getByRole('tab', { name: 'windows.txt', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '关闭文件 windows.txt', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(editor).toHaveCount(0);
+  await fixture.restart();
+  expect(await readFile(path, 'utf8')).toBe('\ufeff保存后的内容\r\n第二行\r\n');
+});
+
+test('native external modification and failed reload preserve the draft until the user reloads successfully', async () => {
+  const path = join(fixture.project, 'conflict.txt');
+  await writeFile(path, '磁盘原文');
+  const page = fixture.page;
+  if (!await page.locator('.review-pane').isVisible()) await taskAction(page, '查看变更');
+  await page.getByRole('button', { name: '新标签', exact: true }).click();
+  await page.locator('.tool-launcher').getByRole('button', { name: '文件', exact: true }).click();
+  await page.getByRole('treeitem', { name: 'conflict.txt', exact: true }).click();
+  const editor = page.getByLabel('文件内容 conflict.txt', { exact: true });
+  await expect(editor).toHaveValue('磁盘原文');
+  await editor.fill('保留的编辑草稿');
+  await writeFile(path, '外部程序的新内容');
+  await page.getByRole('button', { name: '保存 *', exact: true }).click();
+  await expect(page.locator('.files-workbench').getByRole('alert')).toContainText('文件已被其他程序修改');
+  expect(await readFile(path, 'utf8')).toBe('外部程序的新内容');
+  await expect(editor).toHaveValue('保留的编辑草稿');
+  await rename(path, path + '.backup');
+  await page.getByRole('button', { name: '重新加载', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '放弃修改', exact: true }).click();
+  await expect(page.locator('.files-workbench').getByRole('alert')).toContainText('ENOENT');
+  await expect(editor).toHaveValue('保留的编辑草稿');
+  await expect(page.locator('.file-toolbar [role=status]')).toHaveText('有未保存的修改');
+  await page.getByRole('button', { name: '关闭文件 conflict.txt', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();
+  await rename(path + '.backup', path);
+  await page.getByRole('button', { name: '重新加载', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '放弃修改', exact: true }).click();
+  await expect(editor).toHaveValue('外部程序的新内容');
+  await expect(page.locator('.files-workbench').getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: '关闭文件 conflict.txt', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await fixture.restart();
+  expect(await readFile(path, 'utf8')).toBe('外部程序的新内容');
+});

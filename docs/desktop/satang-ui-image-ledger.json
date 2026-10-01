@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "date": "2026-09-26",
+  "maxRecognitionsPerRequest": 20,
+  "historicalScope": "The batches array preserves the earlier chat handoff records. Starting another batch within the same user request never resets the image limit. Current request totals are recorded separately below.",
+  "countingRule": "Each viewed original image, repeated view, retake, or original inside a collage counts once. Metadata and DOM-only inspection do not count.",
+  "batches": [
+    {
+      "id": "B01",
+      "status": "verified_partial",
+      "verifiedScope": "Project welcome and home composer; window chrome remains for B02",
+      "recognitionCount": 5,
+      "carryOverFromPreviousVisualCycle": 13,
+      "conservativeCycleTotal": 18,
+      "carryOverEvidence": "docs/desktop/visual-acceptance.md",
+      "recognitions": [
+        { "index": 1, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/welcome/dark/1440x940.png", "purpose": "Reference welcome and shell at wide viewport" },
+        { "index": 2, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/welcome/light/1000x700.png", "purpose": "Reference welcome at compact viewport" },
+        { "index": 3, "path": ".artifacts/desktop-visual/satang-b01-home-dark-1440.jpg", "purpose": "Final Pi project home at the reference wide viewport" },
+        { "index": 4, "path": ".artifacts/desktop-visual/satang-b01-setup-light-1000.jpg", "purpose": "Compact Pi model onboarding; theme transition was still painting, superseded by recognition 5" },
+        { "index": 5, "path": ".artifacts/desktop-visual/satang-b01-setup-light-1000-settled.jpg", "purpose": "Retake after DOM confirms the light theme and resolved control colors" }
+      ]
+    },
+    {
+      "id": "B02",
+      "status": "verified_partial",
+      "recognitionCount": 3,
+      "recognitions": [
+        { "index": 1, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/sidebar/dark2/1440x940.png", "purpose": "Reference window chrome and sidebar, latest dark retake" },
+        { "index": 2, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/sidebar/light/1000x700.png", "purpose": "Reference compact window chrome and sidebar" },
+        { "index": 3, "path": ".artifacts/desktop-visual/satang-b02-shell-dark-1440.jpg", "purpose": "Pi shell and sidebar at the wide dark reference viewport; local deterministic fixture" }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "threadId": "01a0dcf8-7e4f-71f2-91ea-1d7fb2e29c02",
+      "request": "Continue referenced Codex Desktop frontend migration",
+      "batches": ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B09"],
+      "recognitionCount": 20,
+      "limit": 20,
+      "recognitions": [
+        { "index": 1, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/palette/light/1440x940.png", "purpose": "Reference wide command palette" },
+        { "index": 2, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/workspace/dark2/1440x940.png", "purpose": "Reference inspection; shows a failed old-session load, not a normal conversation" },
+        { "index": 3, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/terminal/dark2/1440x940.png", "purpose": "Reference terminal chrome" },
+        { "index": 4, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/preview/light/1000x700.png", "purpose": "Reference compact browser tabs, address and empty state" },
+        { "index": 5, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/settings/light/1440x940.png", "purpose": "Reference settings heading, cards and page spacing" },
+        { "index": 6, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/pinned/management/dark2/1440x940.png", "purpose": "Reference inspection; shows a failed old-session load, not a reached Sites page" },
+        { "index": 7, "path": ".artifacts/desktop-visual/satang-b02-palette-light-1440.jpg", "purpose": "Pi wide command palette geometry; intermediate image before input placeholder was restored" },
+        { "index": 8, "path": ".artifacts/desktop-visual/satang-b02-palette-dark-1000.jpg", "purpose": "Final Pi compact command palette, including placeholder" },
+        { "index": 9, "path": ".artifacts/desktop-visual/satang-b02-workspace-light-1440.jpg", "purpose": "Final Pi conversation, text, table, code and composer using synthetic local data" },
+        { "index": 10, "path": ".artifacts/desktop-visual/satang-b03-preview-light-1000.jpg", "purpose": "Final Pi compact browser empty state and auxiliary drawer" },
+        { "index": 11, "path": ".artifacts/desktop-visual/satang-b03-terminal-dark-1440.jpg", "purpose": "Final Pi terminal chrome before a PTY starts; real PTY output is covered by Electron tests" },
+        { "index": 12, "path": ".artifacts/desktop-visual/satang-b04-settings-light-1440.jpg", "purpose": "Final Pi general settings and explicit save workflow" },
+        { "index": 13, "path": ".artifacts/desktop-visual/satang-b04-models-dark-1000.jpg", "purpose": "Final Pi compact model settings and scrollable form" },
+        { "index": 14, "path": ".artifacts/desktop-visual/satang-b04-automations-light-1000.jpg", "purpose": "Final Pi automation form, using its real local management structure" },
+        { "index": 15, "path": ".artifacts/desktop-visual/satang-b03-review-dark-1440.jpg", "purpose": "Earlier Pi Git review panel with a clean synthetic repository state; superseded by B06 layout" },
+        { "index": 16, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/workspace/dark-1440x940.png", "purpose": "Earlier reached workspace plus Review. Visible viewport contains error notices and diff; normal prose and plan CSS are from offscreen DOM nodes, not visible-pixel verification" },
+        { "index": 17, "path": "E:/AI_collection/satang_code/.artifacts/reference/26.915.4065.0/management/light-1440x940.png", "purpose": "Earlier valid Sites heading, search, filters and empty-state visual reference" },
+        { "index": 18, "path": ".artifacts/desktop-visual/satang-b08-workspace-review-dark-1440.jpg", "purpose": "Final dark Pi workspace with user bubble, notice, prose, table, code and populated Review file tree/diff. Keyboard-resized Review is 550px and its focus ring is visible; plan is below the viewport and covered by DOM tests" },
+        { "index": 19, "path": ".artifacts/desktop-visual/satang-b07-management-light-1440.jpg", "purpose": "Final Pi automation heading, search, filters, create action and empty state at the wide light reference viewport; synthetic empty data with actual App components" },
+        { "index": 20, "path": ".artifacts/desktop-visual/satang-b09-plan-approval-light-1000.jpg", "purpose": "Final compact light App shows bounded expanded plan with internal scrolling, input approval and focused reply plus composer; approval geometry uses separately identified 26.917 source supplement" }
+      ]
+    }
+  ]
+}

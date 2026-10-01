@@ -1,0 +1,57 @@
+@import "./tokens.css";
+@import "./codex-26915-theme.css";
+@import "./base.css";
+@import "./selection-controls.css";
+@import "./utilities.css";
+@import "./highlight.css";
+@import "./shell.css";
+@import "./commands.css";
+@import "./sidebar.css";
+@import "./timeline.css";
+@import "./conversation-activity.css";
+@import "./approval.css";
+@import "./composer.css";
+@import "./welcome.css";
+@import "./panels.css";
+@import "./task-summary.css";
+@import "./terminal.css";
+@import "./preview.css";
+@import "./artifacts.css";
+@import "./goals.css";
+@import "./subtasks.css";
+@import "./voice.css";
+@import "./automation-runs.css";
+@import "./management.css";
+@import "./skills.css";
+@import "./settings.css";
+@import "./satang-surfaces.css";
+@import "./satang-review.css";
+@import "./satang-management.css";
+@import "./satang-workspace.css";
+@import "./loading.css";
+@import "./appearance.css";
+@import "./memories.css";
+@import "./message-experience.css";
+@import "./workspace-tabs.css";
+
+/*
+ * Width overrides that used to live here (`.sidebar` / `.review-pane` with !important) are gone on
+ * purpose: they defeated the inline sizes the panels now persist, so a saved layout silently
+ * ignored itself below 1100px. The clamp in lib/layout.ts owns that instead.
+ */
+@media (max-width: 1100px) {
+  .composer-footer {
+    gap: 6px;
+  }
+  .toolbar {
+    gap: 5px;
+    padding: 0 10px;
+  }
+  .status {
+    display: none;
+  }
+  .timeline {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}

@@ -1,0 +1,21 @@
+.message-context-cards { display: flex; flex-direction: column; gap: 6px; max-width: min(560px, 100%); min-width: 0; margin: 8px 0 0 auto; }
+.message-context-cards:empty { display: none; }
+.message-context-cards > .disclosure { border: 1px solid var(--border); border-radius: 10px; }
+.message-context-cards .disclosure-header { min-height: 32px; padding: 4px 8px; font-size: 12px; }
+.message-context-cards .disclosure-summary { min-width: 0; gap: 6px; }
+.message-context-cards .disclosure-label, .message-context-cards .disclosure-label > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.message-context-cards .disclosure-chevron { width: 14px; height: 14px; flex-shrink: 0; }
+.message-context-content { padding: 8px; min-width: 0; }
+.message-context-content > .hint { margin: 0 0 6px; font-size: 11px; }
+.message-context-content > pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; font: 12px/1.5 var(--font-mono); margin: 6px 0 0; }
+.message-context-image { display: block; max-width: 100%; max-height: 360px; object-fit: contain; margin-top: 8px; }
+.message-actions { display: flex; align-items: center; gap: 2px; min-height: 28px; opacity: 0; transition: opacity 100ms ease; }
+.message:hover .message-actions, .message:focus-within .message-actions { opacity: 1; }
+.message-actions button { font-size: 12px; }
+.message-actions svg { width: 14px; height: 14px; }
+.message-action-error { font-size: 12px; color: var(--danger); }
+.message-revision-origin { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; color: var(--muted); font-size: 12px; }
+.message-revision-origin button { font-size: inherit; padding: 4px 8px; }
+.markdown-code-block[data-expanded=false] .markdown-code-content { max-height: 360px; }
+@media (hover: none) { .message-actions { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .message-actions { transition: none; } }

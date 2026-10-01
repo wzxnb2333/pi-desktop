@@ -1,0 +1,4 @@
+/* Source-only activity oracle; pinned vendor theme, no Pi measurements. */
+:root {--activity-file-color:rgba(26, 28, 31, 0.494);--activity-diff-description:oklab(0.22559 -0.00131416 -0.00642684 / 0.395294);--activity-diff-background:oklab(0.22559 -0.00131416 -0.00642684 / 0.0329412);}
+:root[data-theme="dark"] {--activity-file-color:rgba(255, 255, 255, 0.498);--activity-diff-description:oklab(0.999994 0.0000455678 0.0000200868 / 0.398431);--activity-diff-background:oklab(0.999994 0.0000455678 0.0000200868 / 0.0470588);}
+@media (prefers-color-scheme: dark) {:root[data-theme="system"] {--activity-file-color:rgba(255, 255, 255, 0.498);--activity-diff-description:oklab(0.999994 0.0000455678 0.0000200868 / 0.398431);--activity-diff-background:oklab(0.999994 0.0000455678 0.0000200868 / 0.0470588);}}

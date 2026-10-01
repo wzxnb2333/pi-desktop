@@ -1,0 +1,16 @@
+export const chatMessages = {
+  '快照准备目录已变化，原数据已保留。': 'The prepared snapshot directory changed. Its existing data has been retained.',
+  '任务创建失败，空 Worktree 已移除，但分支或快照清理未完成。': 'Task creation failed. The empty worktree was removed, but branch or snapshot cleanup is incomplete.',
+  '任务创建请求已被使用，请重新创建任务': 'This task creation request is already in use. Start a new task.',
+  '项目目录已变化，请重新选择后创建任务': 'The project directory changed. Select it again before creating a task.',
+  'Worktree 注册信息已变化，请重新创建任务': 'The worktree registration changed. Start a new task.',
+  '任务已创建，但环境初始化未能启动。请在项目动作中重试。': 'The task was created, but environment setup could not start. Retry it from project actions.',
+  '任务创建失败，Worktree 恢复目录已保留。请从项目 Worktree 列表重新打开。': 'Task creation failed. The worktree recovery directory was retained. Reopen it from the project worktree list.',
+  '聊天请求标识已被使用，请重新创建聊天': 'This chat request identifier is already in use. Start a new chat.',
+  '只能通过此入口创建独立聊天': 'This action only creates standalone chats.',
+  '此聊天当前不能绑定项目': 'This chat cannot be bound to a project right now.',
+  '此聊天已绑定其他目录，请重新打开聊天后确认': 'This chat is already bound to another directory. Reopen it to confirm.',
+  '项目目录已变化，请重新选择后绑定': 'The project directory changed. Select it again before binding.',
+  '正在绑定项目目录，请稍后再发送或修改任务': 'The project directory is being bound. Wait before sending or changing the task.',
+  '聊天保存失败，清理目录时出现错误。原目录已保留。': 'The chat could not be saved and its directory could not be cleaned up. The directory has been retained.',
+} as const;

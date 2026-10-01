@@ -1,0 +1,259 @@
+.desktop {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.titlebar {
+  height: var(--height-toolbar-sm);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  gap: 8px;
+  background: var(--window-menu);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.brand strong {
+  font-weight: 600;
+}
+.pi-mini {
+  font-family: Georgia, serif;
+  font-weight: bold;
+  font-size: 20px;
+  line-height: 20px;
+}
+.titlebar > button,
+.titlebar > .tooltip-anchor {
+  -webkit-app-region: no-drag;
+}
+.window-controls {
+  margin-left: auto;
+  display: flex;
+  -webkit-app-region: no-drag;
+  height: 100%;
+}
+.window-controls .icon-button {
+  width: 46px;
+  height: 100%;
+  border-radius: 0;
+}
+.window-controls .tooltip-anchor { height: 100%; }
+.window-controls .tooltip-anchor:last-child button:hover {
+  background: #c7413b;
+  color: white;
+}
+.icon-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.icon-button.active {
+  color: var(--text);
+  /*
+   * `--hover` and `--selected` are both 5% in light, so a toggled toolbar control (sidebar, review,
+   * terminal, preview) read as merely hovered. Stroke + weight is the same disambiguation the other
+   * sheets settled on; shell.css was the one left behind.
+   */
+  background: var(--selected);
+  box-shadow: var(--elevation-stroke);
+}
+.workspace {
+  background: var(--sidebar);
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.resizer {
+  width: 0;
+  position: relative;
+  background: var(--border);
+  flex-shrink: 0;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 3;
+}
+.resizer::after {
+  content: "";
+  position: absolute;
+  inset: 0 -3px;
+}
+.resizer:hover {
+  background: var(--accent);
+}
+.resizer-h {
+  width: auto;
+  height: 1px;
+  cursor: row-resize;
+}
+.resizer-h::after {
+  inset: -3px 0;
+}
+.main {
+  position: relative;
+  isolation: isolate;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-top-left-radius: var(--radius-lg);
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+.toolbar {
+  container: task-toolbar / inline-size;
+  height: var(--height-toolbar);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 9px;
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 25px);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.toolbar-actions > .tooltip-anchor, .toolbar-actions > .menu { flex: none; }
+.toolbar-actions .task-actions-trigger { width: 30px; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.task-actions-trigger > svg { display: none; }
+.task-actions-trigger .menu-trigger-label { display: flex; }
+.toolbar-actions .task-actions-trigger:hover, .toolbar-actions .task-actions-trigger[aria-expanded="true"] { background: var(--hover); color: var(--text); }
+.project-action-icon { display: none; }
+@container task-toolbar (max-width: 620px) {
+  .toolbar-actions { gap: 0; }
+  .toolbar-actions .icon-button, .toolbar-actions .project-action-trigger { width: 24px; height: 30px; min-height: 0; padding: 0; }
+  .toolbar-actions .status, .toolbar-actions .project-action-label, .toolbar-actions .project-action-trigger > svg { display: none; }
+  .toolbar-actions .project-action-icon { display: block; }
+}
+.breadcrumb {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.breadcrumb > span {
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breadcrumb strong {
+  min-width: 0;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.breadcrumb svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-right: 12px;
+}
+.status > span,
+.local-dot,
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.status.error {
+  color: var(--danger);
+}
+.status.error > span {
+  background: var(--danger);
+}
+.error-banner {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding: 8px 16px;
+  background: #b1453e15;
+  color: var(--danger);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.error-banner > span {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.statusbar {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  min-height: 28px;
+  flex-shrink: 0;
+  padding: 0 8px;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--sidebar);
+  user-select: none;
+}
+.statusbar > span[title] {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.statusbar > span { white-space: nowrap; }
+.statusbar .flex-spacer { display: none; }
+.statusbar .separator {
+  margin: 0 5px;
+  opacity: 0.5;
+}
+
+/* Version-pinned component layout; this file is the sole runtime owner. */
+/* Geometry from the pinned 26.915 menu strip; menu actions remain Pi commands. */
+.titlebar { padding-left: 6px; gap: 0; }
+.toolbar[data-home] .breadcrumb { visibility: hidden; }
+.titlebar-navigation { display: flex; gap: 4px; -webkit-app-region: no-drag; }
+.titlebar-navigation .icon-button { width: 28px; height: 28px; border-radius: 10px; }
+.titlebar-navigation .icon-button.active { background: transparent; box-shadow: none; }
+.titlebar-menus { display: flex; align-items: center; gap: 2px; padding: 0 8px 0 4px; -webkit-app-region: no-drag; }
+.titlebar-menus .menu-trigger {
+  height: 24px; min-height: 0; padding: 4px 10px; gap: 0; border: 1px solid transparent; border-radius: 10px;
+  background: transparent; color: var(--tertiary); font-size: 14px; line-height: 14px; font-weight: 400;
+}
+/* Captured English hit areas stay stable across Windows system font fallback.
+ * Translated labels keep their intrinsic width; glyph pixels remain unverified. */
+.titlebar-menus:lang(en-US) > .menu:nth-child(1) .menu-trigger { width: 45.03125px; }
+.titlebar-menus:lang(en-US) > .menu:nth-child(2) .menu-trigger { width: 47.515625px; }
+.titlebar-menus:lang(en-US) > .menu:nth-child(3) .menu-trigger { width: 54.21875px; }
+.titlebar-menus:lang(en-US) > .menu:nth-child(4) .menu-trigger { width: 52.25px; }
+.titlebar-menus .menu-trigger > svg { display: none; }
+.titlebar-menus .menu-trigger:hover, .titlebar-menus .menu-trigger[aria-expanded="true"] { background: var(--hover); color: var(--text); }

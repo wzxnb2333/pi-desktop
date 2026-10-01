@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { gitRun } from '../src/main/git.ts';
+import { RoundSnapshots } from '../src/main/round-snapshots.ts';
+
+test('round snapshots keep their own index and objects, preserve raw content and label external changes honestly', async context => {
+  const root = await mkdtemp(join(tmpdir(), 'pi-round-'));
+  context.after(async () => { await rm(root, { recursive: true, force: true }); await assert.rejects(access(root), { code: 'ENOENT' }); });
+  const cwd = join(root, 'project'); const storage = join(root, 'storage'); await mkdir(cwd); await mkdir(storage);
+  await gitRun(cwd, ['init', '-b', 'main']); await gitRun(cwd, ['config', 'core.autocrlf', 'false']);
+  await gitRun(cwd, ['config', 'user.name', 'Test']); await gitRun(cwd, ['config', 'user.email', 'test@example.invalid']);
+  await writeFile(join(cwd, '.gitattributes'), '*.txt filter=must-not-run\n');
+  await writeFile(join(cwd, 'code.txt'), 'base\r\n');
+  await gitRun(cwd, ['add', '--', '.gitattributes', 'code.txt']); await gitRun(cwd, ['commit', '-m', 'initial']);
+  await gitRun(cwd, ['config', 'filter.must-not-run.clean', 'false']); await gitRun(cwd, ['config', 'filter.must-not-run.required', 'true']);
+  await writeFile(join(cwd, 'code.txt'), 'before existing changes\r\n');
+  const index = await readFile(join(cwd, '.git', 'index'));
+  const service = new RoundSnapshots(storage);
+  const snapshot = await service.begin('thread-1', cwd);
+  await writeFile(join(cwd, 'code.txt'), 'model write\r\n');
+  await writeFile(join(cwd, 'outside-agent 中文.txt'), 'external editor\n');
+  await service.end(snapshot); assert.equal(snapshot.state, 'complete', snapshot.error);
+  const diff = await service.diff(snapshot); assert.equal(diff.attribution, 'workspace');
+  assert.match(diff.diff, /before existing changes/); assert.match(diff.diff, /model write/); assert.match(diff.diff, /external editor/);
+  assert.deepEqual(await readFile(join(cwd, '.git', 'index')), index);
+  assert.equal((await readdir(join(storage, 'round-snapshots', 'thread-1'))).some(file => file.startsWith('index')), false);
+  await assert.rejects(gitRun(cwd, ['cat-file', '-e', snapshot.after!]));
+  assert.match((await new RoundSnapshots(storage).diff(snapshot, 'code.txt')).diff, /model write/);
+  await gitRun(cwd, ['config', '--unset', 'filter.must-not-run.required']);
+  await gitRun(cwd, ['config', '--unset', 'filter.must-not-run.clean']);
+  await gitRun(cwd, ['switch', '-c', 'feature']); await gitRun(cwd, ['add', '--', 'code.txt']); await gitRun(cwd, ['commit', '-m', 'feature']);
+  const branch = await service.branch(cwd, 'main'); assert.equal(branch.attribution, 'branch');
+  assert.match(branch.diff, /model write/); assert.doesNotMatch(branch.diff, /external editor/);
+  await assert.rejects(service.branch(cwd, '--help'), /有效/);
+});

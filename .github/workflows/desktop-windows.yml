@@ -1,0 +1,37 @@
+name: Desktop Windows
+on:
+  push:
+    paths: ['apps/desktop/**', 'packages/**', 'package.json', 'package-lock.json', '.github/workflows/desktop-windows.yml']
+  pull_request:
+    paths: ['apps/desktop/**', 'packages/**', 'package.json', 'package-lock.json', '.github/workflows/desktop-windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node node_modules/electron/install.js
+      - run: npm run hydrate:model-data
+      - run: npm run build:offline
+      - run: npm run desktop:check
+      - run: npm run desktop:test
+      - run: npm run desktop:package
+      - run: |
+          $env:PI_DESKTOP_EXECUTABLE = (Resolve-Path '.artifacts/desktop/win-unpacked/Pi Desktop.exe').Path
+          npm run test:ui --workspace=@pi-desktop/app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pi-desktop-windows
+          path: |
+            .artifacts/desktop/*.exe
+            .artifacts/screenshots/
+            .artifacts/desktop-tests/

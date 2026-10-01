@@ -1,0 +1,58 @@
+/* Source-only measurements from reference-surfaces.mjs; no application runtime dependencies. */
+:root {  --popup-background: oklab(0.999994 0.0000455678 0.0000200868 / 0.9);
+  --popup-menu-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(26, 28, 31, 0.08) 0px 0px 0px 0.5px, rgba(26, 28, 31, 0.08) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.12) 0px 8px 16px -4px;
+  --popup-dialog-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(26, 28, 31, 0.08) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.1) 0px 4px 8px -2px;
+  --popup-tooltip-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(15, 23, 42, 0.2) 0px 8px 18px 0px;
+  --tooltip-background: rgb(255, 255, 255);
+  --popup-description: rgba(26, 28, 31, 0.494);
+  --dialog-button-radius: 12.5px;
+  --dialog-close-color: oklab(0.22559 -0.00131416 -0.00642684 / 0.8);
+  --dialog-close-icon-size: 16px;
+  --dialog-cancel-background: rgba(255, 255, 255, 0.96);
+  --dialog-danger-background: oklab(0.589905 0.18904 0.0991318 / 0.1);
+  --dialog-danger-color: rgb(224, 46, 42);
+  --dialog-cancel-hover: rgba(26, 28, 31, 0.055);
+  --dialog-danger-hover: oklab(0.589905 0.18904 0.0991318 / 0.2);
+  --dialog-focus-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgb(255, 255, 255) 0px 0px 0px 0px, rgb(51, 156, 255) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+  --markdown-border: rgba(26, 28, 31, 0.118);
+  --markdown-table-divider: rgba(26, 28, 31, 0.047);
+  --markdown-code-background: rgba(26, 28, 31, 0.055);
+  --markdown-code-font: ui-monospace, SFMono-Regular, "SF Mono", menlo, consolas, "Liberation Mono", monospace;}
+:root[data-theme="dark"] {  --popup-background: oklab(0.297161 0.0000135154 0.00000594556 / 0.9);
+  --popup-menu-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(255, 255, 255, 0.082) 0px 0px 0px 0.5px, rgba(255, 255, 255, 0.082) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.12) 0px 8px 16px -4px;
+  --popup-dialog-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(255, 255, 255, 0.082) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.1) 0px 4px 8px -2px;
+  --popup-tooltip-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(15, 23, 42, 0.2) 0px 8px 18px 0px;
+  --tooltip-background: rgb(45, 45, 45);
+  --popup-description: rgba(255, 255, 255, 0.498);
+  --dialog-button-radius: 12.5px;
+  --dialog-close-color: oklab(0.903646 0.0000412762 0.0000180602 / 0.8);
+  --dialog-close-icon-size: 16px;
+  --dialog-cancel-background: rgba(255, 255, 255, 0.03);
+  --dialog-danger-background: oklab(0.705331 0.169982 0.0764888 / 0.1);
+  --dialog-danger-color: rgb(255, 103, 100);
+  --dialog-cancel-hover: rgba(255, 255, 255, 0.08);
+  --dialog-danger-hover: oklab(0.705331 0.169982 0.0764888 / 0.2);
+  --dialog-focus-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgb(255, 255, 255) 0px 0px 0px 0px, rgba(131, 195, 255, 0.76) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+  --markdown-border: rgba(255, 255, 255, 0.157);
+  --markdown-table-divider: rgba(255, 255, 255, 0.043);
+  --markdown-code-background: rgba(255, 255, 255, 0.08);
+  --markdown-code-font: ui-monospace, SFMono-Regular, "SF Mono", menlo, consolas, "Liberation Mono", monospace;}
+@media (prefers-color-scheme: dark) { :root[data-theme="system"] {  --popup-background: oklab(0.297161 0.0000135154 0.00000594556 / 0.9);
+  --popup-menu-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(255, 255, 255, 0.082) 0px 0px 0px 0.5px, rgba(255, 255, 255, 0.082) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.12) 0px 8px 16px -4px;
+  --popup-dialog-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(255, 255, 255, 0.082) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.1) 0px 4px 8px -2px;
+  --popup-tooltip-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(15, 23, 42, 0.2) 0px 8px 18px 0px;
+  --tooltip-background: rgb(45, 45, 45);
+  --popup-description: rgba(255, 255, 255, 0.498);
+  --dialog-button-radius: 12.5px;
+  --dialog-close-color: oklab(0.903646 0.0000412762 0.0000180602 / 0.8);
+  --dialog-close-icon-size: 16px;
+  --dialog-cancel-background: rgba(255, 255, 255, 0.03);
+  --dialog-danger-background: oklab(0.705331 0.169982 0.0764888 / 0.1);
+  --dialog-danger-color: rgb(255, 103, 100);
+  --dialog-cancel-hover: rgba(255, 255, 255, 0.08);
+  --dialog-danger-hover: oklab(0.705331 0.169982 0.0764888 / 0.2);
+  --dialog-focus-shadow: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgb(255, 255, 255) 0px 0px 0px 0px, rgba(131, 195, 255, 0.76) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px;
+  --markdown-border: rgba(255, 255, 255, 0.157);
+  --markdown-table-divider: rgba(255, 255, 255, 0.043);
+  --markdown-code-background: rgba(255, 255, 255, 0.08);
+  --markdown-code-font: ui-monospace, SFMono-Regular, "SF Mono", menlo, consolas, "Liberation Mono", monospace;} }

@@ -1,0 +1,35 @@
+.review-findings { padding: 20px; overflow: auto; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.review-findings h2, .review-findings h3, .review-findings p { margin: 0; }
+.review-findings form, .review-findings label { display: flex; flex-direction: column; gap: 8px; }
+.review-findings form { gap: 14px; }
+.review-findings input, .review-findings select, .review-findings textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.review-findings textarea { min-height: 70px; resize: vertical; }
+.review-finding { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 12px; display: flex; flex-direction: column; gap: 10px; overflow-wrap: anywhere; }
+.review-finding.ignored { opacity: .65; }
+.review-finding header { display: flex; flex-wrap: wrap; gap: 8px; }
+.review-location { text-align: left; overflow-wrap: anywhere; }
+.review-stale { color: var(--muted); font-size: 12px; }
+.review-findings pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 350px; overflow: auto; font-family: var(--font-mono); }
+.review-captured pre > div { display: flex; gap: 12px; }
+.review-captured pre span { user-select: none; min-width: 3ch; color: var(--muted); }
+.diff button.line-number { border: 0; border-radius: 0; padding: 0; font: inherit; background: transparent; cursor: pointer; color: inherit; }
+.diff button.line-number:hover, .diff button.line-number:focus-visible { background: var(--hover); outline: 1px solid var(--border); }
+.pr-panel form { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.pr-panel input:not([type=checkbox]), .pr-panel textarea { min-width: 0; width: 100%; box-sizing: border-box; }
+.pr-panel textarea { min-height: 90px; resize: vertical; }
+.pr-panel .pr-body, .pr-panel p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pr-panel blockquote { border-left: 2px solid var(--border); margin: 12px 0; padding-left: 12px; }
+.pr-panel article { min-width: 0; }
+.project-actions-editor { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.project-actions-editor label { display: flex; flex-direction: column; gap: 6px; }
+.project-actions-editor fieldset { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.project-actions-editor textarea { min-height: 70px; resize: vertical; font-family: var(--font-mono); }
+.project-actions-editor input, .project-actions-editor textarea, .project-actions-editor select { width: 100%; min-width: 0; box-sizing: border-box; }
+.project-actions-editor pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.worktree-lifecycle { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.worktree-lifecycle p { overflow-wrap: anywhere; }
+.managed-worktree { border: 1px solid var(--border); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.managed-worktree h3, .managed-worktree p { margin: 0; overflow-wrap: anywhere; }
+.worktree-manager .check { flex-direction: row; align-items: center; }
+.worktree-manager input[type=checkbox] { width: auto; }
+.worktree-manager details > p { overflow-wrap: anywhere; }

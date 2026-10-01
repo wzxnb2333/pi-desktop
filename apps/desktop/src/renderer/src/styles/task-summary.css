@@ -1,0 +1,41 @@
+.task-summary-rail { position: relative; flex: 0 0 302px; width: 302px; min-width: 0; align-self: flex-start; max-height: calc(100% - 32px); margin: 16px 16px 16px 0; overflow: auto; border-radius: 16px; }
+.task-summary { min-width: 0; padding: 14px 16px; overflow-wrap: anywhere; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.summary-overlay > .task-summary-rail { position: absolute; right: var(--summary-right, 0px); top: 0; width: min(302px, calc(100% - var(--summary-right, 0px) - 32px)); max-height: calc(100% - 170px); z-index: 10; box-shadow: var(--elevation-popover); }
+.summary-stacked > .task-summary-rail { max-height: min(240px, calc(40% - 16px)); }
+.summary-stacked.auxiliary-overlay > .review-pane { top: var(--summary-stack-height); }
+.summary-overlay.auxiliary-overlay > .review-pane { bottom: var(--tool-overlay-bottom, 0px); }
+.task-summary .summary-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.task-summary .summary-heading h2 { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 0; font-size: 13px; font-weight: 400; color: var(--muted); }
+.task-summary .summary-menu { width: 24px; min-height: 24px; height: 24px; padding: 0; border: 0; background: transparent; color: var(--muted); }
+.summary-menu .menu-trigger-label { display: flex; }
+.task-summary .summary-menu > svg { display: none; }
+.summary-branch { display: flex; align-items: center; width: 100%; min-width: 0; gap: 8px; padding: 5px 2px; border: 0; background: transparent; text-align: left; font-size: 13px; }
+.summary-branch > svg { flex: none; }
+.summary-branch strong { min-width: 0; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+.summary-stats { display: flex; flex: none; gap: 5px; font-variant-numeric: tabular-nums; }
+.summary-stats .added { color: var(--success, #28a45d); }
+.summary-stats .removed { color: var(--danger); }
+.summary-count { flex: none; color: var(--muted); font-size: 12px; }
+.task-summary section { margin: 16px 0 8px; }
+.task-summary h3 { font-size: 12px; font-weight: 500; }
+.summary-task { margin-top: 16px; }
+.summary-source { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 5px 2px; border: 0; background: transparent; text-align: left; color: var(--muted); }
+.summary-source svg { flex: none; }
+.summary-source span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-sources .hint { margin: 4px 0; font-size: 12px; }
+.summary-expand { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; margin-top: 6px; padding: 5px 2px; border: 0; background: transparent; font-size: 13px; text-align: left; color: var(--muted); }
+.summary-expand[aria-expanded="true"] svg { transform: rotate(180deg); }
+.summary-suggestion { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.summary-suggestion button { border: 0; background: var(--hover); font-size: 12px; }
+.summary-suggestion small { font-size: 11px; color: var(--muted); }
+.summary-file { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 6px 0; border: 0; background: none; text-align: left; font-size: 12px; }
+.summary-file-status { flex: none; color: var(--muted); }
+.summary-file > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.summary-more-files { font-size: 12px; border: 0; background: transparent; }
+.task-summary .status { display: inline-flex; }
+.task-summary :is(.wide-button, .summary-step, .source) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.task-summary .summary-approval { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; }
+.task-summary .summary-approval small { color: var(--muted); white-space: pre-wrap; }
+.task-summary .summary-error { color: var(--danger); }
+.task-summary [aria-disabled="true"] { opacity: 0.5; cursor: default; }
+.turn-plan > li:focus-visible, .approval-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

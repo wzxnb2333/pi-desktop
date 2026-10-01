@@ -1,0 +1,401 @@
+.review-pane {
+  flex-shrink: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.conversation-layout { position: relative; }
+/* Docked panes share the top toolbar row in the 26.915 split view. */
+.main[data-review-docked] > .toolbar { margin-right: var(--review-pane-width); }
+.main[data-review-docked] .conversation-layout > .review-pane,
+.main[data-review-docked] .conversation-layout > .resizer { margin-top: calc(-1 * var(--height-toolbar)); }
+.main[data-review-docked] .review-pane { border-left: 1px solid var(--border); }
+.auxiliary-overlay > .review-pane { position: absolute; right: 0; top: 0; bottom: 0; max-width: calc(100% - 24px); z-index: 20; border-left: 1px solid var(--border); box-shadow: var(--elevation-stroke); }
+.auxiliary-overlay > [role="separator"] { display: block; }
+.commit-file { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.review-browser { display: flex; overflow: hidden; min-height: 0; }
+.task-summary { padding: 16px; font-size: 13px; }
+.task-summary header h2 { font-size: 15px; margin: 0 0 8px; overflow-wrap: anywhere; }
+.task-summary section { margin: 18px 0; }
+.task-summary h3 { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+.summary-step { display: block; width: 100%; border: 0; background: none; text-align: left; padding: 6px; font-size: 12px; }
+.summary-step.completed { color: var(--muted); }
+.summary-step.in_progress { color: var(--accent); }
+.browser-tab { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.browser-actions, .workbench-actions, .file-search { display: flex; gap: 6px; padding: 8px; align-items: center; flex-wrap: wrap; }
+.browser-actions input, .file-search > input { min-width: 60px; flex: 1; }
+.browser-actions button, .browser-actions select, .workbench-actions button { font-size: 11px; padding: 4px 6px; }
+.browser-find { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px 8px; align-items: center; }
+.browser-find input { flex: 1; min-width: 100px; }
+.browser-find button, .browser-find [role="status"], .browser-feedback { font-size: 12px; }
+.browser-find [role="status"] { flex-basis: 100%; color: var(--muted); }
+.browser-find button[aria-disabled="true"] { opacity: 0.5; cursor: default; }
+.browser-feedback { margin: 0; padding: 4px 8px; color: var(--muted); }
+.browser-error, .git-feedback { padding: 10px; color: var(--danger); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.browser-download { padding: 6px; font-size: 11px; overflow-wrap: anywhere; }
+.file-tree { max-height: 220px; overflow: auto; }
+.project-file-tree, .project-file-tree [role="group"] { list-style: none; margin: 0; padding: 0; }
+.project-file-tree:empty { min-height: 28px; }
+.project-file-tree [role="treeitem"] { outline: none; cursor: default; }
+.file-tree-row { display: flex; align-items: center; gap: 5px; width: 100%; text-align: left; font-size: 12px; padding: 5px 10px; }
+.file-tree-row > svg, .file-tree-chevron { flex: 0 0 auto; }
+.file-tree-chevron { width: 12px; }
+.file-tree-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-tree-note { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.project-file-tree [role="treeitem"] > .file-tree-row:hover { background: var(--hover); }
+.project-file-tree [aria-selected="true"] > .file-tree-row { background: var(--selected); }
+.project-file-tree [role="treeitem"]:focus-visible > .file-tree-row, .project-file-tree:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.file-search-result { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; background: none; font-size: 12px; padding: 5px 10px; overflow-wrap: anywhere; }
+.file-search-result small { display: block; color: var(--muted); }
+.file-search-pagination { position: sticky; top: 0; background: var(--bg); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; padding: 6px 10px; border-block: 1px solid var(--border); }
+.file-search-pagination button, .file-search-stop { font-size: 12px; }
+.file-search-pagination button[aria-disabled="true"] { opacity: 0.5; cursor: default; }
+.file-search-stop { margin: 0 10px 6px; }
+.file-search-coverage, .file-search-progress { overflow-wrap: anywhere; }
+.file-navigation-error { padding: 8px 10px; font-size: 12px; color: var(--danger); overflow-wrap: anywhere; }
+.file-navigation-error p { margin: 0 0 6px; }
+.file-navigator .hint { margin: 6px 10px; }
+.file-editor { width: 100%; min-height: 320px; padding: 10px; resize: vertical; border: 0; border-radius: 0; font: 12px/20px var(--font-mono); white-space: pre; tab-size: 2; }
+.file-toolbar { flex-wrap: wrap; }
+.file-toolbar input[type="number"] { width: 60px; }
+.file-editor-status { color: var(--muted); font-size: 12px; margin: 6px 10px; }
+.file-toolbar > .file-editor-status { flex: 0 1 auto; margin: 0 0 0 auto; white-space: normal; overflow-wrap: anywhere; }
+.workbench-section { margin: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; }
+.workbench-section > textarea, .workbench-section > input { width: 100%; margin: 6px 0; }
+.workbench-section pre { max-height: 240px; overflow: auto; white-space: pre-wrap; }
+.git-file-row { display: flex; align-items: center; }
+.git-file-row > button:first-child { flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.git-file-row > button:not(:first-child) { width: auto; }
+.git-feedback { color: var(--text); }
+.git-feedback pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.git-feedback.error, .git-read-error { color: var(--danger); }
+.git-read-error, .git-read-status { margin: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.git-read-error p { margin: 0 0 6px; }
+.git-read-status { color: var(--muted); }
+.git-field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.git-field input, .git-field select { min-width: 0; max-width: 100%; }
+.git-commit-row { flex-direction: column; align-items: flex-start; overflow-wrap: anywhere; }
+.git-commit-row[aria-pressed="true"] { background: var(--selected); }
+.git-commit-row small { color: var(--muted); }
+.git-commit-detail { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.thread-row [data-thread-menu] .menu-trigger { padding: 2px; min-width: 22px; }
+.thread-row [data-thread-menu] .menu-trigger > svg { display: none; }
+/*
+ * One header strip for every pane - Review's tabs, the terminal's tabs, the preview's toolbar - so
+ * `--height-toolbar-pane` is the only pane-header height in the app (design-tokens.md §1.2; the
+ * reference ships it as a height utility, app-shared-11c21cbb0024.css:207720
+ * `.h-toolbar-pane{height:var(--height-toolbar-pane)}`). `.panel-strip` is the chrome;
+ * `.review-tabs` / `.terminal-tabs` / `.preview-toolbar` stay as the identity hooks the e2e spec
+ * selects, and the tab buttons themselves are skinned by `.tabs` in utilities.css.
+ */
+.panel-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--menu-item-gap);
+  height: var(--height-toolbar-pane);
+  flex-shrink: 0;
+  padding: 0 var(--control-gutter-md);
+  border-bottom: var(--border-width) solid var(--border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+/* Many open terminals must not squash the tab labels into unreadable slivers. */
+.panel-strip > * {
+  flex-shrink: 0;
+}
+/*
+ * design-tokens.md §2: `--selected` and `--hover` are both 5% of `--text` in the light theme, so a
+ * fill alone cannot show which tab is active. This is the second channel (a stroke, as WP1 used for
+ * `.selected`) and it closes the `.terminal-tabs button.active` item in interfaces.md 已知遗留.
+ */
+.panel-strip button.active {
+  box-shadow: var(--elevation-stroke);
+}
+.panel-strip button > span {
+  font-size: var(--font-2xs);
+  color: var(--muted);
+  font-weight: var(--font-weight-normal);
+}
+.review-content {
+  flex: 1;
+  overflow: auto;
+}
+.branch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  padding: 12px 15px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.branch-row strong, .branch-row span { min-width: 0; overflow-wrap: anywhere; }
+.branch-row button {
+  font-size: 10px;
+  padding: 3px 5px;
+}
+.changed-files {
+  padding: 0 8px 10px;
+}
+.changed-files button {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  background: none;
+  padding: 8px 9px;
+  border-radius: 5px;
+  gap: 7px;
+  font-size: 11px;
+}
+.changed-files button.selected {
+  background: var(--selected);
+}
+.changed-files button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.changed-files button > b {
+  font-size: 10px;
+  margin-left: auto;
+}
+.green {
+  color: var(--accent);
+}
+.amber {
+  color: #b68436;
+}
+.panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: var(--muted);
+  padding: 65px 24px;
+  font-size: 12px;
+}
+.panel-empty h3 {
+  color: var(--text);
+  font-weight: 500;
+  margin: 17px 0 6px;
+}
+.panel-empty p {
+  margin-top: 14px;
+}
+.file-toolbar {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 5px 10px;
+  gap: 3px;
+  font-size: 11px;
+}
+.file-toolbar > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-toolbar button {
+  font-size: 10px;
+}
+/*
+ * Diff. `--diff-old` / `--diff-new` size the two gutter columns; components/diff.tsx narrows them per
+ * file to the widest line number its hunks reach, so the defaults only cover the fallback. These belong
+ * in the token layer once syntax/diff colors are tokenized (WP1).
+ */
+.diff {
+  --diff-old: 4ch;
+  --diff-new: 4ch;
+  font: 12px / 1.8 var(--font-mono);
+  margin: 0;
+  overflow: auto;
+  padding: 8px 0;
+}
+.diff > .diff-file:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+}
+.diff.unified .diff-line,
+.diff.unified .hunk {
+  min-width: max-content;
+  padding-right: 10px;
+}
+.line-number {
+  display: inline-block;
+  text-align: right;
+  padding-right: 9px;
+  color: var(--muted);
+  opacity: 0.6;
+  user-select: none;
+}
+.diff .ln-old {
+  width: var(--diff-old);
+}
+.diff .ln-new {
+  width: var(--diff-new);
+}
+.diff .addition {
+  background: var(--diff-added);
+}
+.diff .deletion {
+  background: var(--diff-removed);
+}
+.diff .hunk {
+  background: #538ec21a;
+  color: var(--muted);
+  padding-left: 12px;
+}
+.diff .nodenl {
+  background: #538ec210;
+  color: var(--muted);
+}
+.diff-file-head {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+  padding: 7px 12px 4px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.diff-file-head bdi {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.diff-kind {
+  color: var(--muted);
+}
+.diff-from {
+  color: var(--muted);
+}
+.diff-note {
+  padding: 4px 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff.split-diff {
+  padding: 0;
+}
+.split-label,
+.split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  font-size: 10px;
+}
+.split-label span {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--muted);
+}
+.split-cell {
+  white-space: pre;
+  overflow: auto;
+  min-height: 1.8em;
+  padding: 0 6px;
+  border-right: 1px solid var(--border);
+}
+.split-cell.new {
+  border-right: 0;
+}
+.split-cell.blank {
+  background: var(--panel);
+}
+.split-row.gap .split-cell {
+  background: var(--hover);
+  color: var(--muted);
+  text-align: center;
+}
+.split-cell.addition {
+  background: var(--diff-added);
+}
+.split-cell.deletion {
+  background: var(--diff-removed);
+}
+/* The "\ No newline" marker can sit on either side, so it stays neutral. */
+.split-cell.nodenl {
+  background: #538ec210;
+  color: var(--muted);
+}
+.file-preview-heading {
+  font-size: 11px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.file-preview pre {
+  font:
+    11px / 1.8 Consolas,
+    monospace;
+  overflow: auto;
+  padding: 14px;
+}
+.file-preview img {
+  max-width: 100%;
+  padding: 12px;
+}
+.file-preview > p {
+  padding: 14px;
+  font-size: 12px;
+}
+.plan-list {
+  padding: 15px;
+}
+.plan-list > div:not(.panel-empty) {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+  line-height: 1.8;
+  font-size: 12px;
+}
+.plan-list svg {
+  margin-top: 3px;
+}
+.plan-list .completed {
+  color: var(--muted);
+}
+.plan-list .completed > span {
+  text-decoration: line-through;
+}
+.plan-list .in_progress {
+  color: var(--accent);
+}
+.artifacts {
+  padding: 20px 15px;
+}
+.artifacts h3 {
+  margin-top: 18px;
+  font-size: 12px;
+}
+.source {
+  display: block !important;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  margin-bottom: 10px;
+  text-align: left;
+  font-size: 11px !important;
+}
+.terminal-find { flex-wrap: wrap; gap: 5px; padding: 5px 10px; }
+.terminal-find input { flex: 1; min-width: 100px; }
+.terminal-find button, .terminal-find [role="status"] { font-size: 12px; }
+.terminal-find [role="status"] { color: var(--muted); overflow-wrap: anywhere; }
+.review-footer {
+  display: flex;
+  gap: 5px;
+  border-top: 1px solid var(--border);
+  padding: 8px 10px;
+}
+.review-footer > button:not(.icon-button) {
+  border: 0;
+  background: none;
+  font-size: 10px;
+  padding: 5px 7px;
+}
+.review-footer > .icon-button {
+  margin-left: auto;
+}

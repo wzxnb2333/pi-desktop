@@ -1,0 +1,22 @@
+.file-source { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.file-source[hidden] { display: none; }
+.artifact-preview, .pdf-preview { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; overflow: hidden; }
+.artifact-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 12px; flex-shrink: 0; }
+.artifact-toolbar input[type="number"] { width: 64px; }
+.artifact-toolbar input:not([type="number"]) { min-width: 80px; width: 160px; max-width: 100%; }
+.artifact-toolbar label { display: flex; align-items: center; gap: 4px; }
+.artifact-preview > p, .pdf-preview > p, .pdf-preview > form, .pdf-preview > div[role="status"] { padding: 8px 12px; overflow-wrap: anywhere; }
+.artifact-html-surface { flex: 1; min-height: 100px; background: white; }
+.artifact-network { flex-shrink: 0; padding: 8px 12px; max-height: 170px; overflow: auto; font-size: 12px; border-bottom: 1px solid var(--border); }
+.artifact-network .row { justify-content: space-between; flex-wrap: wrap; }
+.artifact-network code { overflow-wrap: anywhere; }
+.pdf-scroll { flex: 1; min-height: 100px; overflow: auto; background: var(--bg); padding: 12px; }
+.pdf-scroll canvas { display: block; background: white; margin: 0 auto; }
+.pdf-page-text { flex-shrink: 0; max-height: 150px; overflow: auto; padding: 8px 12px; font-size: 12px; }
+.pdf-page-text p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pdf-search-results { margin: 0; padding: 8px 12px; list-style: none; max-height: 150px; overflow: auto; flex-shrink: 0; }
+.pdf-search-results button { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.dialog:has(.artifact-annotations) { width: min(760px, calc(100vw - 40px)); }
+.artifact-annotations { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.artifact-annotations textarea { width: 100%; box-sizing: border-box; }
+.artifact-annotations p, .artifact-annotations small { overflow-wrap: anywhere; }

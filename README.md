@@ -57,10 +57,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [AGENTS.m
 npm install --ignore-scripts  # Install all dependencies without running lifecycle scripts
 npm run build         # Refresh model data, then build all packages
 npm run build:offline # Rebuild using existing model data without network access
-npm run check         # Lint, format, and type check
+npm run check:quick   # Daily lint, format, and type check for shared packages
+npm run desktop:check # Type check the desktop app when changing apps/desktop
+npm run check         # Full checks, including dependency, lockfile, and browser audits
 ./test.sh            # Run tests (skips LLM-dependent tests without API keys)
 ./pi-test.sh         # Run pi from sources (can be run from any directory)
 ```
+
+Use the check for the changed scope during development, plus focused tests for changed behavior. Run the full check for dependencies, lockfiles, package export/import boundaries, check scripts, and full acceptance. CI and pre-commit keep the full check. Desktop-only changes do not require building or auditing every publishable package; see [desktop validation](apps/desktop/README.md#验证).
 
 ## Building standalone binaries from release source
 

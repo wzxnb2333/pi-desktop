@@ -1,0 +1,73 @@
+/*
+ * The header follows the application theme. The output has its own dark surface
+ * in both 26.915 captures; the final geometry lives in satang-surfaces.css.
+ */
+.terminal-panel {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+  border-top: var(--border-width) solid var(--border);
+}
+/*
+ * React owns the slot; the xterm host inside it is moved between the slot and `.terminal-parking` by
+ * TerminalPanel.tsx, which is what lets a pty survive hiding the pane without React ever owning a
+ * node it did not create.
+ */
+.terminal-slot {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  background: var(--terminal-background);
+  color: var(--terminal-foreground);
+}
+.terminal-find[hidden] { display: none; }
+.terminal-feedback {
+  display: block;
+  flex-shrink: 0;
+  margin: 0;
+  padding: var(--control-gutter-sm);
+  max-height: 96px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  color: var(--muted);
+}
+.terminal-feedback[role="alert"] { color: var(--danger); }
+.terminal-surface {
+  flex: 1;
+  min-width: 0;
+  padding: calc(var(--spacing) * 2) var(--control-gutter-sm);
+}
+.terminal-surface .xterm {
+  height: 100%;
+}
+/*
+ * Parked terminals keep their instance, scrollback and scroll position while the pane is hidden or
+ * another tab is showing. `display: none` also leaves FitAddon nothing measurable, and
+ * TerminalPanel.tsx drops that proposal instead of sending a `terminal.resize` below the schema
+ * minimum, so the pty keeps the size it had when the pane was last visible.
+ */
+.terminal-parking {
+  display: none;
+}
+/*
+ * xterm 6 renders its own scrollbar from the terminal palette. Legacy viewport
+ * selectors from a different xterm version would not style that scrollbar.
+ */
+.terminal-empty {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--control-gutter-sm);
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  padding: 0 var(--control-gutter-md);
+  text-align: center;
+}

@@ -1,0 +1,172 @@
+import assert from 'node:assert/strict';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp } from './fixtures/node-temp.ts';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import { GitService, gitRun } from '../src/main/git.ts';
+import { GitWorkflow } from '../src/main/git-workflow.ts';
+import { readProjectFile, writeProjectFile } from '../src/main/files.ts';
+import { FileSearchService } from '../src/main/file-search.ts';
+import { requestSchema } from '../src/shared/contracts.ts';
+
+test('text edits preserve encoding, reject stale concurrent saves and search actual content', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pi-files-'));
+  await writeFile(join(root, '中文.txt'), '\ufefforiginal\r\nline\r\n');
+  const original = await readProjectFile(root, '中文.txt');
+  const results = await Promise.allSettled(['first', 'second'].map(value => writeProjectFile(root, '中文.txt', value + '\n', original.version!)));
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  const winner = results[0].status === 'fulfilled' ? 'first' : 'second';
+  assert.equal(await readFile(join(root, '中文.txt'), 'utf8'), '\ufeff' + winner + '\r\n');
+  const next = await readProjectFile(root, '中文.txt');
+  await writeFile(join(root, '中文.txt'), 'external\n');
+  await assert.rejects(writeProjectFile(root, '中文.txt', 'lost', next.version!), /其他程序修改/);
+  assert.equal(await readFile(join(root, '中文.txt'), 'utf8'), 'external\n');
+  await writeFile(join(root, 'binary.dat'), Buffer.from([0, 1, 2]));
+  await writeFile(join(root, 'legacy.txt'), Buffer.from([0xff, 0xfe, 0x01]));
+  assert.equal((await readProjectFile(root, 'legacy.txt')).writable, false);
+  assert.equal((await readProjectFile(root, 'binary.dat')).kind, 'binary');
+  const search = new FileSearchService();
+  try {
+    const request = { op: 'file.search', threadId: 't', requestId: 'content', query: 'external', content: true } as const;
+    let page = await search.search(root, request);
+    const matches = [...page.matches];
+    // A loaded Windows host may exhaust the 50 ms scan slice before reaching this file.
+    while (!page.done) {
+      assert.ok(page.cursor);
+      page = await search.search(root, { ...request, cursor: page.cursor });
+      matches.push(...page.matches);
+    }
+    assert.deepEqual(matches, [{ path: '中文.txt', line: 1, text: 'external' }]);
+  } finally { search.dispose(); }
+  await assert.rejects(writeProjectFile(root, '../outside.txt', 'escape', 'x'));
+});
+
+test('local Git workflow stages, commits, syncs, resolves and aborts without touching a real remote', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pi-workflow-'));
+  const local = join(root, 'local'); const remote = join(root, 'remote.git'); const peer = join(root, 'peer');
+  await mkdir(local); await gitRun(root, ['init', '--bare', '-b', 'main', remote]);
+  await gitRun(local, ['init', '-b', 'main']);
+  for (const [key, value] of [['user.name','Workbench test'], ['user.email','test@example.invalid'], ['core.autocrlf','false']]) await gitRun(local, ['config', key, value]);
+  await writeFile(join(local, 'file.txt'), 'initial\n');
+  const service = new GitService(join(root, 'storage')); const workflow = new GitWorkflow(service);
+  const run = async (action: string, value = '', paths: string[] = [], strategy = 'ff-only') => {
+    if (action === 'commitStaged' && !paths.length) paths = (await service.status(local)).files.filter(file => file.staged).map(file => file.path);
+    const request = requestSchema.parse({ op: 'git.action', threadId: 't', action, value, paths, remote: 'origin', strategy });
+    if (request.op !== 'git.action') throw new Error('unexpected request');
+    return workflow.exclusive(local, () => workflow.action(local, request));
+  };
+  await run('stage', '', ['file.txt']); await run('commitStaged', 'initial');
+  await gitRun(local, ['remote', 'add', 'origin', remote]); await run('push');
+  await gitRun(root, ['clone', remote, peer]);
+  await gitRun(peer, ['config', 'user.name', 'Peer']); await gitRun(peer, ['config', 'user.email', 'peer@example.invalid']);
+  await writeFile(join(peer, 'remote.txt'), 'remote\n'); await gitRun(peer, ['add', '.']); await gitRun(peer, ['commit', '-m', 'remote']); await gitRun(peer, ['push']);
+  await run('fetch'); await run('pull'); assert.equal(await readFile(join(local, 'remote.txt'), 'utf8'), 'remote\n');
+  await run('branchCreate', 'feature'); await writeFile(join(local, 'file.txt'), 'feature\n');
+  await run('stage', '', ['file.txt']); await run('unstage', '', ['file.txt']); assert.equal((await service.status(local)).files[0].staged, false);
+  await run('stage', '', ['file.txt']); await run('commitStaged', 'feature');
+  await run('branchSwitch', 'main'); await writeFile(join(local, 'file.txt'), 'main\n'); await run('stage', '', ['file.txt']); await run('commitStaged', 'main');
+  await assert.rejects(run('merge', 'feature'));
+  assert.equal((await workflow.inspect(local)).operation, 'merge');
+  const conflict = await workflow.conflict(local, 'file.txt');
+  assert.equal(conflict.base, 'initial\n'); assert.equal(conflict.ours, 'main\n'); assert.equal(conflict.theirs, 'feature\n');
+  await assert.rejects(run('commitStaged', 'unresolved'), /解决冲突/);
+  await run('abort'); assert.equal((await workflow.inspect(local)).operation, '');
+  await assert.rejects(run('merge', 'feature')); await writeFile(join(local, 'file.txt'), 'merged\n'); await run('resolved', '', ['file.txt']); await run('continue');
+  await run('branchDelete', 'feature'); assert.equal((await workflow.inspect(local)).branches.includes('feature'), false);
+  await run('push'); assert.equal((await workflow.inspect(local)).upstream, 'origin/main');
+  // Desktop merge/pull must finish without spawning an interactive editor.
+  await gitRun(local, ['config', 'core.editor', 'false']);
+  await run('branchCreate', 'clean-merge');
+  await writeFile(join(local, 'feature-only.txt'), 'feature only\n');
+  await run('stage', '', ['feature-only.txt']); await run('commitStaged', 'feature only');
+  await run('branchSwitch', 'main');
+  await writeFile(join(local, 'main-only.txt'), 'main only\n');
+  await run('stage', '', ['main-only.txt']); await run('commitStaged', 'main only');
+  await run('merge', 'clean-merge'); await run('branchDelete', 'clean-merge');
+  await gitRun(peer, ['pull', '--ff-only']);
+  await writeFile(join(peer, 'peer-only.txt'), 'peer only\n');
+  await gitRun(peer, ['add', '--', 'peer-only.txt']); await gitRun(peer, ['commit', '-m', 'peer only']); await gitRun(peer, ['push']);
+  await assert.rejects(run('pull'));
+  await run('pull', '', [], 'merge');
+  assert.equal((await workflow.inspect(local)).operation, '');
+  assert.equal(await readFile(join(local, 'peer-only.txt'), 'utf8'), 'peer only\n');
+  const tree = await workflow.exclusive(local, () => service.createWorktree(local, 'isolated'));
+  assert.equal((await workflow.inspect(local)).worktrees.length, 2);
+  await writeFile(join(tree.path, 'dirty.txt'), 'dirty'); await assert.rejects(run('worktreeRemove', tree.path), /未提交/);
+  await service.revert(tree.path, 'dirty.txt'); await run('worktreeRemove', tree.path);
+  assert.equal((await workflow.inspect(local)).worktrees.length, 1);
+  const order: string[] = [];
+  await Promise.all([workflow.exclusive(local, async () => { order.push('first'); await new Promise(resolve => setTimeout(resolve, 20)); order.push('done'); }), workflow.exclusive(local, async () => { order.push('second'); })]);
+  assert.deepEqual(order, ['first', 'done', 'second']);
+});
+
+test('selected staged commits preserve other staged files and unstaged edits', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pi-commit-scope-'));
+  await gitRun(root, ['init', '-b', 'main']);
+  await gitRun(root, ['config', 'user.name', 'Scope test']);
+  await gitRun(root, ['config', 'user.email', 'scope@example.invalid']);
+  await gitRun(root, ['config', 'core.autocrlf', 'false']);
+  await writeFile(join(root, 'selected.txt'), 'staged version\n');
+  await writeFile(join(root, 'other.txt'), 'other staged content\n');
+  await gitRun(root, ['add', '--', 'selected.txt', 'other.txt']);
+  await writeFile(join(root, 'selected.txt'), 'later unstaged edit\n');
+  const service = new GitService(join(root, 'storage'));
+  const workflow = new GitWorkflow(service);
+  const request = requestSchema.parse({ op: 'git.action', threadId: 't', action: 'commitStaged', paths: ['selected.txt'], value: 'selected only' });
+  if (request.op !== 'git.action') throw new Error('unexpected request');
+  await workflow.exclusive(root, () => workflow.action(root, request));
+  assert.equal(await gitRun(root, ['show', 'HEAD:selected.txt']), 'staged version\n');
+  await assert.rejects(gitRun(root, ['show', 'HEAD:other.txt']));
+  assert.equal(await readFile(join(root, 'selected.txt'), 'utf8'), 'later unstaged edit\n');
+  assert.equal((await gitRun(root, ['diff', '--cached', '--name-only'])).trim(), 'other.txt');
+  assert.equal((await gitRun(root, ['diff', '--name-only'])).trim(), 'selected.txt');
+  await assert.rejects(workflow.action(root, { ...request, paths: [] }), /请选择/);
+});
+
+test('hunks, rebase conflicts and request-scoped cancellation preserve repository state', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pi-git-rebase-'));
+  await gitRun(root, ['init', '-b', 'main']);
+  await gitRun(root, ['config', 'user.name', 'Workflow test']);
+  await gitRun(root, ['config', 'user.email', 'workflow@example.invalid']);
+  await gitRun(root, ['config', 'core.autocrlf', 'false']);
+  const service = new GitService(join(root, '.git', 'pi-storage'));
+  const workflow = new GitWorkflow(service);
+  const run = (action: string, value = '', paths: string[] = [], extra: Record<string, unknown> = {}) => {
+    const request = requestSchema.parse({ op: 'git.action', threadId: 't', action, value, paths, ...extra });
+    if (request.op !== 'git.action') throw new Error('unexpected request');
+    return workflow.exclusive(root, () => workflow.action(root, request));
+  };
+  await writeFile(join(root, 'file.txt'), 'initial\n');
+  await run('stage', '', ['file.txt']); await run('commitStaged', 'initial', ['file.txt']);
+  await writeFile(join(root, 'file.txt'), 'changed\n');
+  const patch = await gitRun(root, ['diff', '--no-ext-diff', '--', 'file.txt']);
+  await run('stageHunk', '', [], { patch });
+  assert.equal((await gitRun(root, ['diff', '--cached', '--name-only'])).trim(), 'file.txt');
+  await run('unstageHunk', '', [], { patch });
+  assert.equal((await gitRun(root, ['diff', '--cached'])).trim(), '');
+  await service.revert(root, 'file.txt');
+  await run('branchCreate', 'feature');
+  await writeFile(join(root, 'file.txt'), 'feature\n');
+  await run('stage', '', ['file.txt']); await run('commitStaged', 'feature', ['file.txt']);
+  await run('branchSwitch', 'main');
+  await writeFile(join(root, 'file.txt'), 'main\n');
+  await run('stage', '', ['file.txt']); await run('commitStaged', 'main', ['file.txt']);
+  await run('branchSwitch', 'feature');
+  await assert.rejects(run('rebase', 'main'));
+  assert.equal((await workflow.inspect(root)).operation, 'rebase');
+  await run('abort');
+  assert.equal(await readFile(join(root, 'file.txt'), 'utf8'), 'feature\n');
+  await assert.rejects(run('rebase', 'main'));
+  await writeFile(join(root, 'file.txt'), 'resolved\n');
+  await run('resolved', '', ['file.txt']); await run('continue');
+  assert.equal((await workflow.inspect(root)).operation, '');
+  assert.equal((await gitRun(root, ['branch', '--show-current'])).trim(), 'feature');
+  assert.equal(await readFile(join(root, 'file.txt'), 'utf8'), 'resolved\n');
+  await writeFile(join(root, 'file.txt'), 'cancelled stage\n');
+  workflow.cancel(root, 'cancelled-request');
+  await assert.rejects(run('stage', '', ['file.txt'], { requestId: 'cancelled-request' }), /abort/i);
+  assert.equal((await gitRun(root, ['diff', '--cached'])).trim(), '');
+  await run('stage', '', ['file.txt'], { requestId: 'next-request' });
+  assert.equal((await gitRun(root, ['diff', '--cached', '--name-only'])).trim(), 'file.txt');
+});

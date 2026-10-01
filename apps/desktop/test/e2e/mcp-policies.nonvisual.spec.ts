@@ -1,0 +1,50 @@
+import { access, readFile, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { mcpSchema } from '../../src/shared/contracts.ts';
+import { acceptanceApp } from './fixtures/acceptance-app.ts';
+import { startDevelopmentSource } from './fixtures/development-source.ts';
+
+let development: Awaited<ReturnType<typeof startDevelopmentSource>>;
+let fixture: Awaited<ReturnType<typeof acceptanceApp>>;
+test.beforeAll(async () => { development = await startDevelopmentSource(); });
+test.afterAll(async () => { await development?.server.close(); });
+test.beforeEach(async () => { fixture = await acceptanceApp(development.url, { authorizeExternalTools: true }); });
+test.afterEach(async () => { if (fixture) { const errors = [...fixture.errors]; await fixture.close(); await expect(access(fixture.storage)).rejects.toMatchObject({ code: 'ENOENT' }); expect(errors).toEqual([]); } });
+const idle = async () => { await expect.poll(async () => (await fixture.snapshot()).data.threads.find(item => item.id === 't')?.status).toBe('idle'); };
+
+test('native per-tool controls persist, ask under automatic task permissions and isolate running configurations', async () => {
+  test.setTimeout(150000); const log = join(fixture.storage, 'tool-calls.txt'); await writeFile(log, '');
+  const config = mcpSchema.parse({ id: 'policy', name: '策略测试', enabled: true, transport: 'stdio', command: process.execPath, args: [resolve('test/fixtures/mcp-policy-server.mjs'), log] });
+  await fixture.invoke({ op: 'settings.patch', patch: { mcpServers: [config] } });
+  await fixture.app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false }); });
+  await fixture.page.keyboard.press('Control+,'); await fixture.page.getByRole('button', { name: 'MCP', exact: true }).click();
+  await fixture.page.locator('.mcp-tool-policies > summary').click(); await fixture.page.getByRole('button', { name: '读取工具列表' }).click();
+  await fixture.page.getByLabel('工具审批 echo', { exact: true }).selectOption('ask'); await fixture.page.getByLabel('工具超时（秒） echo', { exact: true }).fill('1');
+  await fixture.page.getByRole('button', { name: '通用', exact: true }).click(); await fixture.page.getByRole('button', { name: 'MCP', exact: true }).click();
+  await fixture.page.locator('.mcp-tool-policies > summary').click(); await expect(fixture.page.getByLabel('工具审批 echo', { exact: true })).toHaveValue('ask');
+  await fixture.page.getByRole('button', { name: '返回工作台', exact: true }).click();
+  await fixture.page.getByRole('dialog', { name: '放弃未保存的修改？' }).getByRole('button', { name: '继续编辑' }).click();
+  await fixture.page.getByRole('button', { name: '保存工具策略' }).click();
+  await expect.poll(async () => (await fixture.snapshot()).data.settings.mcpToolPolicies.policy?.echo).toEqual({ enabled: true, approval: 'ask', timeoutMs: 1000 });
+  await fixture.invoke({ op: 'thread.send', id: 't', text: '加载工具', attachments: [] }); await idle();
+  const tool = fixture.calls.at(-1)?.tools?.find(item => item.function.name.endsWith('_echo'))?.function.name; expect(tool).toBeTruthy();
+  const call = async (approved: boolean) => {
+    fixture.requestTool(tool!, {}); await fixture.invoke({ op: 'thread.send', id: 't', text: '调用工具', attachments: [] });
+    await expect.poll(async () => (await fixture.snapshot()).approvals.length).toBe(1); const approval = (await fixture.snapshot()).approvals[0];
+    await fixture.invoke({ op: 'approval.reply', id: approval.id, approved }); await idle();
+  };
+  await call(false); expect(await readFile(log, 'utf8')).toBe(''); await call(true); expect(await readFile(log, 'utf8')).toBe('call\n');
+  fixture.setMode('hold'); await fixture.invoke({ op: 'thread.send', id: 't', text: '保持运行中的策略', attachments: [] });
+  await expect.poll(async () => (await fixture.snapshot()).data.threads.find(item => item.id === 't')?.status).toBe('running');
+  await fixture.page.getByLabel('启用工具 echo', { exact: true }).uncheck(); await fixture.page.getByRole('button', { name: '保存工具策略' }).click();
+  await expect.poll(async () => (await fixture.snapshot()).data.settings.mcpToolPolicies.policy.echo.enabled).toBe(false);
+  fixture.setMode('reply'); fixture.releaseTool(tool!, {});
+  await expect.poll(async () => (await fixture.snapshot()).approvals.length).toBe(1); await fixture.invoke({ op: 'approval.reply', id: (await fixture.snapshot()).approvals[0].id, approved: true }); await idle();
+  expect(await readFile(log, 'utf8')).toBe('call\ncall\n');
+  fixture.requestTool(tool!, {}); await fixture.invoke({ op: 'thread.send', id: 't', text: '禁用后不能调用', attachments: [] }); await idle();
+  expect(fixture.calls.at(-1)?.tools?.some(item => item.function.name === tool)).toBe(false); expect(await readFile(log, 'utf8')).toBe('call\ncall\n');
+  await fixture.restart(); expect((await fixture.snapshot()).data.settings.mcpToolPolicies.policy.echo.enabled).toBe(false);
+  await fixture.page.getByRole('button', { name: 'MCP', exact: true }).click(); await fixture.page.locator('.mcp-tool-policies > summary').click();
+  await expect(fixture.page.getByLabel('启用工具 echo', { exact: true })).not.toBeChecked();
+});

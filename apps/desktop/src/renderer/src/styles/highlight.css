@@ -1,0 +1,156 @@
+/*
+ * Syntax theme for markdown code blocks (rehype-highlight emits `hljs` + `hljs-*` class names).
+ *
+ * Colours are the GitHub light / GitHub dark pairs copied out of
+ * `highlight.js/styles/github.css` and `github-dark.css`. Those two vendor sheets are not imported:
+ * the app's theme is the `<html data-theme>` attribute rather than `prefers-color-scheme`, so
+ * importing both would apply them at the same time and the later one would win in every theme.
+ *
+ * The palette is held in `--hljs-*` properties for the same reason `tokens.css` holds one — it lets
+ * the 16 selector groups below exist once instead of three times. Copying the group rules per theme
+ * would leave three near-identical blocks free to drift, which is exactly the hazard §6.3 of
+ * design-tokens.md calls out. These names stay in this file; they are a syntax theme's internals, not
+ * design tokens, and `tokens.css` gains no colour names from them.
+ */
+:root {
+  --hljs-text: #24292e;
+  --hljs-keyword: #d73a49;
+  --hljs-entity: #6f42c1;
+  --hljs-constant: #005cc5;
+  --hljs-string: #032f62;
+  --hljs-variable: #e36209;
+  --hljs-comment: #6a737d;
+  --hljs-entity-tag: #22863a;
+  --hljs-bullet: #735c0f;
+  --hljs-section: #005cc5;
+  --hljs-addition: #22863a;
+  --hljs-addition-bg: #f0fff4;
+  --hljs-deletion: #b31d28;
+  --hljs-deletion-bg: #ffeef0;
+}
+
+:root[data-theme="dark"] {
+  --hljs-text: #c9d1d9;
+  --hljs-keyword: #ff7b72;
+  --hljs-entity: #d2a8ff;
+  --hljs-constant: #79c0ff;
+  --hljs-string: #a5d6ff;
+  --hljs-variable: #ffa657;
+  --hljs-comment: #8b949e;
+  --hljs-entity-tag: #7ee787;
+  --hljs-bullet: #f2cc60;
+  --hljs-section: #1f6feb;
+  --hljs-addition: #aff5b4;
+  --hljs-addition-bg: #033a16;
+  --hljs-deletion: #ffdcd7;
+  --hljs-deletion-bg: #67060c;
+}
+
+/* Third copy, verbatim, because Pi also has a follow-the-OS setting the reference does not have. */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --hljs-text: #c9d1d9;
+    --hljs-keyword: #ff7b72;
+    --hljs-entity: #d2a8ff;
+    --hljs-constant: #79c0ff;
+    --hljs-string: #a5d6ff;
+    --hljs-variable: #ffa657;
+    --hljs-comment: #8b949e;
+    --hljs-entity-tag: #7ee787;
+    --hljs-bullet: #f2cc60;
+    --hljs-section: #1f6feb;
+    --hljs-addition: #aff5b4;
+    --hljs-addition-bg: #033a16;
+    --hljs-deletion: #ffdcd7;
+    --hljs-deletion-bg: #67060c;
+  }
+}
+
+/*
+ * `display: block` and `overflow-x` come from the vendor sheets, but their `padding: 1em` is dropped:
+ * `.markdown pre` already pads the block, and `hljs` lands on the inner `code`, so keeping both would
+ * double the inset.
+ */
+.markdown pre code.hljs {
+  display: block;
+  overflow-x: auto;
+}
+.hljs {
+  /* Transparent so the block keeps `.markdown pre`'s background and border instead of patching a
+   * white rectangle over the panel. */
+  color: var(--hljs-text);
+  background: transparent;
+}
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--hljs-keyword);
+}
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  color: var(--hljs-entity);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--hljs-constant);
+}
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  color: var(--hljs-string);
+}
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--hljs-variable);
+}
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color: var(--hljs-comment);
+}
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: var(--hljs-entity-tag);
+}
+.hljs-subst {
+  color: var(--hljs-text);
+}
+.hljs-section {
+  color: var(--hljs-section);
+  font-weight: bold;
+}
+.hljs-bullet {
+  color: var(--hljs-bullet);
+}
+.hljs-emphasis {
+  color: var(--hljs-text);
+  font-style: italic;
+}
+.hljs-strong {
+  color: var(--hljs-text);
+  font-weight: bold;
+}
+.hljs-addition {
+  color: var(--hljs-addition);
+  background-color: var(--hljs-addition-bg);
+}
+.hljs-deletion {
+  color: var(--hljs-deletion);
+  background-color: var(--hljs-deletion-bg);
+}

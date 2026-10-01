@@ -1,0 +1,4 @@
+.selection-quote { position: fixed; z-index: 90; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--elevation-popover); }
+.selection-quote .menu-trigger { min-height: 30px; padding: 4px 8px; border: 0; background: transparent; font-size: 12px; }
+.selection-quote .menu-trigger-label { display: inline-flex; align-items: center; gap: 6px; }
+.selection-quote p { margin: 0; padding: 6px 10px; font-size: 12px; color: var(--danger); overflow-wrap: anywhere; }

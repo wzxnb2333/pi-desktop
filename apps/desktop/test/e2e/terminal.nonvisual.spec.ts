@@ -1,0 +1,203 @@
+import { readFile, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { TERMINAL_OUTPUT_LIMIT } from '../../src/shared/terminal-output.ts';
+import { acceptanceApp } from './fixtures/acceptance-app.ts';
+import { startDevelopmentSource } from './fixtures/development-source.ts';
+
+let development: Awaited<ReturnType<typeof startDevelopmentSource>>;
+let fixture: Awaited<ReturnType<typeof acceptanceApp>>;
+let clipboard: string;
+test.beforeAll(async () => { development = await startDevelopmentSource(); });
+test.afterAll(async () => { await development?.server.close(); });
+test.beforeEach(async () => {
+  fixture = await acceptanceApp(development.url);
+  clipboard = await fixture.app.evaluate(({ clipboard }) => clipboard.readText());
+  await fixture.page.keyboard.press('Control+j');
+  await fixture.page.getByLabel('新建终端', { exact: true }).click();
+  await expect(fixture.page.locator('.terminal-panel [data-terminal-id]')).toBeVisible();
+});
+test.afterEach(async () => {
+  if (!fixture) return;
+  const errors = [...fixture.errors];
+  await fixture.app.evaluate(({ clipboard }, value) => clipboard.writeText(value), clipboard).catch(() => {});
+  await fixture.close();
+  await expect(stat(fixture.storage)).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(errors).toEqual([]);
+});
+
+async function activeId(): Promise<string> {
+  const id = await fixture.page.locator('.terminal-panel [data-terminal-id]').getAttribute('data-terminal-id');
+  if (!id) throw new Error('没有活动终端');
+  return id;
+}
+const visibleText = () => fixture.page.locator('.terminal-panel .xterm-rows').textContent();
+async function emit(id: string, filename: string, output: string) {
+  await writeFile(join(fixture.project, filename), 'process.stdout.write(' + JSON.stringify(output) + ');');
+  await fixture.invoke({ op: 'terminal.input', id, data: 'node ' + filename + '\r' });
+}
+
+test('terminal startup failure retries without duplicate processes and renamed profiles restore after restart', async () => {
+  const original = await fixture.app.evaluate(() => process.env.ComSpec);
+  try {
+    const page = fixture.page;
+    const first = await activeId();
+    await fixture.invoke({ op: 'settings.patch', patch: { terminal: 'cmd' } });
+    await fixture.app.evaluate((_electron, shell) => { process.env.ComSpec = shell; }, join(fixture.storage, 'missing-cmd.exe'));
+    await page.getByRole('button', { name: '新建终端', exact: true }).click();
+    await expect(page.locator('.terminal-panel').getByRole('alert')).toBeVisible();
+    expect((await fixture.snapshot()).terminals).toHaveLength(1);
+    expect(await activeId()).toBe(first);
+    await fixture.app.evaluate((_electron, shell) => { if (shell === undefined) delete process.env.ComSpec; else process.env.ComSpec = shell; }, original);
+    await page.getByRole('button', { name: '新建终端', exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+    await expect.poll(async () => (await fixture.snapshot()).terminals.length).toBe(2);
+    await expect(page.locator('.terminal-panel').getByRole('alert')).toHaveCount(0);
+    const second = await activeId(); expect(second).not.toBe(first);
+    await page.getByRole('button', { name: '终端操作', exact: true }).click();
+    await page.getByRole('menuitem', { name: '重命名', exact: true }).click();
+    await page.getByLabel('终端名称', { exact: true }).fill('恢复后的终端');
+    await page.getByRole('dialog', { name: '重命名终端' }).getByRole('button', { name: '保存', exact: true }).click();
+    await expect(page.getByRole('tab', { name: '恢复后的终端', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('button', { name: '隐藏终端', exact: true }).click();
+    await page.keyboard.press('Control+j');
+    expect(await activeId()).toBe(second);
+    await fixture.restart();
+    expect((await fixture.snapshot()).terminals).toEqual([]);
+    const restart = fixture.page.getByRole('button', { name: '重新启动 恢复后的终端 · cmd（新进程）', exact: true });
+    await expect(restart).toBeVisible();
+    await restart.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+    await expect.poll(async () => (await fixture.snapshot()).terminals.length).toBe(1);
+    await expect(fixture.page.getByRole('tab', { name: '恢复后的终端', exact: true })).toHaveAttribute('aria-selected', 'true');
+  } finally {
+    await fixture.app.evaluate((_electron, shell) => { if (shell === undefined) delete process.env.ComSpec; else process.env.ComSpec = shell; }, original).catch(() => {});
+  }
+});
+
+test('large output survives rename, parked output, renderer reload and real process exit', async () => {
+  const page = fixture.page;
+  const id = await activeId();
+  await emit(id, 'large.cjs', Array.from({ length: 1700 }, (_, index) => 'ROW_' + index + '_' + 'a'.repeat(160) + '\r\n').join('') + 'BEFORE_RENAME\r\n');
+  await expect.poll(visibleText).toContain('BEFORE_RENAME');
+  await expect.poll(async () => (await fixture.snapshot()).terminals.find(item => item.id === id)?.outputOffset ?? 0).toBeGreaterThan(0);
+  await page.getByLabel('终端操作', { exact: true }).click();
+  await page.getByRole('menuitem', { name: '重命名', exact: true }).click();
+  await page.getByLabel('终端名称', { exact: true }).fill('持续输出');
+  await page.getByRole('dialog', { name: '重命名终端' }).getByRole('button', { name: '保存', exact: true }).click();
+  await expect(page.getByRole('tab', { name: '持续输出', exact: true })).toBeVisible();
+  await emit(id, 'after.cjs', 'AFTER_RENAME\r\n');
+  await expect.poll(visibleText).toContain('AFTER_RENAME');
+  await page.locator('.terminal-surface').evaluate(node => node.setAttribute('data-probe', 'same-pty'));
+  await page.getByLabel('隐藏终端', { exact: true }).click();
+  await emit(id, 'parked.cjs', 'background'.repeat(23000) + '\r\nPARKED_OUTPUT\r\n');
+  await expect.poll(async () => (await fixture.snapshot()).terminals.find(item => item.id === id)?.output).toContain('PARKED_OUTPUT');
+  await page.keyboard.press('Control+j');
+  await expect(page.locator('.terminal-panel .terminal-surface[data-probe="same-pty"]')).toBeVisible();
+  await expect.poll(visibleText).toContain('PARKED_OUTPUT');
+  const snapshot = (await fixture.snapshot()).terminals.find(item => item.id === id)!;
+  expect(snapshot.output.length).toBeLessThanOrEqual(TERMINAL_OUTPUT_LIMIT);
+  expect(snapshot.outputOffset).toBeGreaterThan(TERMINAL_OUTPUT_LIMIT);
+  await page.reload();
+  await page.getByRole('tab', { name: /持续输出.*后台运行/ }).click();
+  await expect.poll(visibleText).toContain('PARKED_OUTPUT');
+  await emit(id, 'restored.cjs', 'AFTER_RELOAD\r\n');
+  await expect.poll(visibleText).toContain('AFTER_RELOAD');
+  await fixture.invoke({ op: 'terminal.input', id, data: 'exit\r' });
+  await expect(page.getByRole('tab', { name: /持续输出.*已退出/ })).toBeVisible();
+  await expect.poll(async () => (await fixture.snapshot()).terminals.find(item => item.id === id)?.output).toContain('[进程已退出：0]');
+  await page.reload();
+  await page.getByRole('tab', { name: /持续输出.*已退出/ }).click();
+  await expect.poll(visibleText).toContain('[进程已退出：0]');
+  await expect(page.locator('.terminal-panel .xterm-helper-textarea')).toHaveJSProperty('readOnly', true);
+  await fixture.restart();
+  expect((await fixture.snapshot()).terminals).toEqual([]);
+  await expect(fixture.page.getByRole('button', { name: /重新启动 持续输出.*新进程/ })).toBeVisible();
+});
+
+test('real terminal search handles wide text, wrapping, cyclic previous results, IME and active-tab copy', async () => {
+  const page = fixture.page;
+  const first = await activeId();
+  const wrapped = '跨行开始' + 'x'.repeat(240) + '跨行结束';
+  await emit(first, 'search.cjs', 'MATCH_A MATCH_A\r\n中😀e\u0301目标\r\n' + wrapped + '\r\nSEARCH_READY\r\n');
+  await expect.poll(visibleText).toContain('SEARCH_READY');
+  const input = page.getByRole('search', { name: '终端查找' }).getByRole('textbox');
+  const status = page.getByRole('search', { name: '终端查找' }).getByRole('status');
+  const terminal = page.locator('.terminal-panel .xterm-helper-textarea');
+  await terminal.focus();
+  await page.keyboard.press('Control+Shift+f');
+  await expect(input).toBeFocused();
+  await input.fill('MATCH_A');
+  await input.dispatchEvent('keydown', { key: 'Enter', code: 'Enter', isComposing: true, keyCode: 229 });
+  await expect(status).toBeEmpty();
+  await input.press('Enter'); await expect(status).toContainText('第 1/2 处');
+  await input.press('Enter'); await expect(status).toContainText('第 2/2 处');
+  await input.press('Enter'); await expect(status).toHaveText('第 1/2 处 · 已循环');
+  await input.press('Shift+Enter'); await expect(status).toHaveText('第 2/2 处 · 已循环');
+  await input.fill('😀e\u0301目标'); await input.press('Enter');
+  await page.keyboard.press('Control+Shift+c');
+  await expect.poll(() => fixture.app.evaluate(({ clipboard }) => clipboard.readText())).toBe('😀e\u0301目标');
+  await input.fill(wrapped); await input.press('Enter');
+  await expect(status).toContainText('第 1/1 处');
+  await page.keyboard.press('Control+Shift+c');
+  await expect.poll(() => fixture.app.evaluate(({ clipboard }) => clipboard.readText())).toBe(wrapped);
+  await input.press('Escape'); await expect(terminal).toBeFocused();
+  await page.getByLabel('新建终端', { exact: true }).click();
+  const second = await activeId();
+  expect(second).not.toBe(first);
+  await expect(input).toHaveValue('');
+  await emit(second, 'second.cjs', 'SECOND_ONLY\r\n');
+  await expect.poll(visibleText).toContain('SECOND_ONLY');
+  await input.fill('SECOND_ONLY'); await input.press('Enter');
+  await page.keyboard.press('Control+Shift+c');
+  await expect.poll(() => fixture.app.evaluate(({ clipboard }) => clipboard.readText())).toBe('SECOND_ONLY');
+  const tabs = page.getByRole('tablist', { name: '终端页签' }).getByRole('tab');
+  await tabs.first().click(); await expect(input).toHaveValue(wrapped);
+  await tabs.nth(1).click(); await expect(input).toHaveValue('SECOND_ONLY');
+  await page.getByLabel('隐藏终端', { exact: true }).click();
+  await page.keyboard.press('Control+j'); await expect(input).toHaveValue('SECOND_ONLY');
+  await input.fill('NO_MATCH'); await input.press('Enter'); await expect(status).toHaveText('未找到匹配内容');
+  await page.keyboard.press('Control+Shift+c');
+  await expect.poll(() => fixture.app.evaluate(({ clipboard }) => clipboard.readText())).toContain('SECOND_ONLY');
+  expect(await fixture.app.evaluate(({ clipboard }) => clipboard.readText())).not.toContain('SEARCH_READY');
+  await terminal.focus(); await page.keyboard.press('Control+Shift+l');
+  await expect.poll(visibleText).not.toContain('SECOND_ONLY');
+  await tabs.first().click();
+  await input.fill(wrapped); await input.press('Enter');
+  await expect(status).toContainText('第 1/1 处');
+});
+
+test('custom terminal navigation bindings save and hydrate after restart without sending shell input', async () => {
+  const page = fixture.page;
+  const id = await activeId();
+  await writeFile(join(fixture.project, 'keys-input.txt'), '');
+  await writeFile(join(fixture.project, 'keys.cjs'), 'const fs = require("node:fs"); process.stdin.setRawMode(true); process.stdin.on("data", data => fs.appendFileSync("keys-input.txt", data)); process.stdout.write(' + JSON.stringify('KEY_MATCH KEY_MATCH\r\nKEY_READY\r\n') + ');');
+  await fixture.invoke({ op: 'terminal.input', id, data: 'node keys.cjs\r' });
+  await expect.poll(visibleText).toContain('KEY_READY');
+  await page.keyboard.press('Control+,');
+  await page.getByRole('button', { name: '键盘快捷键', exact: true }).click();
+  await page.getByLabel('终端查找：下一处 快捷键', { exact: true }).press('Control+n');
+  await expect(page.getByLabel('终端查找：下一处 快捷键', { exact: true })).toHaveValue('Ctrl+N');
+  await expect(page.getByRole('alert')).toContainText('使用相同快捷键');
+  expect((await fixture.snapshot()).data.threads).toHaveLength(1);
+  await page.getByLabel('终端查找：下一处 快捷键', { exact: true }).press('F3');
+  await page.getByLabel('终端查找：上一处 快捷键', { exact: true }).press('Shift+F3');
+  await page.getByLabel('终端查找：返回终端 快捷键', { exact: true }).press('F4');
+  await page.getByRole('button', { name: '保存设置', exact: true }).click();
+  await expect.poll(async () => (await fixture.snapshot()).data.settings.shortcuts?.terminalFindNext).toBe('F3');
+  await page.getByRole('button', { name: '返回工作台', exact: true }).click();
+  await page.getByRole('button', { name: '终端查找', exact: true }).click();
+  const input = page.getByRole('search', { name: '终端查找' }).getByRole('textbox');
+  const status = page.getByRole('search', { name: '终端查找' }).getByRole('status');
+  await input.fill('KEY_MATCH'); await input.press('F3'); await expect(status).toContainText('第 1/2 处');
+  await input.press('F3'); await expect(status).toContainText('第 2/2 处');
+  await input.press('Shift+F3'); await expect(status).toContainText('第 1/2 处');
+  await input.press('F4'); await expect(page.locator('.terminal-panel .xterm-helper-textarea')).toBeFocused();
+  await page.keyboard.press('Control+Shift+f'); await expect(input).toBeFocused();
+  await input.press('F4');
+  await page.keyboard.press('Control+Shift+c');
+  await page.keyboard.press('Control+Shift+l');
+  await page.keyboard.type('z');
+  await expect.poll(() => readFile(join(fixture.project, 'keys-input.txt'), 'utf8')).toBe('z');
+  await fixture.restart();
+  expect((await fixture.snapshot()).data.settings.shortcuts).toMatchObject({ terminalFindNext: 'F3', terminalFindPrevious: 'Shift+F3', terminalFindExit: 'F4' });
+  expect((await fixture.snapshot()).terminals).toEqual([]);
+});

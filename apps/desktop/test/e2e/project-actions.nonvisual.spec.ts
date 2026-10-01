@@ -1,0 +1,61 @@
+import { access, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { expect, test } from '@playwright/test';
+import type { Thread } from '../../src/shared/contracts.ts';
+import type { OperationRecord } from '../../src/shared/operations.ts';
+import { projectEnvironmentSchema } from '../../src/shared/project-environment.ts';
+import { acceptanceApp } from './fixtures/acceptance-app.ts';
+import { startDevelopmentSource } from './fixtures/development-source.ts';
+
+let development: Awaited<ReturnType<typeof startDevelopmentSource>>;
+let fixture: Awaited<ReturnType<typeof acceptanceApp>>;
+test.beforeAll(async () => { development = await startDevelopmentSource(); });
+test.afterAll(async () => { await development?.server.close(); });
+test.beforeEach(async () => { fixture = await acceptanceApp(development.url); });
+test.afterEach(async () => { if (fixture) { const errors = [...fixture.errors]; await fixture.close(); await expect(access(fixture.storage)).rejects.toMatchObject({ code: 'ENOENT' }); expect(errors).toEqual([]); } });
+
+const open = async () => { await fixture.page.getByRole('button', { name: '项目动作', exact: true }).click(); await fixture.page.getByRole('menuitem', { name: '配置环境与动作' }).click(); };
+const operation = (id: string) => fixture.snapshot().then(state => state.data.operations.find(item => item.id === id)!);
+
+test('project action configuration runs real terminal commands, persists output and initializes only the new worktree', async () => {
+  await open(); let dialog = fixture.page.getByRole('dialog', { name: '项目环境与动作' });
+  await dialog.getByLabel('初始化命令').fill("Set-Content -LiteralPath initialized.txt -Value 'INITIALIZED'; Write-Output 'SETUP_DONE'");
+  await dialog.getByLabel('清理命令').fill("Remove-Item -LiteralPath initialized.txt; Write-Output 'CLEANUP_DONE'");
+  await dialog.getByRole('button', { name: '添加常用动作' }).click();
+  await dialog.getByLabel('动作名称 1').fill('执行检查'); await dialog.getByLabel('动作命令 1').fill("Write-Output 'ACTION_DONE 中文'; Set-Content -LiteralPath action.txt -Value 'REAL_ACTION'");
+  await dialog.getByRole('button', { name: '保存项目环境' }).click(); await expect(dialog.getByText('项目环境已保存')).toBeVisible();
+  await dialog.getByRole('button', { name: '关闭', exact: true }).click();
+  await fixture.page.getByRole('button', { name: '项目动作', exact: true }).click(); await fixture.page.getByRole('menuitem', { name: '执行检查', exact: true }).click();
+  await expect.poll(async () => (await fixture.snapshot()).data.operations.at(-1)?.status).toBe('succeeded');
+  expect(await readFile(join(fixture.project, 'action.txt'), 'utf8')).toContain('REAL_ACTION');
+  await expect(fixture.page.getByRole('tab', { name: /执行检查/ })).toBeVisible();
+  expect((await fixture.snapshot()).terminals.at(-1)?.output).toContain('ACTION_DONE 中文');
+  await fixture.restart(); await open(); dialog = fixture.page.getByRole('dialog', { name: '项目环境与动作' });
+  await expect(dialog.getByLabel('动作名称 1')).toHaveValue('执行检查'); await expect(dialog.getByRole('region', { name: '项目动作记录' })).toContainText('操作完成');
+  await dialog.getByText('动作输出', { exact: true }).click(); await expect(dialog.locator('pre')).toContainText('ACTION_DONE 中文');
+  await dialog.getByRole('button', { name: '关闭', exact: true }).click();
+  const thread = await fixture.invoke({ op: 'thread.create', projectId: 'p', worktree: true }) as Thread;
+  await expect.poll(async () => (await fixture.snapshot()).data.operations.find(item => item.threadId === thread.id)?.status).toBe('succeeded');
+  expect(await readFile(join(thread.cwd, 'initialized.txt'), 'utf8')).toContain('INITIALIZED');
+  await expect(access(join(fixture.project, 'initialized.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await fixture.app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false }); });
+  const cleanup = await fixture.invoke({ op: 'project.action', threadId: thread.id, requestId: crypto.randomUUID(), kind: 'cleanup', actionId: '' }) as OperationRecord;
+  await expect.poll(async () => (await operation(cleanup.id)).status).toBe('succeeded'); await expect(access(join(thread.cwd, 'initialized.txt'))).rejects.toMatchObject({ code: 'ENOENT' });
+});
+test('active action uses its configuration snapshot, supports cancellation, records failures and refuses stale config saves', async () => {
+  const environment = projectEnvironmentSchema.parse({ actions: [{ id: 'hold', name: '等待动作', command: "Write-Output 'RUNNING_OLD'; Start-Sleep -Seconds 120" }, { id: 'fail', name: '失败动作', command: "throw 'ACTION_FAILURE'" }] });
+  const base = projectEnvironmentSchema.parse({});
+  await fixture.invoke({ op: 'project.environment', projectId: 'p', environment, base });
+  const job = await fixture.invoke({ op: 'project.action', threadId: 't', requestId: crypto.randomUUID(), kind: 'action', actionId: 'hold' }) as OperationRecord;
+  await expect.poll(async () => (await fixture.snapshot()).terminals.some(item => item.output.includes('RUNNING_OLD'))).toBe(true);
+  const next = { ...environment, actions: environment.actions.map(action => action.id === 'hold' ? { ...action, command: "Write-Output 'RUNNING_NEW'" } : action) };
+  await fixture.invoke({ op: 'project.environment', projectId: 'p', environment: next, base: environment });
+  await expect(fixture.invoke({ op: 'project.environment', projectId: 'p', environment, base })).rejects.toThrow(/其他窗口/);
+  expect((await operation(job.id)).status).toBe('running');
+  await fixture.invoke({ op: 'operation.cancel', threadId: 't', requestId: job.id }); await expect.poll(async () => (await operation(job.id)).status).toBe('cancelled');
+  const success = await fixture.invoke({ op: 'project.action', threadId: 't', requestId: crypto.randomUUID(), kind: 'action', actionId: 'hold' }) as OperationRecord;
+  await expect.poll(async () => (await operation(success.id)).status).toBe('succeeded');
+  const failed = await fixture.invoke({ op: 'project.action', threadId: 't', requestId: crypto.randomUUID(), kind: 'action', actionId: 'fail' }) as OperationRecord;
+  await expect.poll(async () => (await operation(failed.id)).status).toBe('failed'); expect((await operation(failed.id)).error).toContain('退出码');
+  await fixture.restart(); expect((await operation(failed.id)).status).toBe('failed');
+});

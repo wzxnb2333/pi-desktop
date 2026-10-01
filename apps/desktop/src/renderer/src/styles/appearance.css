@@ -1,0 +1,7 @@
+/* User appearance preferences only. The pinned theme owns defaults and component geometry. */
+.markdown pre.markdown-code-content code,
+.file-editor,
+.diff-view pre {
+  font-size: var(--code-font-size, 12px);
+  line-height: max(20px, calc(var(--code-font-size, 12px) * 1.6));
+}

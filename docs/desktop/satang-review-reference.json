@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 1,
+  "version": "26.915.4065.0",
+  "scope": "Four earlier valid Review captures. Geometry covers chrome, header, file header, tree width and filter. Shadow-root diff lines and file rows are Pi functional adaptations; source data and placeholder controls are not copied.",
+  "samples": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/review/light-1440x940.dom-styles.json",
+      "sha256": "f67422bfb10c8b707768162e804f5f37c933d079141ca937600d88c5170cc0c2",
+      "measurements": {
+        "strip": {
+          "node": 1352,
+          "rect": {
+            "x": 593,
+            "y": 36,
+            "w": 847,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "header": {
+          "node": 1398,
+          "rect": {
+            "x": 593,
+            "y": 82,
+            "w": 847,
+            "h": 81
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "fileHeader": {
+          "node": 1671,
+          "rect": {
+            "x": 593,
+            "y": 239,
+            "w": 587,
+            "h": 32
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "paddingTop": "4px",
+            "paddingRight": "8px",
+            "paddingBottom": "4px",
+            "paddingLeft": "12px",
+            "borderRadius": "0px"
+          }
+        },
+        "files": {
+          "node": 1708,
+          "rect": {
+            "x": 1190,
+            "y": 239,
+            "w": 250,
+            "h": 701
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "filterRow": {
+          "node": 1713,
+          "rect": {
+            "x": 1191,
+            "y": 239,
+            "w": 249,
+            "h": 37
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "8px",
+            "paddingRight": "8px",
+            "paddingBottom": "1px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "filter": {
+          "node": 1715,
+          "rect": {
+            "x": 1199,
+            "y": 247,
+            "w": 233,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(255, 255, 255, 0.96)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "12.5px"
+          }
+        },
+        "tree": {
+          "node": 1722,
+          "rect": {
+            "x": 1199,
+            "y": 276,
+            "w": 233,
+            "h": 664
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "13px",
+            "lineHeight": "19.5px",
+            "fontWeight": "400",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "theme": "light",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/review/light-1000x700.dom-styles.json",
+      "sha256": "4006202691015e85cced4c2ec34ddc146f157b16c3d48b8fce9e56104e2b719f",
+      "measurements": {
+        "strip": {
+          "node": 1262,
+          "rect": {
+            "x": 593,
+            "y": 36,
+            "w": 407,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "header": {
+          "node": 1308,
+          "rect": {
+            "x": 593,
+            "y": 82,
+            "w": 407,
+            "h": 81
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgba(26, 28, 31, 0.494)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "fileHeader": {
+          "node": 1581,
+          "rect": {
+            "x": 593,
+            "y": 268.125,
+            "w": 152.8125,
+            "h": 32
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "paddingTop": "4px",
+            "paddingRight": "8px",
+            "paddingBottom": "4px",
+            "paddingLeft": "12px",
+            "borderRadius": "0px"
+          }
+        },
+        "files": {
+          "node": 1618,
+          "rect": {
+            "x": 755.8125,
+            "y": 268.125,
+            "w": 244.1875,
+            "h": 431.875
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "filterRow": {
+          "node": 1623,
+          "rect": {
+            "x": 756.8125,
+            "y": 268.125,
+            "w": 243.1875,
+            "h": 37
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "8px",
+            "paddingRight": "8px",
+            "paddingBottom": "1px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "filter": {
+          "node": 1625,
+          "rect": {
+            "x": 764.8125,
+            "y": 276.125,
+            "w": 227.1875,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(255, 255, 255, 0.96)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "14px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "12.5px"
+          }
+        },
+        "tree": {
+          "node": 1632,
+          "rect": {
+            "x": 764.8125,
+            "y": 305.125,
+            "w": 227.1875,
+            "h": 394.875
+          },
+          "css": {
+            "backgroundColor": "rgb(255, 255, 255)",
+            "color": "rgb(26, 28, 31)",
+            "fontSize": "13px",
+            "lineHeight": "19.5px",
+            "fontWeight": "400",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "height": 940,
+      "file": ".artifacts/reference/26.915.4065.0/review/dark-1440x940.dom-styles.json",
+      "sha256": "f3717509f3c500034dd1f3e194252c630dc78a3a8209f86565f0d83d81bad1ca",
+      "measurements": {
+        "strip": {
+          "node": 1287,
+          "rect": {
+            "x": 741,
+            "y": 36,
+            "w": 699,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "header": {
+          "node": 1333,
+          "rect": {
+            "x": 741,
+            "y": 82,
+            "w": 699,
+            "h": 81
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "fileHeader": {
+          "node": 1606,
+          "rect": {
+            "x": 741,
+            "y": 239,
+            "w": 439,
+            "h": 32
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "paddingTop": "4px",
+            "paddingRight": "8px",
+            "paddingBottom": "4px",
+            "paddingLeft": "12px",
+            "borderRadius": "0px"
+          }
+        },
+        "files": {
+          "node": 1643,
+          "rect": {
+            "x": 1190,
+            "y": 239,
+            "w": 250,
+            "h": 701
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "filterRow": {
+          "node": 1648,
+          "rect": {
+            "x": 1191,
+            "y": 239,
+            "w": 249,
+            "h": 37
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "8px",
+            "paddingRight": "8px",
+            "paddingBottom": "1px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "filter": {
+          "node": 1650,
+          "rect": {
+            "x": 1199,
+            "y": 247,
+            "w": 233,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(255, 255, 255, 0.03)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "12.5px"
+          }
+        },
+        "tree": {
+          "node": 1657,
+          "rect": {
+            "x": 1199,
+            "y": 276,
+            "w": 233,
+            "h": 664
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "13px",
+            "lineHeight": "19.5px",
+            "fontWeight": "400",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1000,
+      "height": 700,
+      "file": ".artifacts/reference/26.915.4065.0/review/dark-1000x700.dom-styles.json",
+      "sha256": "c31712ad13096e1476f54ae98c54f8a588c7d0c43a9d3282dd1d77f782174225",
+      "measurements": {
+        "strip": {
+          "node": 1262,
+          "rect": {
+            "x": 617.671875,
+            "y": 36,
+            "w": 382.328125,
+            "h": 46
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "header": {
+          "node": 1308,
+          "rect": {
+            "x": 617.671875,
+            "y": 82,
+            "w": 382.328125,
+            "h": 81
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgba(255, 255, 255, 0.498)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "0px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "fileHeader": {
+          "node": 1581,
+          "rect": {
+            "x": 617.671875,
+            "y": 268.125,
+            "w": 142.9375,
+            "h": 32
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "lineHeight": "21px",
+            "fontWeight": "430",
+            "paddingTop": "4px",
+            "paddingRight": "8px",
+            "paddingBottom": "4px",
+            "paddingLeft": "12px",
+            "borderRadius": "0px"
+          }
+        },
+        "files": {
+          "node": 1618,
+          "rect": {
+            "x": 770.609375,
+            "y": 268.125,
+            "w": 229.390625,
+            "h": 431.875
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        },
+        "filterRow": {
+          "node": 1623,
+          "rect": {
+            "x": 771.609375,
+            "y": 268.125,
+            "w": 228.390625,
+            "h": 37
+          },
+          "css": {
+            "backgroundColor": "rgba(0, 0, 0, 0)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "16px",
+            "lineHeight": "24px",
+            "fontWeight": "430",
+            "paddingTop": "8px",
+            "paddingRight": "8px",
+            "paddingBottom": "1px",
+            "paddingLeft": "8px",
+            "borderRadius": "0px"
+          }
+        },
+        "filter": {
+          "node": 1625,
+          "rect": {
+            "x": 779.609375,
+            "y": 276.125,
+            "w": 212.390625,
+            "h": 28
+          },
+          "css": {
+            "backgroundColor": "rgba(255, 255, 255, 0.03)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "14px",
+            "lineHeight": "18px",
+            "fontWeight": "430",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "12.5px"
+          }
+        },
+        "tree": {
+          "node": 1632,
+          "rect": {
+            "x": 779.609375,
+            "y": 305.125,
+            "w": 212.390625,
+            "h": 394.875
+          },
+          "css": {
+            "backgroundColor": "rgb(24, 24, 24)",
+            "color": "rgb(255, 255, 255)",
+            "fontSize": "13px",
+            "lineHeight": "19.5px",
+            "fontWeight": "400",
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "borderRadius": "0px"
+          }
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "file": "src/renderer/src/surfaces/review/index.tsx",
+      "sha256": "e60f1d5a9bcbde00bb8daf03b29047b5722cf91f25efa17c490f7d6d2906f0e1"
+    },
+    {
+      "file": "src/renderer/src/surfaces/review/styles/tokens.css",
+      "sha256": "344dd37bdd9fde3f73f77541216868a5cc5d724f35b5730ef5ae274e271a1440"
+    },
+    {
+      "file": "src/renderer/src/styles/review.css",
+      "sha256": "176575573f52b25d44f603f149154dbb7ed46b6336f662878808ff3442dd4057"
+    }
+  ]
+}

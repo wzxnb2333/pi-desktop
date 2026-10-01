@@ -1,0 +1,78 @@
+/*
+ * The preview replaces the conversation column, so its body surface matches the timeline's. Chrome
+ * (height, gutter, hairline) comes from `.panel-strip` in panels.css.
+ */
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+}
+/* `flex-basis` instead of `flex: 1` so the field can shrink under the strip's `> * { shrink: 0 }`. */
+.preview-toolbar input {
+  flex: 1 1 8rem;
+  min-width: 0;
+  height: var(--control-size-sm);
+  padding: 0 var(--control-gutter-xs);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+}
+.preview-surface {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+}
+.browser-find[hidden] { display: none; }
+.preview-panel .browser-overflow { width: 28px; height: 28px; padding: 0; border: 0; background: transparent; justify-content: center; }
+.browser-overflow > svg { display: none; }
+.browser-overflow .menu-trigger-label { display: flex; align-items: center; justify-content: center; }
+.browser-overflow .menu-trigger-label svg { flex-shrink: 0; }
+.browser-submit { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; background: transparent; }
+.preview-toolbar output { font-size: 12px; color: var(--muted); }
+.browser-site-settings { min-width: 0; overflow-wrap: anywhere; }
+.browser-site-settings ul { padding: 0; max-height: 280px; overflow: auto; }
+.browser-site-settings .row { flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.browser-site-settings input { flex: 1; min-width: 160px; }
+.browser-site-settings code { flex: 1; min-width: 0; }
+.dialog:has(.browser-annotations) { width: min(840px, calc(100vw - 40px)); }
+.browser-annotations { min-width: 0; overflow-wrap: anywhere; }
+.browser-annotations .row { flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.browser-annotations > select, .browser-annotations textarea { width: 100%; margin: 8px 0; }
+.browser-annotations > code { display: block; margin: 6px 0; }
+.annotation-image { position: relative; max-height: 46vh; max-width: 100%; margin: 12px auto; width: auto; touch-action: none; user-select: none; }
+.annotation-image img { display: block; height: 100%; width: 100%; object-fit: fill; border-radius: 6px; }
+.annotation-highlight { position: absolute; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); pointer-events: none; }
+.annotation-coordinates { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.annotation-coordinates label { min-width: 0; }
+.annotation-coordinates input { display: block; width: 100%; }
+.annotation-detail { border-block: 1px solid var(--border); margin: 12px 0; padding: 8px 0; }
+.annotation-detail p { white-space: pre-wrap; }
+.annotation-list { list-style: none; padding: 0; margin: 0; }
+.annotation-list li { display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--border); padding: 8px 0; }
+.annotation-list li > button:first-child { flex: 1; min-width: 0; background: transparent; border: 0; text-align: left; }
+.annotation-list strong, .annotation-list small { display: block; overflow-wrap: anywhere; white-space: normal; }
+.annotation-list small { color: var(--muted); margin-top: 4px; }
+.preview-toolbar > .browser-address { display: flex; flex: 1 1 8rem; min-width: 0; }
+.browser-address input { width: 100%; }
+.browser-address-suggestions { position: fixed; z-index: 1000; max-height: 300px; overflow: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 4px; box-shadow: var(--elevation-stroke); }
+.browser-address-suggestions button { display: block; width: 100%; min-width: 0; text-align: left; border: 0; background: transparent; padding: 8px; }
+.browser-address-suggestions button[aria-selected="true"], .browser-address-suggestions button:hover { background: var(--hover); }
+.browser-address-suggestions strong, .browser-address-suggestions span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--font-xs); }
+.browser-address-suggestions span { color: var(--muted); }
+.dialog:has(.browser-history) { width: min(680px, calc(100vw - 40px)); }
+.browser-history { min-width: 0; overflow-wrap: anywhere; }
+.browser-history .row { flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.browser-history .row input { flex: 1; min-width: 100px; }
+.browser-history ul { padding: 0; list-style: none; max-height: 45vh; overflow: auto; }
+.browser-history li > button { display: block; width: 100%; border: 0; background: transparent; text-align: left; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+.browser-history li > button:hover { background: var(--hover); }
+.browser-history li strong, .browser-history li span, .browser-history li small { display: block; overflow-wrap: anywhere; white-space: normal; }
+.browser-history li span, .browser-history li small { color: var(--muted); }
+.browser-data-settings { padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.browser-data-settings label { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }

@@ -1,0 +1,41 @@
+/* Native selection semantics with the desktop's neutral control palette.
+ * Settings switches and reasoning chips own their separate presentation. */
+input:is([type="checkbox"], [type="radio"]):not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)) {
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--bg);
+  cursor: pointer;
+}
+input:is([type="checkbox"], [type="radio"]):not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)):hover:not(:disabled) { border-color: var(--text); }
+input[type="checkbox"]:not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)):is(:checked, :indeterminate) { background: var(--text); border-color: var(--text); }
+input[type="checkbox"]:not(:where(.settings-page .field-row-control > input, .thinking-level-option > input))::before {
+  content: '';
+  width: 7px;
+  height: 4px;
+  border-left: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(-45deg);
+  visibility: hidden;
+}
+input[type="checkbox"]:not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)):checked::before { visibility: visible; }
+input[type="checkbox"]:not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)):indeterminate::before { height: 0; border-left: 0; transform: none; visibility: visible; }
+input[type="radio"]:not(:where(.settings-page .field-row-control > input)) { border-radius: 50%; }
+input[type="radio"]:not(:where(.settings-page .field-row-control > input)):checked { border-color: var(--text); }
+input[type="radio"]:not(:where(.settings-page .field-row-control > input))::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--text); visibility: hidden; }
+input[type="radio"]:not(:where(.settings-page .field-row-control > input)):checked::before { visibility: visible; }
+input:is([type="checkbox"], [type="radio"]):not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)):focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+input:is([type="checkbox"], [type="radio"]):not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)):disabled { opacity: .45; cursor: default; }
+@media (forced-colors: active) {
+  input:is([type="checkbox"], [type="radio"]):not(:where(.settings-page .field-row-control > input, .thinking-level-option > input)) { appearance: auto; accent-color: auto; background: Canvas; color: CanvasText; border-color: ButtonText; }
+  input:is([type="checkbox"], [type="radio"]):not(:where(.settings-page .field-row-control > input, .thinking-level-option > input))::before { content: none; }
+}

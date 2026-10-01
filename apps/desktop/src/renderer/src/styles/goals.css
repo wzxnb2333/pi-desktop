@@ -1,0 +1,21 @@
+.goal-panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 20px; }
+.goal-panel header, .goal-heading, .goal-panel footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.goal-panel header h2 { margin: 0; flex: 1; font-size: 15px; }
+.goal-panel p { margin: 0; overflow-wrap: anywhere; }
+.goal-panel .goal-editor { display: grid; gap: 12px; }
+.goal-panel label { display: grid; gap: 7px; min-width: 0; }
+.goal-panel textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 56px; }
+.goal-panel fieldset { min-width: 0; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.goal-criterion-edit { display: flex; gap: 8px; align-items: flex-start; }
+.goal-criterion-edit label { flex: 1; display: flex; align-items: baseline; }
+.goal-criterion-edit textarea { flex: 1; min-width: 0; }
+.goal-objective, .goal-criteria small, .goal-history p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.goal-criteria { display: grid; gap: 12px; padding-left: 24px; margin: 0; }
+.goal-criteria small { display: block; color: var(--muted); margin-top: 5px; }
+.goal-history { padding-left: 24px; display: grid; gap: 10px; }
+.goal-history li span { margin-left: 10px; }
+.goal-heading { justify-content: space-between; }
+.goal-heading span { font-size: 12px; color: var(--muted); }
+.goal-summary { display: flex; gap: 10px; width: 100%; text-align: left; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.goal-summary span { display: grid; gap: 4px; min-width: 0; }
+.goal-summary small { color: var(--muted); }

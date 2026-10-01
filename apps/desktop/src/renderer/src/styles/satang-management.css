@@ -1,0 +1,38 @@
+/* Sites capture supplies the management-page layout; Pi supplies real local resources and jobs. */
+.management-page { min-width: 0; padding: 20px; --management-search-bg: oklab(0.999994 0.0000455678 0.0000200868 / 0.864706); --management-selection-bg: oklab(0.22559 -0.00131416 -0.00642684 / 0.05); }
+:root[data-theme="dark"] .management-page { --management-search-bg: #2d2d2d; --management-selection-bg: oklab(0.999994 0.0000455678 0.0000200868 / 0.05); }
+@media (prefers-color-scheme: dark) { :root[data-theme="system"] .management-page { --management-search-bg: #2d2d2d; --management-selection-bg: oklab(0.999994 0.0000455678 0.0000200868 / 0.05); } }
+.management-page > *, .management-page > :not(.page-heading), .skills-page .resource-inspection, .skills-page .resource-runtime { width: 100%; max-width: 728px; margin-inline: auto; }
+.management-page > .page-heading { padding: 0 8px; margin-bottom: 0; }
+.management-page .page-heading h1 { margin: 0; font-size: 28px; line-height: 33.6px; font-weight: 500; }
+.management-page .page-heading > p { margin: 8px 0 0; font-size: 14px; line-height: 24px; }
+.management-page .management-search-row { display: flex; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 1; height: 60px; padding: 20px 0 8px; margin-block: 0; background: var(--bg); }
+.management-search-field { display: flex; flex: 1; min-width: 0; height: 32px; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--border); border-radius: 9999px; background: var(--management-search-bg); }
+.management-search-field > svg { flex: none; color: var(--muted); }
+.management-search-field > input { flex: 1; width: 100%; min-width: 0; height: 18px; padding: 0; border: 0; border-radius: 0; background: transparent; font-size: 14px; line-height: 18px; }
+.management-search-field:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.management-search-field > input:focus-visible { outline: none; }
+.management-page .management-filter-row { padding: 20px 12px 8px; }
+.management-filters { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.management-filters button { height: 28px; padding: 0 8px; border: 1px solid transparent; border-radius: 12.5px; background: transparent; color: var(--muted); font-size: 13px; line-height: 18px; white-space: nowrap; }
+.management-filters button[aria-pressed="true"] { background: var(--management-selection-bg); color: var(--text); }
+.management-filters button:hover { background: var(--hover); }
+.management-page .management-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 420px; padding: 24px 12px; border: 0; }
+.management-empty-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: 100%; max-width: 576px; text-align: center; }
+.management-empty-content > svg { flex: none; width: 32px; height: 32px; color: var(--muted); }
+.management-empty-text { display: flex; flex-direction: column; gap: 8px; }
+.management-empty-text h3 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 500; }
+.management-empty-text p { margin: 0; font-size: 13px; line-height: 18.5714px; color: var(--muted); }
+.management-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.management-empty-actions button { height: 32px; padding: 6px 16px; border-radius: 12.5px; font-size: 14px; line-height: 18px; }
+.management-page > .field-stack:empty { border: 0; }
+.management-page > .form-feedback:empty { min-height: 0; margin-block: 0; }
+.management-page .management-list-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+.management-list-actions .hint { margin: 0; }
+.management-page .section-heading { align-items: center; padding: 12px 8px; margin-bottom: 0; }
+.management-page .section-heading h2 { font-size: 13px; line-height: 18px; font-weight: 500; }
+.management-page .config-card { margin-top: 20px; }
+.management-page .resource-inspection { margin-block: 8px; padding-inline: 8px; }
+.management-page .resource-inspection .hint { margin-block: 4px; }
+.management-page .automation-page-actions { display: flex; justify-content: flex-end; padding: 12px 8px 0; }
+@media (max-width: 880px) { .management-page { padding: 20px; } }

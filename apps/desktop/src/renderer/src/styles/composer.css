@@ -1,0 +1,239 @@
+/*
+ * Pi multiline composer. The 22px surface, 44px input and 28px controls are
+ * verified against the 26.915 welcome captures in codex-26915-reference-manifest.json.
+ * Queue, plan and growing-input behavior are Pi adaptations; theme has one owner.
+ */
+.composer-area {
+  width: 100%;
+  max-width: calc(var(--thread-content-max-width) + 48px);
+  margin-inline: auto;
+  padding: 12px 24px;
+  text-align: start;
+  flex-shrink: 0;
+}
+
+/*
+ * The surface. No border: the reference sets `--composer-layout-surface-shadow:var(--elevation-composer)`
+ * (`initial@76140`) and paints the surface with
+ * `box-shadow:var(--composer-layout-surface-shadow);border:0!important` (`initial@81487`). The 1px edge is
+ * the first layer of `--elevation-composer` (`shared@856832`), so a `--border` stroke here would double it.
+ * 22px is `--radius-composer-single`, and it is also the desktop default: `--composer-radius` is
+ * re-declared to `calc(var(--spacing) * 5.5)` at `shared@101177`, so the corners do not change between the
+ * one-line and the grown state.
+ * `overflow` stays visible on purpose: the three menus open upward out of this box.
+ */
+.composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--composer-background);
+  border: 0;
+  border-radius: var(--radius-composer-single);
+  box-shadow: var(--elevation-composer);
+  /* Attachments, input and footer own their padding; the outer surface adds none. */
+  padding: 0;
+}
+.composer:focus-within {
+  box-shadow: var(--elevation-composer);
+}
+.composer-input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  max-height: 200px; /* keeps composer.tsx's MAX_INPUT_HEIGHT honest: CSS caps it even if the effect lags */
+  background: none;
+  border: 0;
+  padding: 0 12px;
+  margin-bottom: 4px;
+  resize: none;
+  overflow-y: hidden;
+  color: var(--text);
+  font-size: var(--font-sm);
+  line-height: var(--font-sm-lh);
+  letter-spacing: var(--tracking-normal);
+}
+.composer-input::placeholder {
+  color: var(--muted);
+}
+/*
+ * `base.css` gives every text input a 2px accent ring on `:focus-visible`. Inside the composer that ring
+ * sits around the textarea rather than the card, so it crosses the 22px corners; the card's own
+ * `:focus-within` hairline above is the affordance here. Specificity has to beat `textarea:focus-visible`
+ * (0-1-1), which the previous `.composer > textarea` rule only managed by source order.
+ */
+.composer-input:focus-visible {
+  outline: none;
+}
+
+/*
+ * The desktop multiline footer uses a 5px control gap and an 8px inline inset.
+ */
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding-inline: 8px;
+  margin-bottom: 8px;
+}
+.composer-submit-controls { display: flex; flex-shrink: 0; gap: 5px; margin-left: 0; }
+.composer-actions > .flex-spacer { flex: 1; min-width: 0; }
+.composer-actions > .menu:has(.composer-add-menu) { flex-shrink: 0; }
+.composer-actions > .menu:has(.composer-model-capabilities) { min-width: 0; max-width: 46%; }
+.composer-actions > .menu:has(.composer-menu-policy) { min-width: 0; max-width: 30%; }
+.composer-area button.composer-add-menu { width: var(--control-size-composer); padding: 0; justify-content: center; }
+.composer-add-menu > svg { display: none; }
+.composer-menu-policy .menu-trigger-label { display: flex; align-items: center; gap: 5px; }
+.composer-menu-policy .menu-trigger-label > span { overflow: hidden; text-overflow: ellipsis; }
+.composer-model-capabilities { max-width: 240px; min-width: 0; width: 100%; }
+.composer-model-capabilities .menu-trigger-label { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.composer-model-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.composer-model-effort { color: var(--muted); flex-shrink: 0; }
+.composer-model-popover { width: 248px; }
+.menu-heading { padding: 4px 8px 6px; color: var(--muted); font-size: var(--font-xs); }
+.composer-capability-panel { padding: 8px 6px 4px; }
+.composer-capability-heading { display: flex; align-items: center; color: var(--muted); }
+.composer-capability-heading strong { flex: 1; text-align: center; padding-right: 16px; color: var(--accent); font-size: var(--font-sm); }
+button.composer-model-link { display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 0; background: transparent; color: var(--muted); font-size: var(--font-xs); padding: 4px; }
+.composer-effort-control { position: relative; margin-top: 10px; padding-block: 2px; }
+.composer-effort-slider { appearance: none; display: block; width: 100%; height: 24px; padding: 0; margin: 0; border: 0; border-radius: var(--radius-pill); cursor: pointer; }
+.composer-effort-slider::-webkit-slider-thumb { appearance: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--text); box-shadow: var(--elevation-stroke); position: relative; z-index: 1; }
+.composer-effort-slider:disabled { opacity: .45; cursor: default; }
+.composer-effort-stops { position: absolute; inset: 0 13px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+.composer-effort-stops > span { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); opacity: .45; }
+.composer-effort-stops > [data-selected] { visibility: hidden; }
+button.composer-plan-chip { display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 110px; padding-inline: 6px; border: 0; background: var(--selected); box-shadow: var(--elevation-stroke); color: var(--text); }
+.composer-plan-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-suggestions { padding: 6px; border-radius: 16px; overflow: auto; }
+.composer-suggestion-heading, .composer-suggestion-group { padding: 4px 8px; color: var(--muted); font-size: var(--font-xs); }
+.composer-suggestion-group { padding-top: 8px; }
+button.composer-suggestion-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; min-width: 0; min-height: 30px; padding: 5px 8px; border: 0; border-radius: 10px; background: none; text-align: left; font-size: var(--font-sm); }
+.composer-suggestion-row[aria-selected='true'] { background: var(--selected); }
+.composer-suggestion-row[aria-disabled='true'] { opacity: .45; }
+.composer-suggestion-row > svg { flex-shrink: 0; color: var(--muted); }
+.composer-suggestion-label { max-width: 52%; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-suggestion-detail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--font-xs); }
+.composer-suggestion-error { padding: 8px; overflow-wrap: anywhere; }
+@container (max-width: 420px) {
+  .composer-actions { gap: 3px; }
+  .composer-plan-chip > span { display: none; }
+  .composer-actions .menu-trigger { padding-inline: 4px; }
+}
+
+/*
+ * The shared trigger is a framed chip; inside the composer's own framed surface that reads as a second
+ * box, and the native selects it replaces were borderless. Only `background`/`border` are dropped, so
+ * `utilities.css` still owns the size, radius, gap and chevron, and the hover fill from `base.css`
+ * (0-2-1) still wins over the `background: none` below (0-2-0).
+ */
+.composer-area .menu-trigger {
+  background: none;
+  border: 0;
+}
+
+/* Provider names are long; the trigger shrinks and ellipsizes instead of pushing the send button out. */
+.composer-actions .menu,
+.composer-footer .menu {
+  min-width: 0;
+}
+.composer-menu-model {
+  max-width: 12.5rem;
+}
+.composer-menu-policy {
+  max-width: 10rem;
+}
+
+/*
+ * 28px round send control: `--control-size-composer` (`shared@18755`, and the reference applies the same
+ * value through the `.size-token-button-composer` utility at `shared@197800`), on top of
+ * `<Button variant="primary" size="sm">`, which already carries the reference's inverted ink pair
+ * (`--text` on `--bg`, design-tokens.md §3). `button.` prefixes keep this ahead of `button.btn-sm`.
+ */
+button.send-button {
+  width: var(--control-size-composer);
+  height: var(--control-size-composer);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
+/* --- attachments ----------------------------------------------------------- */
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing);
+  padding: 8px 8px 6px;
+}
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing);
+  max-width: 100%;
+  padding: 0 var(--control-gutter-2xs) 0 var(--control-gutter-sm);
+  border-radius: var(--radius-pill);
+  background: var(--hover);
+  box-shadow: var(--elevation-stroke);
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  letter-spacing: var(--tracking-wide);
+}
+.attachment-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.attachment-remove {
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+}
+
+/* --- footer ---------------------------------------------------------------- */
+.composer-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--control-gutter-xs);
+  padding: var(--spacing) var(--control-gutter-sm) 0;
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  letter-spacing: var(--tracking-wide);
+}
+.composer-footer .menu-trigger {
+  color: var(--muted);
+}
+/* Keep the policy name readable in a narrow docked conversation. */
+.composer-footer > :is(.menu, .composer-toggle, .composer-worktree, .usage-details) { flex-shrink: 0; }
+button.composer-toggle {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--font-xs);
+  line-height: var(--font-xs-lh);
+  letter-spacing: var(--tracking-wide);
+}
+
+/*
+ * `interfaces.md` 已知遗留: `--hover` and `--selected` are both 5% of `--text` in the light theme, so a
+ * fill cannot carry the pressed state. The reference separates them with a stroke or a weight
+ * (design-tokens.md §2 `--selected`), so the fill stays at `--selected` and the stroke plus the weight
+ * carry the state. No new colour name.
+ */
+.composer-footer button.active {
+  background: var(--selected);
+  box-shadow: var(--elevation-stroke);
+  color: var(--text);
+  font-weight: var(--font-weight-medium);
+}
+.composer-worktree {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing);
+  color: var(--muted);
+}

@@ -1,0 +1,71 @@
+/* Generated from Codex 26.917.71314 default theme functions. See reference-contract.json. */
+:root {
+  --bg: rgb(255, 255, 255);
+  --sidebar: rgb(246, 246, 246);
+  --surface: rgb(255, 255, 255);
+  --hover: rgba(26, 28, 31, 0.055);
+  --selected: oklab(0.22559 -0.00131416 -0.00642684 / 0.05);
+  --text: rgb(26, 28, 31);
+  --muted: color(srgb 0.101961 0.109804 0.121569 / 0.65);
+  --border: rgba(26, 28, 31, 0.08);
+  --accent: rgb(51, 156, 255);
+  --accent-soft: color(srgb 0.2 0.611765 1 / 0.3);
+  --danger: rgb(224, 46, 42);
+  --window-menu: rgb(248, 248, 249);
+  --user-message: oklab(0.22559 -0.00131416 -0.00642684 / 0.05);
+  --diff-added: rgba(0, 162, 64, 0.15);
+  --diff-removed: rgba(186, 38, 35, 0.15);
+  --composer-background: rgba(255, 255, 255, 0.96);
+  --elevation-composer: rgba(0, 0, 0, 0.04) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 8px 0px, rgba(0, 0, 0, 0.024) 0px 4px 80px 8px;
+  --elevation-popover: rgba(26, 28, 31, 0.118) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.04) 0px 3px 7.5px 0px, rgba(0, 0, 0, 0.05) 0px 0px 20px 0px;
+}
+:root[data-theme="dark"] {
+  --bg: rgb(24, 24, 24);
+  --sidebar: rgb(20, 20, 20);
+  --surface: rgb(54, 54, 54);
+  --hover: rgba(255, 255, 255, 0.08);
+  --selected: oklab(0.903646 0.0000412762 0.0000180602 / 0.05);
+  --text: rgb(223, 223, 223);
+  --muted: color(srgb 0.87451 0.87451 0.87451 / 0.65);
+  --border: rgba(255, 255, 255, 0.082);
+  --accent: rgb(131, 195, 255);
+  --accent-soft: color(srgb 0.513726 0.764706 1 / 0.3);
+  --danger: rgb(255, 103, 100);
+  --window-menu: rgb(31, 31, 31);
+  --user-message: oklab(0.903646 0.0000412762 0.0000180602 / 0.05);
+  --diff-added: rgba(64, 201, 119, 0.23);
+  --diff-removed: rgba(250, 66, 62, 0.23);
+  --composer-background: rgba(54, 54, 54, 0.96);
+  --elevation-composer: rgba(255, 255, 255, 0.2) 0px 0px 1px 0px inset;
+  --elevation-popover: rgba(255, 255, 255, 0.157) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.04) 0px 3px 7.5px 0px, rgba(0, 0, 0, 0.05) 0px 0px 20px 0px;
+}
+@media (prefers-color-scheme: dark) {
+ :root[data-theme="system"] {
+  --bg: rgb(24, 24, 24);
+  --sidebar: rgb(20, 20, 20);
+  --surface: rgb(54, 54, 54);
+  --hover: rgba(255, 255, 255, 0.08);
+  --selected: oklab(0.903646 0.0000412762 0.0000180602 / 0.05);
+  --text: rgb(223, 223, 223);
+  --muted: color(srgb 0.87451 0.87451 0.87451 / 0.65);
+  --border: rgba(255, 255, 255, 0.082);
+  --accent: rgb(131, 195, 255);
+  --accent-soft: color(srgb 0.513726 0.764706 1 / 0.3);
+  --danger: rgb(255, 103, 100);
+  --window-menu: rgb(31, 31, 31);
+  --user-message: oklab(0.903646 0.0000412762 0.0000180602 / 0.05);
+  --diff-added: rgba(64, 201, 119, 0.23);
+  --diff-removed: rgba(250, 66, 62, 0.23);
+  --composer-background: rgba(54, 54, 54, 0.96);
+  --elevation-composer: rgba(255, 255, 255, 0.2) 0px 0px 1px 0px inset;
+  --elevation-popover: rgba(255, 255, 255, 0.157) 0px 0px 0px 0.5px, rgba(0, 0, 0, 0.04) 0px 3px 7.5px 0px, rgba(0, 0, 0, 0.05) 0px 0px 20px 0px;
+ }
+}
+@supports (corner-shape: superellipse(1.5)) {
+ :root {
+ --radius-md: .625rem; --radius-lg: .78125rem; --radius-xl: .9375rem;
+ --radius-2xl: 1.25rem; --radius-3xl: 1.5625rem; --radius-4xl: 1.875rem;
+ --radius-button: var(--radius-lg);
+ }
+ .btn, .menu-list, .dialog { corner-shape: superellipse(1.5); }
+}
