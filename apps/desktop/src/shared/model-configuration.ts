@@ -92,8 +92,8 @@ export function validateModel(model: ProviderModel, provider: ModelProvider | un
   const entry = catalogModel(provider, model, catalog);
   if (!catalog) throw new Error('内置模型目录尚未加载，请重试或改用自定义提供商');
   if (!entry) throw new Error(label + '：当前模型不在该提供商的内置目录中，请重新选择或改用自定义提供商');
-  if (model.thinkingLevels?.some((level) => !entry.thinkingLevels.includes(level)))
-    throw new Error(label + '：所选思考程度不在此内置模型支持的范围内');
+  // The catalogue's levels are a default, not a fence: a gateway or a newer model revision can accept
+  // levels the pinned catalogue does not list, and the settings page lets the user own that list.
 }
 
 function checkEndpoint(label: string, endpoint: string): void {

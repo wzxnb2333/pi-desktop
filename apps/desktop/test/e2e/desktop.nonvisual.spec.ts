@@ -197,7 +197,8 @@ test('Windows desktop: streaming, approvals, review, terminals, preview, themes 
     await page.keyboard.press('Control+,');
     await expect(page.locator('.settings-page h1')).toHaveText('模型');
     await page.getByRole('button', { name: '外观', exact: true }).click();
-    await page.getByLabel('主题', { exact: true }).selectOption('dark');
+    await page.getByLabel('主题', { exact: true }).click();
+    await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
     await page.getByRole('button', { name: '保存设置' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.getByRole('button', { name: '返回工作台' }).click();
@@ -214,14 +215,18 @@ test('Windows desktop: streaming, approvals, review, terminals, preview, themes 
     await page.keyboard.press('Control+Shift+P');
     await expect(page.getByRole('dialog').getByRole('combobox', { name: '搜索命令或最近任务' })).toBeFocused();
     await page.keyboard.press('Escape');
-    await page.getByLabel('任务更多操作', { exact: true }).click();
-    await page.getByRole('menuitem', { name: '归档', exact: true }).click();
+    // Rows archive and restore from the hover actions: the context-menu trigger stays inert while the row is
+    // hovered, so a project chat is archived through the button the row reveals.
+    const projectRow = page.getByRole('region', { name: '项目聊天' }).locator('.thread-row').first();
+    await projectRow.hover();
+    await projectRow.getByLabel('归档此任务', { exact: true }).click();
     await expect(page.locator('.thread-row')).toHaveCount(0);
     await page.getByLabel('本地工作区操作').click();
     await page.getByRole('menuitem', { name: /已归档任务/ }).click();
     await expect(page.locator('.thread-row')).toHaveCount(1);
-    await page.getByLabel('任务更多操作', { exact: true }).click();
-    await page.getByRole('menuitem', { name: '恢复归档任务', exact: true }).click();
+    const archivedRow = page.locator('.thread-row').first();
+    await archivedRow.hover();
+    await archivedRow.getByLabel('恢复此任务', { exact: true }).click();
     await page.getByLabel('本地工作区操作').click();
     await page.getByRole('menuitem', { name: /查看活跃任务/ }).click();
     await page.getByRole('separator', { name: '调整侧栏宽度' }).focus();
@@ -333,7 +338,8 @@ test('first run registers a project and saves a model key through Windows encryp
       'desktop-fake-secret-for-test',
     );
     await page.getByRole('button', { name: '外观', exact: true }).click();
-    await page.getByLabel('主题', { exact: true }).selectOption('dark');
+    await page.getByLabel('主题', { exact: true }).click();
+    await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
     await page.getByRole('button', { name: '保存设置' }).click();
     await page.getByRole('button', { name: '返回工作台' }).click();
     await page.locator('.thread-row').first().click();

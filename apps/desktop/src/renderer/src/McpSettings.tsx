@@ -6,6 +6,7 @@ import { type DesktopData, type DesktopRequest, type McpConfig, type Thread, mcp
 import { type McpConfigurationErrors, mcpConfigurationErrors, parseMcpSecrets } from '../../shared/mcp-configuration.ts';
 import { Button } from './components/primitives/button.tsx';
 import { FieldRow } from './components/primitives/field-row.tsx';
+import { Menu } from './components/primitives/menu.tsx';
 import { McpOAuthControls } from './components/management/mcp-oauth-controls.tsx';
 import { McpToolPolicies } from './components/management/mcp-tool-policies.tsx';
 import { McpTestProgress, useMcpTest } from './components/management/mcp-test-controls.tsx';
@@ -172,10 +173,10 @@ function McpServerCard({ server, saved, threads, secret, onSecret, onChange, onR
     <div className="field-stack">
       <h4 className="settings-subheading">{tr('服务连接')}</h4>
       <FieldRow label={tr("名称")} htmlFor={inputId('name')}><input id={inputId('name')} value={server.name} onChange={e => patch({ name: e.target.value })} {...validity('name')} />{fieldError('name')}</FieldRow>
-      <FieldRow label={tr("传输")} htmlFor={'mcp-' + server.id + '-transport'} description={tr("本地进程或远程端点")}>
-        <select id={'mcp-' + server.id + '-transport'} value={server.transport} onChange={e => patch({ transport: e.target.value as McpConfig['transport'] })}>
-          <option value="stdio">stdio</option><option value="http">Streamable HTTP</option>
-        </select>
+      <FieldRow label={tr("传输")} description={tr("本地进程或远程端点")}>
+        <Menu id={'mcp-' + server.id + '-transport'} label={tr("传输")} value={server.transport} matchTriggerWidth className="settings-select"
+          options={[{ value: 'stdio', label: 'stdio' }, { value: 'http', label: 'Streamable HTTP' }]}
+          onChange={value => patch({ transport: value as McpConfig['transport'] })} />
       </FieldRow>
       {server.transport === 'stdio' ? <>
         <FieldRow label={tr("命令")} htmlFor={inputId('command')} description={tr("在启动时执行的程序")}>

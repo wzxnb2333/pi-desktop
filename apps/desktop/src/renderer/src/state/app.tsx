@@ -29,7 +29,7 @@ import {
 import type { ResizeKey } from '../lib/layout.ts';
 import type { TimelineFocusRequest, TimelineFocusTarget } from '../hooks/use-timeline-focus.ts';
 import { applyUiPatch, type UiPatch } from '../../../shared/ui-patches.ts';
-import { panelSelectionPatch, panelUiState } from '../../../shared/panel-tabs.ts';
+import { fileSelectionPatch, panelSelectionPatch, panelUiState } from '../../../shared/panel-tabs.ts';
 import { appendTerminalOutput, mergeTerminalSnapshot } from '../../../shared/terminal-output.ts';
 import { receiveTerminalOutput } from '../TerminalPanel.tsx';
 import { fileBuffers } from '../lib/file-buffers.ts';
@@ -95,6 +95,8 @@ export interface AppState {
   setTerminalOpen(open: boolean): void;
   selectedPath: string;
   setSelectedPath(path: string): void;
+  /** Records the file and selects its own panel tab; optional location jumps to a line after load. */
+  openFileTab(path: string, location?: { line: number; column?: number }, directoryId?: string): void;
   patchThread(patch: Partial<UiThread>, threadId?: string): void;
   updateDraft(threadId: string, update: (draft: NonNullable<UiThread['draft']>) => NonNullable<UiThread['draft']>): void;
   updateContextReferences(threadId: string, update: (references: ContextReference[]) => ContextReference[]): void;
@@ -480,9 +482,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         commitUi({ reviewOpen: terminalOpen });
       },
       selectedPath: threadUi.selectedPath,
+      // Recording which file the reader inspects (Git diff, summary links) never opens a tab; only openFileTab does.
       setSelectedPath: (selectedPath: string) => {
-        const selectedUi = directoryThreadUi(baseUi().threads[activeId] ?? emptyThreadUi, directoryId, executionDirectoryId);
-        commitThreadUi({ selectedPath, openFiles: [...new Set([...(selectedUi.openFiles ?? []), selectedPath])].filter(Boolean) });
+        commitThreadUi({ selectedPath });
+      },
+      openFileTab: (path, location, targetDirectory) => {
+        const scope = targetDirectory ?? directoryId;
+        const selectedUi = directoryThreadUi(baseUi().threads[activeId] ?? emptyThreadUi, scope, executionDirectoryId);
+        commitThreadUi({
+          ...(targetDirectory ? { directoryId: scope } : {}),
+          ...fileSelectionPatch(selectedUi, path, location
+            ? { fileLocation: { id: crypto.randomUUID(), path, line: location.line, ...(location.column === undefined ? {} : { column: location.column }) } }
+            : {}),
+        });
       },
       composerRef,
       timelineRef,

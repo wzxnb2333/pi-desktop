@@ -69,7 +69,8 @@ test('voice settings preserve pending preferences in both locales, themes and th
   fixture.setMode('hold'); await fixture.invoke({ op: 'thread.send', id: 't', text: 'SETTINGS_MUST_NOT_STOP_TASK', attachments: [] });
   const initial = (await fixture.snapshot()).data.ui; await fixture.invoke({ op: 'ui.update', ui: { ...initial, view: 'settings' } });
   await fixture.page.locator('.settings-sidebar [data-category=voice]').click();
-  await fixture.page.locator('#voice-speed').fill('1.2'); await fixture.page.locator('#voice-speaker').selectOption('58');
+  await fixture.page.locator('#voice-speed').fill('1.2'); await fixture.page.locator('#voice-speaker').click();
+  await fixture.page.getByRole('menuitemradio', { name: /· 58$/ }).click();
   for (const locale of ['zh-CN', 'en-US'] as const) for (const theme of ['light', 'dark'] as const) for (const dimensions of [[1440, 940], [1000, 700], [1280, 800]]) {
     const snapshot = await fixture.snapshot(); await fixture.invoke({ op: 'ui.update', ui: { ...snapshot.data.ui, locale } }); await fixture.invoke({ op: 'settings.patch', patch: { theme } });
     await fixture.app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size[0], size[1]), dimensions);

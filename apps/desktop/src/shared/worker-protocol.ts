@@ -22,10 +22,19 @@ import {
   threadSchema,
   timelineSchema,
 } from './contracts.ts';
+import { manageMessagesToolSchema, manageProjectsToolSchema, manageSessionsToolSchema, manageUiToolSchema, readSessionsToolSchema, sendToSessionToolSchema } from './session-tools.ts';
+import { manageCommentsToolSchema, manageFilesToolSchema, manageGitToolSchema, managePreviewToolSchema, manageReviewToolSchema, manageTerminalToolSchema, manageWindowsToolSchema, manageWorktreesToolSchema } from './workbench-tools.ts';
+import { manageSettingsToolSchema } from './settings-tools.ts';
+import { browserDataToolSchema, mcpToolSchema, prToolSchema, resourceToolSchema } from './service-tools.ts';
 
 export const desktopToolSchema = z.union([browserToolSchema, goalToolSchema, automationToolSchema, subtaskToolSchema, askParentSchema, harnessToolSchema, harnessApprovalsToolSchema, harnessArtifactsToolSchema, harnessAttachmentAddToolSchema, harnessAttachmentListToolSchema, harnessAttachmentRemoveToolSchema, harnessContextCatalogToolSchema, harnessContextListToolSchema, harnessContextRemoveToolSchema, harnessMessageOptionsToolSchema, harnessMessageReadToolSchema, harnessQueueChangeToolSchema, harnessQueueClearToolSchema, harnessQueueToolSchema, harnessQuoteToolSchema, harnessContextToolSchema, harnessDraftHistoryRestoreToolSchema, harnessDraftHistoryToolSchema, harnessDraftPreflightToolSchema, harnessDraftReplaceToolSchema, harnessDraftSendToolSchema, harnessDraftStateToolSchema, harnessDraftToolSchema, desktopViewToolSchema, harnessFocusToolSchema, projectActionsListToolSchema, projectActionRunToolSchema, terminalToolSchema, operationToolSchema,
   z.object({ action: z.literal('sandbox.exec'), command: z.string().max(100000), timeout: z.number().positive().max(2147483).optional() }).strict(),
-  z.object({ action: z.literal('memory.context') }).strict()]);
+  z.object({ action: z.literal('memory.context') }).strict(),
+  // Waves 1–3 of the model-facing desktop surface. Permission-plane fields stay out of these schemas.
+  readSessionsToolSchema, manageSessionsToolSchema, sendToSessionToolSchema, manageProjectsToolSchema, manageUiToolSchema, manageMessagesToolSchema,
+  manageReviewToolSchema, manageGitToolSchema, manageWorktreesToolSchema, manageTerminalToolSchema,
+  manageSettingsToolSchema, manageFilesToolSchema, manageCommentsToolSchema,
+  browserDataToolSchema, prToolSchema, resourceToolSchema, mcpToolSchema, manageWindowsToolSchema, managePreviewToolSchema]);
 export type DesktopToolRequest = z.infer<typeof desktopToolSchema>;
 export const workerConfigSchema = z
   .object({

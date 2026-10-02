@@ -185,6 +185,17 @@ button.icon-button.btn-lg svg {
   white-space: nowrap;
   text-align: start;
 }
+/* An icon-only trigger centres its glyph in the control; the stretched, text-aligned label box would
+ * otherwise park an 18px icon on the left edge and read as an off-centre button. */
+.menu-trigger.menu-trigger-icon-only {
+  justify-content: center;
+}
+.menu-trigger.menu-trigger-icon-only .menu-trigger-label {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .menu-trigger svg {
   color: var(--muted);
 }

@@ -2,7 +2,6 @@ import { tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
 import { ListChecks, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
-import { statusText } from '../../lib/labels.ts';
 import { useApp } from '../../state/app.tsx';
 import { IconButton } from '../primitives/icon-button.tsx';
 import { Menu } from '../primitives/menu.tsx';
@@ -63,10 +62,6 @@ export function Toolbar({ setPreviewOpen }: ToolbarProps) {
       {isThread && thread && (
         <div className="toolbar-actions">
           <ProjectActions key={thread.id} />
-          {!isHome && <><span className={`status ${thread.status}`}>
-            <span />
-            {statusText[thread.status]}
-          </span></>}
           <IconButton label={tr('辅助栏')} active={reviewOpen} onClick={() => {
             if (!['changes', 'files', 'browser', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask'].includes(reviewTab)) setReviewTab('browser');
             setReviewOpen(!reviewOpen);
@@ -76,7 +71,7 @@ export function Toolbar({ setPreviewOpen }: ToolbarProps) {
           <IconButton label={tr("任务摘要")} active={summaryVisible} onClick={() => patchUi({ summaryOpen: !summaryVisible })}>
             <ListChecks size={18} />
           </IconButton>
-          <Menu kind="action" label={tr('工作台更多操作')} value="" align="end" className="task-actions-trigger" placeholder={<MoreHorizontal size={18} />} options={[
+          <Menu kind="action" label={tr('工作台更多操作')} value="" align="end" iconOnly className="task-actions-trigger" placeholder={<MoreHorizontal size={18} />} options={[
             { value: 'window', label: tr('在独立窗口打开') },
             { value: 'editor', label: tr('打开编辑器'), disabled: !project },
             { value: 'directories', label: tr('项目目录'), disabled: !project },

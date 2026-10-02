@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProvider, useApp } from '../../../src/renderer/src/state/app.tsx';
 import { Menu } from '../../../src/renderer/src/components/primitives/menu.tsx';
 import { Tooltip } from '../../../src/renderer/src/components/primitives/tooltip.tsx';
 import { ConfirmDialog } from '../../../src/renderer/src/components/primitives/dialog.tsx';
 import { Message } from '../../../src/renderer/src/components/timeline/message.tsx';
+import { ErrorBanner } from '../../../src/renderer/src/components/shell/status-bar.tsx';
 import { dataSchema, defaultData, type DesktopBridge } from '../../../src/shared/contracts.ts';
 import '../../../src/renderer/src/styles/index.css';
 
@@ -20,6 +21,17 @@ const bridge: DesktopBridge = {
 };
 window.desktop = bridge;
 
+function Banner() {
+  const { setError } = useApp();
+  const message = params.get('message') || '预览已取消';
+  useEffect(() => { setError(message); }, [setError, message]);
+  // `.main` is the pane the toast centers over; give it the viewport height the real shell gives it.
+  return <main className="main" style={{ height: '100dvh' }}>
+    <ErrorBanner />
+    <button type="button" onClick={() => setError(message)}>再次触发</button>
+  </main>;
+}
+
 function Harness() {
   const { ready } = useApp();
   const [value, setValue] = useState('b');
@@ -28,6 +40,7 @@ function Harness() {
   const scene = params.get('scene');
   if (!ready) return null;
   return <main data-surface-ready="true">
+    {scene === 'banner' && <Banner />}
     {scene === 'menu' && <div className="surface-anchor">
       <Menu label="菜单" value={value} matchTriggerWidth options={[
         { value: 'a', label: '选项 A' }, { value: 'b', label: '选项 B' }, { value: 'c', label: '不可用选项', disabled: true },

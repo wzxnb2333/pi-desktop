@@ -42,10 +42,10 @@ test('opening files preserves drafts, other file tabs, reading position and inde
   assert.deepEqual(f.ui.threads.t.openFiles, ['README.md', 'entry.ts']);
   assert.deepEqual(f.ui.threads.t.draft, before.draft); assert.deepEqual(f.ui.threads.t.scroll, before.scroll);
   await openDesktopView(f.runtime, { kind: 'file', path: 'entry.ts' }, signal());
-  assert.equal(f.ui.threads.t.panelTabs?.filter(tab => tab.kind === 'files').length, 1);
+  assert.equal(f.ui.threads.t.panelTabs?.filter(tab => tab.kind === 'file').length, 2);
   assert.equal(f.ui.threads.t.openFiles?.length, 2); assert.equal(f.ui.threads.t.fileLocation, undefined);
   await openDesktopView(f.runtime, { kind: 'summary' }, signal());
-  assert.equal(f.ui.summaryOpen, true); assert.equal(f.ui.reviewOpen, true); assert.equal(f.ui.threads.t.reviewTab, 'files');
+  assert.equal(f.ui.summaryOpen, true); assert.equal(f.ui.reviewOpen, true); assert.equal(f.ui.threads.t.reviewTab, 'file');
   await openDesktopView(f.runtime, { kind: 'changes' }, signal());
   assert.equal(f.ui.threads.t.activePanelTab, 'custom-changes');
 });

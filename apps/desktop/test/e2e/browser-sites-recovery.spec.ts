@@ -22,7 +22,8 @@ test.afterEach(async () => { await page?.close(); expect(errors).toEqual([]); })
 test('website saves deduplicate, retain failed drafts and retry the requested rule', async () => {
   await page.evaluate(() => { window.sitesHarness.hold = true; });
   await page.getByLabel('网站来源', { exact: true }).fill('https://new.example');
-  await page.getByLabel('网站规则', { exact: true }).selectOption('deny');
+  await page.getByLabel('网站规则', { exact: true }).click();
+  await page.locator('.menu-item[data-value="deny"]').click();
   const add = page.getByRole('button', { name: '添加网站规则', exact: true });
   await add.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   expect(await page.evaluate(() => window.sitesHarness.calls.length)).toBe(1);
@@ -32,9 +33,9 @@ test('website saves deduplicate, retain failed drafts and retry the requested ru
   await page.evaluate(() => window.sitesHarness.release('SAVE_FAILED'));
   await expect(page.getByRole('alert')).toHaveText('SAVE_FAILED'); await expect(add).toBeEnabled();
   await expect(page.getByLabel('网站来源', { exact: true })).toHaveValue('https://new.example');
-  await expect(page.getByLabel('网站规则', { exact: true })).toHaveValue('deny');
+  await expect(page.getByLabel('网站规则', { exact: true })).toContainText('始终拒绝此网站');
   await page.getByRole('button', { name: '重试保存网站规则', exact: true }).click(); await page.evaluate(() => window.sitesHarness.release());
-  await expect(page.getByLabel('网站规则 https://new.example', { exact: true })).toHaveValue('deny');
+  await expect(page.getByLabel('网站规则 https://new.example', { exact: true })).toContainText('始终拒绝此网站');
   await expect(page.getByRole('alert')).toHaveCount(0); await expect(page.getByRole('status')).toContainText('https://new.example');
 });
 
@@ -45,14 +46,14 @@ test('website origin validation cannot silently turn a path or credentials into 
   }
   await page.getByLabel('网站来源', { exact: true }).fill('  https://EXAMPLE.org:443/  ');
   await page.getByLabel('网站来源', { exact: true }).press('Enter');
-  await expect(page.getByLabel('网站规则 https://example.org', { exact: true })).toHaveValue('allow');
+  await expect(page.getByLabel('网站规则 https://example.org', { exact: true })).toContainText('始终允许此网站');
   expect(await page.evaluate(() => window.sitesHarness.calls)).toEqual([{ op: 'browser.site', origin: 'https://example.org', policy: 'allow' }]);
 });
 
 test('the current website preserves its existing deny rule when opening the settings form', async () => {
   await page.goto(url + '?url=' + encodeURIComponent('https://existing.example/private'));
   await expect(page.getByLabel('网站来源', { exact: true })).toHaveValue('https://existing.example');
-  await expect(page.getByLabel('网站规则', { exact: true })).toHaveValue('deny');
+  await expect(page.getByLabel('网站规则', { exact: true })).toContainText('始终拒绝此网站');
   await expect(page.getByLabel('网站来源', { exact: true })).toBeFocused();
 });
 
@@ -60,7 +61,7 @@ test('website removal failure keeps the committed rule and retries that origin',
   await page.evaluate(() => { window.sitesHarness.hold = true; });
   await page.getByRole('button', { name: '移除网站规则 https://existing.example', exact: true }).click();
   await page.evaluate(() => window.sitesHarness.release('REMOVE_FAILED'));
-  await expect(page.getByLabel('网站规则 https://existing.example', { exact: true })).toHaveValue('deny');
+  await expect(page.getByLabel('网站规则 https://existing.example', { exact: true })).toContainText('始终拒绝此网站');
   await page.getByLabel('网站来源', { exact: true }).fill('https://unrelated.example');
   await page.getByRole('button', { name: '重试保存网站规则', exact: true }).click(); await page.evaluate(() => window.sitesHarness.release());
   await expect(page.getByLabel('网站规则 https://existing.example', { exact: true })).toHaveCount(0);

@@ -44,8 +44,10 @@ test('file tree supports one tab stop, complete keyboard navigation, typeahead a
   await pages.press('ArrowRight'); await expect(file).toBeFocused();
   await file.press('Enter');
   await expect(page.getByLabel('文件内容 src/pages/中文.txt', { exact: true })).toHaveValue('第一行\n查找内容\n末行');
+  await page.getByRole('tab', { name: '文件', exact: true }).click();
   await expect(file).toHaveAttribute('aria-selected', 'true');
   await expect(file).toHaveAttribute('aria-level', '3');
+  await file.focus();
   await file.press('ArrowLeft'); await expect(pages).toBeFocused();
   await pages.press('ArrowLeft'); await expect(file).toHaveCount(0);
   await pages.press('ArrowLeft'); await expect(src).toBeFocused();
@@ -66,13 +68,16 @@ test('directory expansion and breadcrumb scope survive refresh, task changes and
   await page.getByRole('treeitem', { name: 'pages', exact: true }).click();
   await page.getByRole('treeitem', { name: '中文.txt', exact: true }).click();
   await expect(page.getByLabel('文件内容 src/pages/中文.txt', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: '文件', exact: true }).click();
   await page.getByLabel('刷新文件列表').click();
   await expect(page.getByRole('treeitem', { name: '中文.txt', exact: true })).toBeVisible();
   await page.getByRole('treeitem', { name: '中文.txt', exact: true }).focus();
   await page.getByLabel('刷新文件列表').evaluate(node => (node as HTMLButtonElement).click());
   await expect(page.getByRole('treeitem', { name: '中文.txt', exact: true })).toBeFocused();
   await expect.poll(async () => (await fixture.snapshot()).data.ui.threads.t.expandedDirectories).toEqual(['src', 'src/pages']);
+  await page.locator('.workspace-tabs').getByRole('tab', { name: '中文.txt', exact: true }).click();
   await page.getByRole('button', { name: 'src ›', exact: true }).click();
+  await page.getByRole('tab', { name: '文件', exact: true }).click();
   await expect(page.getByRole('navigation', { name: '文件目录' }).getByRole('button', { name: 'src', exact: true })).toHaveAttribute('aria-current', 'location');
   await expect(page.getByRole('treeitem', { name: 'pages', exact: true })).toHaveAttribute('aria-level', '1');
   await page.getByRole('treeitem', { name: 'entry.txt', exact: true }).focus();
@@ -133,6 +138,7 @@ test('Unicode directory names with spaces retain valid accessibility references 
   })).toBe(true);
   await page.getByRole('treeitem', { name: 'note.txt', exact: true }).click();
   await page.getByRole('button', { name: '含 空格 ›', exact: true }).click();
+  await page.getByRole('tab', { name: 'note.txt', exact: true }).hover();
   await page.getByRole('button', { name: '关闭文件 含 空格/note.txt', exact: true }).click();
   await rm(join(fixture.project, '含 空格', 'note.txt'));
   await page.getByLabel('刷新文件列表').click();
@@ -165,6 +171,7 @@ test('file search clears obsolete results, defers Chinese composition and opens 
   const editor = page.getByLabel('文件内容 src/pages/中文.txt', { exact: true });
   await expect(editor).toBeFocused();
   expect(await editor.evaluate(node => (node as HTMLTextAreaElement).selectionStart)).toBe(4);
+  await page.getByRole('tab', { name: '文件', exact: true }).click();
   await input.fill('   ');
   await expect(results).toHaveCount(0);
   await expect(page.getByRole('tree', { name: '项目文件' })).toBeVisible();
@@ -238,6 +245,7 @@ test('search paginates beyond two hundred matches, retains previous pages and op
   const editor = page.getByLabel('文件内容 many.txt', { exact: true });
   await expect(editor).toBeFocused();
   expect(await editor.evaluate(node => (node as HTMLTextAreaElement).selectionStart)).toBe(lines.slice(0, 200).join('\n').length + 1);
+  await page.getByRole('tab', { name: '文件', exact: true }).click();
   await pagination.getByRole('button', { name: '上一页', exact: true }).click();
   await expect(results.locator('.file-search-result').first()).toContainText('many.txt:1');
   await expect(results.locator('.file-search-result')).toHaveCount(200);

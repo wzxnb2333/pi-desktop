@@ -14,6 +14,7 @@ import {
 } from '../../shared/contracts';
 import { Button } from './components/primitives/button.tsx';
 import { FieldRow } from './components/primitives/field-row.tsx';
+import { Menu } from './components/primitives/menu.tsx';
 import { Tabs } from './components/primitives/tabs.tsx';
 import { UnsavedNavigation, type RegisterViewGuard } from './components/primitives/unsaved-navigation.tsx';
 import { ModelSettings } from './ModelSettings.tsx';
@@ -326,14 +327,14 @@ export function Settings({
           <fieldset className="settings-fields" disabled={saving} aria-label={tr("设置内容")} aria-busy={saving}>
           <MemorySettings data={data} preferences={draft.memory} onChange={memory => patch({ memory })} invoke={invoke} active={category === 'memories'} onDirty={setMemoryDirty} onBusy={setMemoryBusy} />
           <VoiceSettings preferences={draft.voice} savedDirectory={data.settings.voice.modelDirectory} onChange={voice => patch({ voice })} invoke={invoke} active={category === 'voice'} />
-          {category === 'models' && <ModelSettings providers={draft.modelProviders} models={draft.models} defaultId={draft.modelId} selected={selected} keys={keys}
+          {category === 'models' && <ModelSettings providers={draft.modelProviders} models={draft.models} defaultId={draft.modelId} defaultThinking={draft.thinking} selected={selected} keys={keys}
             error={modelIssue?.id === selected ? modelIssue.text : undefined}
             catalog={catalog} catalogError={catalogError} onSelect={setSelected} onAddProvider={addProvider}
             onChange={patchProvider} onRetry={() => setCatalogAttempt(value => value + 1)}
             onKey={(id, value) => { setKeys(previous => ({ ...previous, [id]: value })); setFeedback(null); }}
             onAddModel={model => patch({ models: [...draft.models, model], modelId: draft.modelId || model.id })}
             onModelChange={patchModel} onModelDelete={removeModel}
-            onDefault={id => patch({ modelId: id })} onDeleteProvider={removeProvider} />}
+            onDefault={id => patch({ modelId: id })} onDefaultThinking={thinking => patch({ thinking })} onDeleteProvider={removeProvider} />}
           {category === 'general' && <GeneralSettings draft={draft} locale={data.ui.locale} onChange={patch} onLocaleChange={onLocaleChange} />}
           {category === 'appearance' && <AppearanceSettings draft={draft} onChange={patch} invoke={invoke} onFeedback={(text, error) => setFeedback({ text, error })} />}
           {category === 'shortcuts' && (
@@ -376,20 +377,16 @@ export function Settings({
               <div className="field-stack">
                 <FieldRow
                   label={tr("默认审批")}
-                  htmlFor="settings-policy"
                   description={tr(draft.policy === 'auto' ? '由独立模型请求审查操作；危险或不确定时交给你确认。' : draft.policy === 'full' ? '允许任务在完全访问模式下执行操作。' : '逐次确认需要授权的操作。')}
                 >
-                  <select
-                    id="settings-policy"
-                    aria-label={tr("默认审批")}
-                    value={draft.policy}
-                    onChange={(e) => patch({ policy: e.target.value as SettingsType['policy'] })}
-                  >
-                    {draft.policy === 'deny' && <option value="deny" hidden>{tr('只读模式')}</option>}
-                    <option value="ask">{tr('请求批准')}</option>
-                    <option value="auto">{tr('替我批准')}</option>
-                    <option value="full">{tr('完全访问')}</option>
-                  </select>
+                  <Menu id="settings-policy" label={tr("默认审批")} value={draft.policy} matchTriggerWidth className="settings-select"
+                    options={[
+                      ...(draft.policy === 'deny' ? [{ value: 'deny', label: tr('只读模式') }] : []),
+                      { value: 'ask', label: tr('请求批准') },
+                      { value: 'auto', label: tr('替我批准') },
+                      { value: 'full', label: tr('完全访问') },
+                    ]}
+                    onChange={value => patch({ policy: value as SettingsType['policy'] })} />
                 </FieldRow>
               </div>
               <details className="settings-explanation"><summary>{tr('沙箱与代审批说明')}</summary>

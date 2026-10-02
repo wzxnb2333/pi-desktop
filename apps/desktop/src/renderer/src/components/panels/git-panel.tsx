@@ -13,6 +13,7 @@ import { diffHunks } from '../../../../shared/git-patches.ts';
 import { PullRequestPanel } from './pull-requests.tsx';
 import { WorktreeControls } from './worktree-controls.tsx';
 import { GitProcessRecovery } from './git-process-recovery.tsx';
+import { Menu } from '../primitives/menu.tsx';
 export { diffHunks } from '../../../../shared/git-patches.ts';
 
 type Action = Extract<DesktopRequest, { op: 'git.action' }>['action'];
@@ -53,7 +54,7 @@ function ReadState({ name, pending, error, retry }: { name: string; pending: boo
 
 export function GitPanel({ status, refresh }: { status: GitStatus; refresh(): Promise<void> }) {
   useLocale();
-  const { thread, activeId, directoryId, fileScopeId, act, selectedPath, setSelectedPath, setReviewTab, setText, text, diffSplit, setDiffSplit, setTerminalOpen, selectThread } = useApp();
+  const { thread, activeId, directoryId, fileScopeId, act, selectedPath, setSelectedPath, openFileTab, setReviewTab, setText, text, diffSplit, setDiffSplit, setTerminalOpen, selectThread } = useApp();
   const { mode, baseRef, message, commitPaths, target, remote, remoteRef, strategy, job, feedback, conflictPath, commit, hunk, filter, filesOpen, controlsOpen, comment, recoveryOpen, revision } = useSyncExternalStore(subscribe, () => controlsFor(fileScopeId));
   const field = <K extends keyof GitControls>(key: K) => (value: GitControls[K] | ((previous: GitControls[K]) => GitControls[K])) => {
     updateControls(fileScopeId, { [key]: typeof value === 'function' ? value(controlsFor(fileScopeId)[key]) : value });
@@ -164,8 +165,16 @@ export function GitPanel({ status, refresh }: { status: GitStatus; refresh(): Pr
     {!status.available ? <div className="panel-empty"><p>{status.error ? localizeAppError(status.error) : tr("此项目尚未初始化 Git")}</p><button onClick={() => void refreshAll()}>{tr("重试 Git 状态")}</button>{activity}</div> : <section className="git-workbench" aria-label={tr("Git 工作台")}>
     <header className="git-review-header">
       <div className="git-review-header-row branch-row"><GitBranch size={16} aria-hidden="true" /><strong title={status.branch}>{status.branch}</strong><span className="git-upstream" title={inspection?.upstream}>{inspection ? inspection.upstream || tr("未设置上游") : ''}</span><button className="git-controls-toggle" aria-expanded={controlsOpen} aria-controls="git-controls git-more-controls" onClick={() => setControlsOpen(!controlsOpen)}>{tr("Git 操作")}</button></div>
-      <div className="git-review-header-row"><select aria-label={tr("差异范围")} value={mode} onChange={event => setMode(event.target.value as typeof mode)}><option value="all">{tr("全部改动")}</option><option value="unstaged">{tr("未暂存")}</option><option value="staged">{tr("已暂存")}</option><option value="branch">{tr('分支差异')}</option><option value="turn">{tr('最近一轮')}</option></select><span className="git-file-count">{rangeFiles.length}  {tr("个文件")}</span><div className="git-review-view-actions"><button aria-label={diffSplit ? tr("统一视图") : tr("并排视图")} title={diffSplit ? tr("统一视图") : tr("并排视图")} onClick={() => setDiffSplit(!diffSplit)}><Columns2 size={16} aria-hidden="true" /></button><button aria-label={filesOpen ? tr("隐藏文件列表") : tr("显示文件列表")} title={filesOpen ? tr("隐藏文件列表") : tr("显示文件列表")} aria-expanded={filesOpen} aria-controls="git-review-files" onClick={() => setFilesOpen(!filesOpen)}><Files size={16} aria-hidden="true" /></button></div></div>
-      {mode === 'branch' && <label className="git-field">{tr('基准分支')}<select value={baseRef} onChange={event => setBaseRef(event.target.value)}><option value="">{tr('选择基准分支')}</option>{inspection?.branches.map(branch => <option key={branch} value={branch}>{branch}</option>)}{inspection?.remoteBranches.map(branch => <option key={branch.ref} value={branch.ref}>{branch.ref}</option>)}</select></label>}
+      <div className="git-review-header-row"><Menu label={tr("差异范围")} value={mode} size="sm" align="start" className="git-range-menu"
+        options={[{ value: 'all', label: tr('全部改动') }, { value: 'unstaged', label: tr('未暂存') }, { value: 'staged', label: tr('已暂存') }, { value: 'branch', label: tr('分支差异') }, { value: 'turn', label: tr('最近一轮') }]}
+        onChange={value => setMode(value as typeof mode)} /><span className="git-file-count">{rangeFiles.length}  {tr("个文件")}</span><div className="git-review-view-actions"><button aria-label={diffSplit ? tr("统一视图") : tr("并排视图")} title={diffSplit ? tr("统一视图") : tr("并排视图")} onClick={() => setDiffSplit(!diffSplit)}><Columns2 size={16} aria-hidden="true" /></button><button aria-label={filesOpen ? tr("隐藏文件列表") : tr("显示文件列表")} title={filesOpen ? tr("隐藏文件列表") : tr("显示文件列表")} aria-expanded={filesOpen} aria-controls="git-review-files" onClick={() => setFilesOpen(!filesOpen)}><Files size={16} aria-hidden="true" /></button></div></div>
+      {mode === 'branch' && <label className="git-field">{tr('基准分支')}<Menu label={tr('基准分支')} value={baseRef} matchTriggerWidth
+        options={[
+          { value: '', label: tr('选择基准分支') },
+          ...(inspection?.branches ?? []).map(branch => ({ value: branch, label: branch })),
+          ...(inspection?.remoteBranches ?? []).map(branch => ({ value: branch.ref, label: branch.ref })),
+        ]}
+        onChange={setBaseRef} /></label>}
       {mode === 'turn' && <p className="hint">{tr('本次运行开始至结束的工作区快照，包含追加消息及可能的外部修改，不代表 Pi 独占改动。')}</p>}
     </header>
     {comparison && <ReadState name={tr('范围差异')} pending={rangeQuery.pending} error={rangeQuery.error} retry={rangeQuery.reload} />}
@@ -176,14 +185,25 @@ export function GitPanel({ status, refresh }: { status: GitStatus; refresh(): Pr
     {controlsOpen && <PullRequestPanel key={activeId + '/' + directoryId} />}
     {controlsOpen && <WorktreeControls key={'worktree:' + activeId + '/' + directoryId} inspection={inspection ?? undefined} />}
     <details className="workbench-section"><summary>{tr("分支与远端")}</summary>
-      <label className="git-field">{tr("本地分支名称或合并目标")}<input aria-label={tr("分支名称")} value={target} onChange={event => setTarget(event.target.value)} placeholder={tr("输入分支名称")} list="git-branches" /></label>
-      <datalist id="git-branches">{inspection?.branches.map(branch => <option key={branch} value={branch} />)}{inspection?.remoteBranches?.map(branch => <option key={'remote:' + branch.ref} value={branch.ref} />)}</datalist>
+      <label className="git-field">{tr("本地分支名称或合并目标")}<span className="git-input-with-menu"><input aria-label={tr("分支名称")} value={target} onChange={event => setTarget(event.target.value)} placeholder={tr("输入分支名称")} /><Menu label={tr('分支建议')} placeholder={tr('选择')} kind="action" size="sm" value=""
+        options={[
+          ...(inspection?.branches ?? []).map(branch => ({ value: branch, label: branch })),
+          ...(inspection?.remoteBranches ?? []).map(branch => ({ value: branch.ref, label: branch.ref })),
+        ]}
+        onChange={setTarget} /></span></label>
+      
       <div className="workbench-actions">{([['branchCreate',tr("创建并切换")],['branchSwitch',tr("切换")],['branchDelete',tr("删除已合并分支")],['merge',tr("合并")],['rebase',tr("变基")]] as const).map(([action, label]) => <button key={action} disabled={directoryBusy || !!inspection?.operation || !target.trim()} onClick={() => void run(action)}>{label}</button>)}</div>
-      <label className="git-field">{tr("远端")}<select aria-label={tr("Git 远端")} value={remote} onChange={event => setRemote(event.target.value)}>{!inspection?.remotes.length && <option value="">{tr("没有已配置的远端")}</option>}{inspection?.remotes.map(name => <option key={name}>{name}</option>)}</select></label>
-      <label className="git-field">{tr("远端分支")}<select aria-label={tr("远端分支")} value={remoteRef} onChange={event => setRemoteRef(event.target.value)}>{!remoteBranches.length && <option value="">{tr("尚无远端分支，请先获取")}</option>}{remoteBranches.map(branch => <option key={branch.ref} value={branch.ref}>{branch.ref}</option>)}</select></label>
+      <label className="git-field">{tr("远端")}<Menu label={tr('Git 远端')} value={remote} matchTriggerWidth
+        options={inspection?.remotes.length ? inspection.remotes.map(name => ({ value: name, label: name })) : [{ value: '', label: tr('没有已配置的远端') }]}
+        onChange={setRemote} /></label>
+      <label className="git-field">{tr("远端分支")}<Menu label={tr('远端分支')} value={remoteRef} matchTriggerWidth
+        options={remoteBranches.length ? remoteBranches.map(branch => ({ value: branch.ref, label: branch.ref })) : [{ value: '', label: tr('尚无远端分支，请先获取') }]}
+        onChange={setRemoteRef} /></label>
       <div className="workbench-actions"><button disabled={directoryBusy || !!inspection?.operation || !selectedRemote || !trackingName} onClick={() => void run('branchTrack', [], trackingName, undefined, remoteRef)}>{tr("从远端创建跟踪分支")}</button><button disabled={directoryBusy || !selectedRemote} onClick={() => void run('upstream', [], remoteRef)}>{tr("设置上游")}</button></div>
       {selectedRemote && <p className="hint">{tr("创建并切换至")} {trackingName}{tr("，跟踪")} {remoteRef}{tr("；设置上游仅修改当前分支的跟踪关系。")}</p>}
-      <label className="git-field">{tr("拉取策略")}<select aria-label={tr("拉取策略")} value={strategy} onChange={event => setStrategy(event.target.value as typeof strategy)}><option value="ff-only">{tr("仅快进")}</option><option value="merge">{tr("合并")}</option><option value="rebase">{tr("变基")}</option></select></label>
+      <label className="git-field">{tr("拉取策略")}<Menu label={tr('拉取策略')} value={strategy} matchTriggerWidth
+        options={[{ value: 'ff-only', label: tr('仅快进') }, { value: 'merge', label: tr('合并') }, { value: 'rebase', label: tr('变基') }]}
+        onChange={value => setStrategy(value as typeof strategy)} /></label>
       <div className="workbench-actions">{([['fetch',tr("获取")],['pull',tr("拉取")],['push',tr("推送")]] as const).map(([action,label]) => <button key={action} disabled={(action === 'fetch' ? busy : directoryBusy) || !remote || (action === 'pull' && !!inspection?.operation)} onClick={() => void run(action)}>{label}</button>)}<button onClick={() => setTerminalOpen(true)}>{tr("打开终端处理认证")}</button></div>
     </details>
     <div className="workbench-section"><textarea aria-label={tr("提交信息")} placeholder={tr("提交信息")} value={message} onChange={event => setMessage(event.target.value)} />
@@ -194,11 +214,11 @@ export function GitPanel({ status, refresh }: { status: GitStatus; refresh(): Pr
     {hasConflicts && <p className="browser-error" role="status">{tr("请先解决冲突并标记已解决，再继续或提交。")}</p>}
     {!rangeFiles.length && !rangeQuery.pending && !rangeQuery.error && <div className="git-review-empty"><FileDiff size={32} aria-hidden="true" /><p>{comparison ? tr('当前范围没有文本差异。') : tr("工作区是干净的。")}</p></div>}
     {!!rangeFiles.length && !selectedPath && <div className="git-review-empty"><FileDiff size={32} aria-hidden="true" /><p>{tr("选择要查看的文件")}</p></div>}
-    {selectedPath && <><div className="file-toolbar"><span title={selectedPath}><bdi>{selectedPath}</bdi></span><button aria-label={tr("编辑文件")} title={tr("编辑文件")} onClick={() => setReviewTab('files')}><FilePenLine size={14} aria-hidden="true" /></button><button aria-label={tr("恢复")} title={tr("恢复")} disabled={directoryBusy || comparison} onClick={() => void perform({ op: 'git.revert', threadId: activeId, path: selectedPath })}><RotateCcw size={14} aria-hidden="true" /></button></div>
+    {selectedPath && <><div className="file-toolbar"><span title={selectedPath}><bdi>{selectedPath}</bdi></span><button aria-label={tr("编辑文件")} title={tr("编辑文件")} onClick={() => openFileTab(selectedPath)}><FilePenLine size={14} aria-hidden="true" /></button><button aria-label={tr("恢复")} title={tr("恢复")} disabled={directoryBusy || comparison} onClick={() => void perform({ op: 'git.revert', threadId: activeId, path: selectedPath })}><RotateCcw size={14} aria-hidden="true" /></button></div>
       <div className="workbench-actions"><button disabled={!diff.trim()} onClick={() => setText(text + tr("\n请检查以下差异：\n") + (hunks[currentHunk] ?? diff))}>{tr("加入任务输入")}</button></div>
       <ReadState name={tr("文件差异")} pending={diffQuery.pending} error={diffQuery.error} retry={diffQuery.reload} />
       {!!hunks.length && <div className="workbench-actions"><button disabled={currentHunk === 0} onClick={() => setHunk(currentHunk - 1)}>{tr("上一块")}</button><span>{currentHunk + 1}/{hunks.length}</span><button disabled={currentHunk >= hunks.length - 1} onClick={() => setHunk(currentHunk + 1)}>{tr("下一块")}</button><button disabled={busy || mode === 'all' || comparison || hasConflicts} onClick={() => void run(mode === 'staged' ? 'unstageHunk' : 'stageHunk', [], '', hunks[currentHunk])}>{mode === 'staged' ? tr("取消暂存此块") : tr("暂存此块")}</button></div>}
-      {conflictSelected && <section className="workbench-section git-conflict" aria-label={tr("冲突版本 ") + conflictPath}><strong>{conflictPath}</strong><ReadState name={tr("冲突版本")} pending={conflictQuery.pending} error={conflictQuery.error} retry={conflictQuery.reload} />{!conflictQuery.pending && conflictQuery.data && <>{(['base', 'ours', 'theirs'] as const).map((key, index) => <details key={key}><summary>{[tr("基准"), tr("当前版本"), tr("传入版本")][index]}</summary><pre>{conflictQuery.data![key] || tr("此版本不存在或为空")}</pre></details>)}<button onClick={() => setReviewTab('files')}>{tr("编辑解决结果")}</button><button disabled={directoryBusy} onClick={() => void run('resolved', [conflictPath])}>{tr("标记已解决")}</button></>}</section>}
+      {conflictSelected && <section className="workbench-section git-conflict" aria-label={tr("冲突版本 ") + conflictPath}><strong>{conflictPath}</strong><ReadState name={tr("冲突版本")} pending={conflictQuery.pending} error={conflictQuery.error} retry={conflictQuery.reload} />{!conflictQuery.pending && conflictQuery.data && <>{(['base', 'ours', 'theirs'] as const).map((key, index) => <details key={key}><summary>{[tr("基准"), tr("当前版本"), tr("传入版本")][index]}</summary><pre>{conflictQuery.data![key] || tr("此版本不存在或为空")}</pre></details>)}<button onClick={() => openFileTab(selectedPath)}>{tr("编辑解决结果")}</button><button disabled={directoryBusy} onClick={() => void run('resolved', [conflictPath])}>{tr("标记已解决")}</button></>}</section>}
       {!!hunks.length && !comparison && mode !== 'staged' && <button disabled={directoryBusy || hasConflicts} title={tr('撤销前校验文件版本并保存恢复副本，不改变暂存区。')} onClick={() => {
         const request: DesktopRequest = { op: 'git.hunkRevert', threadId: activeId, path: selectedPath, patch: hunks[currentHunk], version: '', mode: mode === 'unstaged' ? 'unstaged' : 'all' };
         void perform(request, () => { setControlsOpen(true); setRecoveryOpen(true); }, async () => {

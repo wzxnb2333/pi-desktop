@@ -453,7 +453,7 @@ test('a model opens a known HTML artifact in the isolated files preview', async 
   const item = (await fixture.snapshot()).data.threads.find(thread => thread.id === 't')!.items.findLast(item => item.toolName === 'open_in_pi')!;
   expect(item.state, item.text).toBe('done'); expect(JSON.parse(item.text)).toMatchObject({ status: 'opened', kind: 'artifact', path: 'preview.html' });
   const view = (await fixture.snapshot()).data.ui;
-  expect(view.reviewOpen).toBe(true); expect(view.threads.t.reviewTab).toBe('files'); expect(view.threads.t.selectedPath).toBe('preview.html');
+  expect(view.reviewOpen).toBe(true); expect(view.threads.t.reviewTab).toBe('file'); expect(view.threads.t.selectedPath).toBe('preview.html');
   await expect(fixture.page.locator('.artifact-preview')).toBeVisible();
 });
 

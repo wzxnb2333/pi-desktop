@@ -2,18 +2,21 @@ import type { ToolDefinition } from '@earendil-works/pi-coding-agent';
 import { Type } from 'typebox';
 import { desktopViewTargetSchema, harnessApprovalsToolSchema, harnessArtifactsToolSchema, harnessAttachmentAddToolSchema, harnessAttachmentListToolSchema, harnessAttachmentRemoveToolSchema, harnessContextCatalogToolSchema, harnessContextListToolSchema, harnessContextRemoveToolSchema, harnessContextToolSchema, harnessDraftHistoryRestoreToolSchema, harnessDraftHistoryToolSchema, harnessDraftPreflightToolSchema, harnessDraftReplaceToolSchema, harnessDraftSendToolSchema, harnessDraftStateToolSchema, harnessDraftToolSchema, harnessFocusTargetSchema, harnessFocusToolSchema, harnessMessageOptionsToolSchema, harnessMessageReadToolSchema, harnessQueueChangeToolSchema, harnessQueueClearToolSchema, harnessQueueToolSchema, harnessQuoteToolSchema, harnessToolSchema, projectActionRunToolSchema, projectActionsListToolSchema } from '../shared/harness-tools.ts';
 import { modelResultContent } from '../shared/tool-results.ts';
+import { desktopToolCatalogFor, type DesktopToolFamily } from '../shared/desktop-tools.ts';
 import { terminalReadParametersSchema, terminalToolSchema } from '../shared/terminal-tools.ts';
 import { operationToolSchema } from '../shared/operation-tools.ts';
 import type { DesktopToolRunner } from './browser-tool.ts';
 
-export function harnessTool(run: DesktopToolRunner, activeTools: () => string[]): ToolDefinition {
+export function harnessTool(run: DesktopToolRunner, activeTools: () => string[], desktopFamilies: () => DesktopToolFamily[] = () => []): ToolDefinition {
   return { name: 'get_harness', label: '查看桌面运行环境',
-    description: 'Inspect your current Pi Desktop session, measured context usage, plan and goal status, queue count, child questions, scoped workspace directories and recent operation progress. Returns the tools actually available in this session. Read-only; no secrets, unsent drafts or other chats. This is not a raw desktop IPC or permission-changing interface.',
-    parameters: Type.Object({ section: Type.Optional(Type.Union(['all', 'session', 'workspace', 'operations', 'view'].map(value => Type.Literal(value)))) }),
+    description: 'Inspect your current Pi Desktop session, measured context usage, plan and goal status, queue count, child questions, scoped workspace directories and recent operation progress. Returns the tools actually available in this session. section=desktop lists the desktop surface you can call (tool, action, read/write, whether the ask policy gates it). Read-only; no secrets, unsent drafts or permission-changing interface.',
+    parameters: Type.Object({ section: Type.Optional(Type.Union(['all', 'session', 'workspace', 'operations', 'view', 'desktop'].map(value => Type.Literal(value)))) }),
     execute: async (_id, args, signal) => {
       const request = harnessToolSchema.omit({ action: true }).parse(args);
       const result = await run({ ...request, action: 'harness.inspect' }, signal ?? AbortSignal.timeout(15000));
-      return { content: [...modelResultContent(result.result), { type: 'text' as const, text: JSON.stringify({ availableTools: activeTools() }) }], details: { toolResult: result } };
+      const extra: Record<string, unknown> = { availableTools: activeTools() };
+      if (request.section === 'desktop') extra.desktop = desktopToolCatalogFor(desktopFamilies());
+      return { content: [...modelResultContent(result.result), { type: 'text' as const, text: JSON.stringify(extra) }], details: { toolResult: result } };
     },
   };
 }

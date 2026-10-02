@@ -99,12 +99,14 @@ button.composer-model-back { display: inline-flex; align-items: center; justify-
 button.composer-model-back:hover { background: var(--hover); color: var(--text); }
 .menu-heading { padding: 4px 8px 6px; color: var(--muted); font-size: var(--font-xs); }
 .composer-capability-panel { padding: 8px 6px 4px; }
-.composer-capability-heading { display: flex; align-items: center; color: var(--muted); }
-.composer-capability-heading strong { flex: 1; text-align: center; padding-right: 16px; color: var(--accent); font-size: var(--font-sm); }
+/* No leading glyph: the row is the current level's own label, centred in the popover. */
+.composer-capability-heading { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.composer-capability-heading strong { flex: 1; text-align: center; color: var(--accent); font-size: var(--font-sm); }
 button.composer-model-link { display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 0; background: transparent; color: var(--muted); font-size: var(--font-xs); padding: 4px; }
 .composer-effort-control { position: relative; margin-top: 10px; padding-block: 2px; }
 .composer-effort-slider { appearance: none; display: block; width: 100%; height: 24px; padding: 0; margin: 0; border: 0; border-radius: var(--radius-pill); cursor: pointer; }
-.composer-effort-slider::-webkit-slider-thumb { appearance: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--text); box-shadow: var(--elevation-stroke); position: relative; z-index: 1; }
+/* White knob: it rides the filled accent track, where the inverted ink read as a filled-in dot. */
+.composer-effort-slider::-webkit-slider-thumb { appearance: none; width: 28px; height: 28px; border: 0; border-radius: 50%; background: #fff; box-shadow: var(--elevation-stroke); position: relative; z-index: 1; }
 .composer-effort-slider:disabled { opacity: .45; cursor: default; }
 .composer-effort-stops { position: absolute; inset: 0 13px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
 .composer-effort-stops > span { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); opacity: .45; }
@@ -148,6 +150,20 @@ button.composer-suggestion-row { display: flex; align-items: center; justify-con
 }
 .composer-menu-policy {
   max-width: 10rem;
+}
+/*
+ * The permission label carries a shield glyph. Inline it would sit on the text baseline with a literal
+ * space as its gap, which reads as a misaligned icon next to the trigger's own label; the row keeps the
+ * glyph optically centred and the spacing identical in the trigger and in every menu item.
+ */
+.composer-policy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.composer-policy-label > svg {
+  flex: none;
 }
 
 /*

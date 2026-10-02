@@ -7,6 +7,7 @@ import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import type { Approval, TimelineItem } from '../../../../shared/contracts.ts';
 import { useApp } from '../../state/app.tsx';
+import { Menu } from '../primitives/menu.tsx';
 import { ToolActivity } from './activity.tsx';
 import { messageLink } from '../../lib/message-links.ts';
 import { useOpenLink } from '../../hooks/use-open-link.ts';
@@ -81,8 +82,10 @@ export function Message({ item, searchTarget, actions = true }: { item: Timeline
         <span className="notice-text">{item.text}</span>
       </div>
     );
+  // Quotable text is any finished message, including process narration; the action row is separate,
+  // because copy/edit/regenerate only make sense for the turn's answer.
   const body = (
-    <div className="markdown" data-quote-body={actions && item.state !== 'running' || undefined} data-markdown-text-style={item.role === 'user' ? 'user-message' : 'assistant-message'} data-search-target={searchTarget} tabIndex={searchTarget ? -1 : undefined}>
+    <div className="markdown" data-quote-body={item.state !== 'running' || undefined} data-markdown-text-style={item.role === 'user' ? 'user-message' : 'assistant-message'} data-search-target={searchTarget} tabIndex={searchTarget ? -1 : undefined}>
       <MarkdownBody text={item.role === 'user' ? item.input?.text ?? item.text : item.text} />
     </div>
   );
@@ -161,11 +164,9 @@ export function ApprovalCard({ approval }: { approval: Approval }) {
           <input form={'approval-reply-' + approval.id} aria-label={tr("回复内容")} disabled={busy} value={value} onChange={(event) => setValue(event.target.value)} />
         )}
         {approval.kind === 'select' && (
-          <select form={'approval-reply-' + approval.id} aria-label={tr("选择回复")} disabled={busy} value={value} onChange={(event) => setValue(event.target.value)}>
-            {approval.options?.map((option) => (
-              <option key={option}>{option}</option>
-            ))}
-          </select>
+          <Menu label={tr("选择回复")} value={value} disabled={busy} matchTriggerWidth className="approval-choice"
+            options={(approval.options ?? []).map(option => ({ value: option, label: option }))}
+            onChange={setValue} />
         )}
       </div>
       <form id={'approval-reply-' + approval.id} className="approval-footer" onSubmit={event => { event.preventDefault(); void reply(true); }}>

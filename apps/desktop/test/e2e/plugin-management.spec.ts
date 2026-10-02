@@ -79,7 +79,8 @@ test('plugin tool policy saves serialize and retain edits when persistence fails
   await policies.locator('summary').click();
   await policies.getByLabel('原始工具名称', { exact: true }).fill('echo');
   await policies.getByRole('button', { name: '添加工具规则', exact: true }).click();
-  await policies.getByLabel('工具审批 echo', { exact: true }).selectOption('deny');
+  await policies.getByLabel('工具审批 echo', { exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '禁止调用', exact: true }).click();
   await page.evaluate(() => window.__plugins.hold('settings.patch', true));
   const save = policies.getByRole('button', { name: '保存工具策略', exact: true });
   await save.evaluate((element: HTMLButtonElement) => { element.click(); element.click(); });
@@ -87,7 +88,7 @@ test('plugin tool policy saves serialize and retain edits when persistence fails
   await expect(policies.getByLabel('工具审批 echo', { exact: true })).toBeDisabled();
   await page.evaluate(() => window.__plugins.complete(window.__plugins.pending('settings.patch')[0].id, { error: 'POLICY_SAVE_FAILED' }));
   await expect(policies.getByRole('alert')).toContainText('POLICY_SAVE_FAILED');
-  await expect(policies.getByLabel('工具审批 echo', { exact: true })).toHaveValue('deny');
+  await expect(policies.getByLabel('工具审批 echo', { exact: true })).toContainText('禁止调用');
   await expect(save).toBeEnabled(); await save.click();
   await expect.poll(() => page.evaluate(() => window.__plugins.pending('settings.patch').length)).toBe(1);
   expect(await page.evaluate(() => window.__plugins.pending('settings.patch')[0].request)).toMatchObject({

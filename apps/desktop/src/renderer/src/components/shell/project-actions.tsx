@@ -96,7 +96,9 @@ export function ProjectActions() {
     {open && <ConfirmDialog title={tr('项目环境与动作')} presentation="panel" pending={saving} confirmLabel={tr('关闭')} onConfirm={() => setOpen(false)} onCancel={() => setOpen(false)} description={
       <div className="project-actions-editor command-content">
         <p>{project.name}</p><p className="hint">{tr('命令使用所选目录，配置更改只用于后续运行。初始化用于新建 Worktree，清理不会自动执行。')}</p><p className="hint">{directory?.path}</p>
-        <label>{tr('命令解释器')}<select value={form.shell} onChange={event => edit({ ...form, shell: event.target.value as ProjectEnvironment['shell'] })}><option value="powershell">PowerShell</option><option value="cmd">cmd</option><option value="git-bash">Git Bash</option></select></label>
+        <label>{tr('命令解释器')}<Menu label={tr('命令解释器')} value={form.shell} matchTriggerWidth
+          options={[{ value: 'powershell', label: 'PowerShell' }, { value: 'cmd', label: 'cmd' }, { value: 'git-bash', label: 'Git Bash' }]}
+          onChange={value => edit({ ...form, shell: value as ProjectEnvironment['shell'] })} /></label>
         <label>{tr('初始化命令')}<textarea value={form.initialization} maxLength={8000} onChange={event => edit({ ...form, initialization: event.target.value })} /></label>
         <label>{tr('清理命令')}<textarea value={form.cleanup} maxLength={8000} onChange={event => edit({ ...form, cleanup: event.target.value })} /></label>
         {form.actions.map((action, index) => <fieldset key={action.id}>

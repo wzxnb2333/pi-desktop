@@ -6,6 +6,7 @@ import { localizeAppError, tr } from '../../../../shared/localization.ts';
 import { useLocale } from '../../hooks/use-locale.ts';
 import { Button } from '../primitives/button.tsx';
 import { FieldRow } from '../primitives/field-row.tsx';
+import { Menu } from '../primitives/menu.tsx';
 import { UnsavedNavigation, type RegisterViewGuard } from '../primitives/unsaved-navigation.tsx';
 import type { OperationRecord } from '../../../../shared/operations.ts';
 import { McpTestProgress, useMcpTest } from './mcp-test-controls.tsx';
@@ -79,8 +80,9 @@ export function McpToolPolicies({ server, settings, operations, tools = [], invo
       const policy = draft[name] ?? mcpToolPolicySchema.parse({});
       return <fieldset disabled={busy} className="config-card" key={name}><legend>{name}</legend>
         <FieldRow label={tr('启用工具')}><input type="checkbox" aria-label={tr('启用工具') + ' ' + name} checked={policy.enabled} onChange={event => patch(name, { enabled: event.target.checked })} /></FieldRow>
-        <FieldRow label={tr('工具审批')}><select aria-label={tr('工具审批') + ' ' + name} value={policy.approval} onChange={event => patch(name, { approval: event.target.value as McpToolPolicy['approval'] })}>
-          <option value="inherit">{tr('沿用任务权限')}</option><option value="ask">{tr('每次询问')}</option><option value="deny">{tr('禁止调用')}</option></select></FieldRow>
+        <FieldRow label={tr('工具审批')}><Menu label={tr('工具审批') + ' ' + name} value={policy.approval} matchTriggerWidth className="settings-select"
+          options={[{ value: 'inherit', label: tr('沿用任务权限') }, { value: 'ask', label: tr('每次询问') }, { value: 'deny', label: tr('禁止调用') }]}
+          onChange={value => patch(name, { approval: value as McpToolPolicy['approval'] })} /></FieldRow>
         <FieldRow label={tr('工具超时（秒）')}><input type="number" min={1} max={600} step={1} aria-label={tr('工具超时（秒）') + ' ' + name} value={policy.timeoutMs / 1000} onChange={event => patch(name, { timeoutMs: Number(event.target.value) * 1000 })} /></FieldRow>
         {draft[name] && <Button size="sm" onClick={() => { setDraft(previous => { const next = { ...previous }; delete next[name]; return next; }); setFeedback(''); }}>{tr('恢复工具默认值')}</Button>}
       </fieldset>;

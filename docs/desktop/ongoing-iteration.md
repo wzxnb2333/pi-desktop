@@ -588,3 +588,66 @@
 - 桌面接口（Harness）工具调用不再显示“桌面接口”字样：移除来源标签与专用措辞，改用 π 图标标记，调用名称、参数与输出保持不变，分组摘要计入“次工具调用”。
 - 流式思考预览（`.thinking-preview` 的 8.75rem 滚动框）现在自动跟随到最新一行；读者滚动后保持其位置，重新滚到底部即恢复跟随，手势期间不抢滚动。
 - 修复主时间线的跟随判定：过去只要“距底部超过 100px”就判定读者离开，而流式内容在滚动事件晚一帧到达时会触发该判定，导致思考过程不再自动跟随；现在只有“位置确实移动且不在底部”才算读者滚动，增长本身不解除跟随。
+- 时间线不再显示“正在工作”状态：移除轮次标题里的“● 正在工作”徽标和底部“Pi 正在工作…”行，仅保留“等待你的确认”（等待审批时）与“出错”。
+- 「处理过程」行改为任务计时：运行中每秒刷新“耗时 X 秒 / X 分 Y 秒”，轮次结束后冻结为该轮实际耗时；无计时数据时回退为“处理过程”。等待确认、已停止、出错仍显示各自状态。
+- 处理过程里的中间说明不再显示「复制 / 从侧聊 / 重新生成」小按钮：这些操作只出现在该轮最终回答上，避免还在运行的一轮看起来像"已经说完又继续"。可引用文本（选中引用）不受影响。
+- 报错横幅：关闭按钮贴到右缘。最初 `.error-banner > span` 连 Tooltip 的包裹层一起拉伸，按钮停在离右缘约 100px 处；只让文案拉伸后，旧渲染下按钮又会紧贴文案，因此改为 `.error-banner` 用 `justify-content: space-between` 分列两端，不依赖标记版本。
+- 任务摘要：「来源」里的链接行改为左对齐（`.btn` 默认居中，行本身没有 opt out）。
+- 任务摘要：「查看全部」展开后不再重复文件变更列表，改动入口只保留分支行与审查面板。
+- 时间线：一轮运行中不再显示「已编辑 N 个文件」的编辑预览，改为该轮结束后再出现。
+- 报错提示改为顶部中间的小型浮层 toast：绝对定位在对话面板上方（不占布局、不再让工作台位移），宽度随内容、最长 560px，进入 160ms 淡入下滑（`prefers-reduced-motion` 下关闭动画）。
+- 该 toast 7 秒后自动消失；鼠标悬停时暂停计时，Escape 立即关闭。没有关闭按钮：它是临时提示，不占用点击目标。
+- 侧栏分区顺序互换：项目聊天在上（项目列表直接跟在主导航之后，与 pinned 参考一致），最近任务移到其下方（间距 16px 由 `margin-top` 提供）。`reference.spec.ts` 里为「recents 在前」加的 y 偏移补偿随之删除，改为断言最近任务在项目区之下。
+- 空项目欢迎页不再要求先点「新建聊天」：选中项目但没有会话时，欢迎页会为该项目建设一个空会话（`welcome.tsx` 的 effect），因此直接渲染常规 `Composer`，与正在运行的会话完全一致（输入框、附件、模型能力、策略、计划模式、Worktree 入口都在），发送走常规发送流程。
+- 没有项目时仍保留「添加本地项目」按钮；未配置模型时不创建会话、只显示模型配置引导。代价是：该空会话会立刻出现在侧栏，直到用户输入内容为止（与侧栏「新建聊天」按钮今天的行为一致）。
+- 新会话（供应商还没返回上下文占用）不再显示上下文环：`ContextUsage` 在没有已知百分比时直接不渲染，环与「未知」提示都不出现；0% 是已知值，照常显示。
+- 权限菜单的盾牌图标对齐修正：标签原来是内联 `<span><Shield/> 文本</span>`，图标落在文字基线上、间距是一个空格；现在用 `.composer-policy-label`（inline-flex + 5px gap）让触发器和每个菜单项里的图标光学居中和间距一致。
+
+## 文件面板：整栏文件树与独立文件标签（2026-10-01，本地时间）
+
+- 「文件」工具标签不再上下分栏：整栏只有项目文件树（搜索、面包屑、刷新），原来的「打开的文件」子标签条与下方预览取消。在树里点开一个文件，会在辅助栏标签条上打开一个独立文件标签并切换过去；标签顺序排在「文件」导航标签之后，标签名带脏/保存中 `*` 标记，关闭按钮与浏览器标签一致（悬停显示、中键关闭）。
+- `panelTabs` 新增 `file` 种类（id 为 `file:<相对路径>`），由 `openFiles` 派生（与浏览器标签由 `browserTabs` 派生同构），持久化 `panelTabs` 只是顺序缓存；`reviewTab` 枚举新增 `file`，`reviewTab: 'file'` 时若当前目录没有打开文件会兜底显示「文件」导航标签。`panelTab` id/`activePanelTab` 上限放宽到 2100 以容纳 `file:` + 长路径。
+- 打开文件的入口统一走 `openFileTab(path, location?, directoryId?)`：文件树、消息链接、上下文引用「打开来源」、审查定位、Git「编辑文件/编辑解决结果」、Harness `open_in_pi` 的 file/artifact 目标。它原子地提交 `selectedPath`、`openFiles`、`reviewTab`、`activePanelTab` 和可选 `fileLocation`；无行号时也写 `fileLocation`，保证打开即聚焦编辑器。Git 变更列表与任务摘要的「查看变更」仍只记录 `selectedPath`，不再偷偷生成文件标签。
+- 关闭文件标签在 `usePanelActions.close` 内集中守卫：保存中显示「正在保存 {path}，请完成后再关闭或重新加载」并自动在保存结束后消失；有未保存修改时弹出「放弃未保存的文件修改？」确认，确认绑定任务与目录（切换任务/目录后旧确认自动失效），内容/版本变化时拒绝丢弃并提示。文件标签关闭后从 `openFiles` 移除并按相邻标签回退选择。
+- `selectedPath` 收敛为「读者正在查看的文件」记录（Git 面板、最近文件、Harness view 投影读取），切换文件标签会同步更新；`FileTabPanel` 按挂载实例重放最后一次 `fileLocation`（任务/目录切换回来后恢复行定位）。
+- 定向验证：`npm run desktop:check` 退出 0；unit 66/66（tabs、files、harness-views、links、summary、file-search 等）；UI 层 17+6/6（tabs/files/terminal/summary/dialogs）；原生层 file-editor、file-navigation（10/10）、message-links、workbench（7/7）、git、review、context、composer-enhancements、harness、harness-views、browser、desktop、terminal、summary、projects 均退出 0。本轮将 message-experience 的「sent image cards」失败用「仅还原本轮文件到 HEAD」的 A/B 方式复现，确认与本轮改动无关（HEAD 同样失败；该期间工作区存在另一会话对 composer/ModelSettings 等文件的并发修改）。
+- 没有提交、发布或制作 EXE；未运行全套桌面回归。
+- 思考程度改为用户可增删：模型设置里「允许的思考程度」不再被内置目录限制，7 档全部可选（目录列出的档位在提示里说明，默认勾选仍来自目录）；`validateModel` 不再因「超出内置模型支持范围」而拒绝保存。
+- 模型与能力弹层：删掉标题左侧无功能的闪电图标（标题改为纯标签居中，去掉为图标预留的 16px 右内边距）；滑块圆点由深色改为白色 `#fff`（仍是 28px 圆 + 描边），在强调色轨道上不再像一颗实心黑点。
+- 借鉴参考 harness 的模型配置页（只取结构，不引新概念）：`SettingsSection` 增加可选 `action` 槽位，「+ 添加模型」移到「模型」区块标题行右侧（列表底部按钮移除，行为不变）；模型行能力数字改紧凑写法（`1M`、`384K`、`204.8K`），精确值放进 `title`；API Key 字段内加「显示/隐藏密钥」眼睛按钮，输入框不变宽。
+- 未照搬参考的特性：每行模型启用开关、「视觉/输入类型」与「模型能力」标签、推理参数映射、智能配置开关、获取 API Key 外链——Pi 契约里没有对应字段，属于新增产品面。
+- 修正 form-navigation「取消项目导航」的过期断言：无会话项目现在落地即准备一个空会话，改为断言「有活动会话 + 输入框可见」，项目名断言放宽以容纳会话计数。
+- 去掉模型回复顶部的作者标识（`π` + `Pi`）：`turn.tsx` 的 `.turn-head` 只留时间戳与出错标记，`.pi-mini` 类保留给侧栏品牌使用。
+- 修复提示条（notice）的残缺描边：源设计用 0.5px 阴影环，在 Windows 100% 缩放下渲染成断续的线；改为 `.timeline .notice` 的 1px 实线边框（保留原投影），错误的提示条用 45% 危险色描边。
+- 修复模型切换提示的错位与多余留白：`.notice.model-switch` 之前被 `.timeline .notice` 的卡片内边距/圆角/阴影覆盖（同权重、样式表顺序在后），现在提升为 `.timeline .notice.model-switch` 并显式清零内边距、圆角、背景与阴影，`align-items: center` 让左右横线与文字中线对齐（实测 286.5/296.6 → 295.0/295.0）。
+- activity 用例新增回归：提示条 1px 完整描边、危险色不同、切换提示为纯分隔行且横线与文字中线误差 ≤0.5px。
+- 移除顶部工具栏的状态药丸（`π` 侧的状态点 + 就绪/运行中/等待确认/出错文本）：状态仍由侧栏任务点与任务摘要面板承担；清理随之失效的 `.toolbar-actions .status` 窄宽度隐藏规则，reference 用例新增「工具栏内不再有状态元素」断言。
+- 三点菜单类按钮的居中问题：`.menu-trigger-label { flex: 1; text-align: start }` 会把只放图标（省略号/加号）的标签盒撑开，内联 SVG 贴在左缘；带 ▾ 的还把图标挤到控件中线左边。`Menu` 新增 `iconOnly`：标签改为居中 flex 行，且不再渲染多余的 ▾。已在工具栏「工作台更多操作」、摘要「摘要操作」、浏览器「浏览器操作」、侧栏任务「…」、输入区「添加上下文与操作」加上。
+- 实测：工具栏省略号偏移 dx -6 → 0、dy 0；输入区加号 dx -4/dy -2.5 → 0/0。清理随之失效的 panels.css 中侧栏菜单 chevron 隐藏规则。
+- reference 用例新增回归：所有 `menu-trigger-icon-only` 的图标中心与控件中心误差 ≤0.5px，且不渲染 chevron。
+- 修正 summary.spec 里陈旧的工具栏断言：「管理可选子任务 / 可选子任务」早已改为「查看子智能体」，且该入口是切换辅助栏到子智能体页签而非打开对话框；断言按实际行为改写（此前该用例一直失败）。
+- 模型回复头部去掉时间戳：`.turn-head` 只在 `turn.state === 'error'`（出错标记）时渲染，其余情况不再有这一行与它的 10px 间隔，回复直接从「耗时 …」的处理过程折叠条开始；同步删掉失效的 `.turn-head time` 规则与 `timeLabel` 引入。
+- visual.spec 的两处陈旧断言更新：`.turn-head` 计数改为 `.turn` 章节计数；「工具活动折叠」的 `.activity` 类早已不存在，改为每轮一条的 `.turn-body > .disclosure-process`（该用例更下方仍有与辅助栏「计划」页签相关的陈旧断言，属于另一路正在改的面板页签范围，未动）。
+- 侧栏最近任务/置顶行：悬停只露出「置顶」与「归档」两个按钮，会话行的「…」触发器不再随悬停出现（保留在 DOM 内供右键菜单调用，且 pointer-events: none 不会误触），仅在它自身获得焦点时显现；新增的 `.shortcut-row` 与项目行共用同一套动作组件。
+- 置顶：新增「置顶」合集位于项目聊天之上，跨项目显示已置顶会话（项目列表仍保留其原位置），置顶按钮在图钉状态高亮（IconButton 的 active/aria-pressed）；最近任务排除已置顶项以免重复。
+- 移除回收站：侧栏不再有回收站入口，右键「移入回收站/从回收站恢复/永久删除」改为单一「删除任务」，主进程 `thread.purge` 允许删除任意空闲任务并用原生确认框（文案改为「删除此任务？」），相关文案与消息键同步清理。
+- 测试：sidebar 新增置顶往返用例、更新悬停/焦点与指示器断言、移除回收站断言；native purge 相关用例（workbench fork、worktree-owner-recovery）复跑通过。
+- 修复最近任务/置顶行悬停高亮只有文字宽、动作按钮浮在色块外的问题：`.recent-thread` 现在 `width: 100%`，高亮随整行铺满，图钉与归档落在色块内（与项目行一致）。
+- 模型桌面面第一批（W0+W1）落地：新增 `shared/desktop-tools.ts` 动作目录（族/工具/动作/读写成对/是否受 ask 审批 + 权限面禁用清单）、`shared/session-tools.ts` 五个族的严格 schema、`worker/desktop-session-tools.ts` 五个工具（read_sessions / manage_sessions / send_to_session / manage_projects / manage_ui）、`main/desktop-session-tools.ts` 跨会话只读投影；`agent.ts` 按主聊天/子代理门控注册，`get_harness section=desktop` 返回实际可用目录。
+- 主进程 `runDesktopSessionTool` 复用用户点击时的同一条 op（thread.*、project.*、ui.*），`project.add`/`project.directoryAdd` 增加可选 path 并抽出 `addProjectPath`/`addProjectDirectory`；跨会话发消息在 `ask` 策略下走既有审批卡片，`auto`/`full` 直接发送，`deny` 与计划模式拒绝。
+- 权限面不可达由 `test/desktop-tool-surface.test.ts` 看守（目录动作必须能被 worker 协议解析、任何 schema 拒绝 policy/planMode/sandbox/approval/secret/apiKey 字段）；`test/session-context.test.ts` 覆盖跨会话可见性、分页、字符上限与搜索截断。
+- W2 消息族落地：`manage_messages`（messages.copy / revise / setModel / setThinking / createSidechat），schema 不带 threadId，只能作用于调用方自己的会话；revise 复用 `thread.revise` 的幂等与回滚并切到新会话，setThinking 用 allowedThinkingLevels 校验，copy 走主进程剪贴板。目录动作 26 → 31，工具 34 → 35。
+- 守卫测试同步扩展：新增五个动作必须能被 worker 协议解析；wave 2 的所有动作拒绝 threadId 字段；权限面探针加入 messages.setThinking + policy 组合。
+- W3 工作台族落地：`manage_review`（start/cancel/inspect/read/finding/locate）、`manage_git`（8 个只读 + 8 个写动作，写动作走 ask 审批，hunkRevert 要求先取 hunkVersion）、`manage_worktrees`（create/migrate/manage/recycle/recovery/creationRecovery，复用 `worktree.*` 的 requestId 幂等）、`manage_terminal`（open/rename/close，明确不含 terminal.input）。目录动作 31 → 62，工具 35 → 39。
+- 主进程 `runWorkbenchTool` 与原 op 一一对应：只读直通，写动作先 `ask`（full/auto 免审批、deny 与计划模式拒绝）；守卫测试同步覆盖 62 个动作能被 worker 协议解析。浏览器数据面（history/download/site/annotation）留到 W4 与 settings 一起做。
+- W4a 设置族：`manage_settings`（read / models / inputCatalog / apply）。白名单只允许外观与行为偏好 19 个键，`deniedSettingsKeys` 里 14 个权限与能力键（policy、modelProviders、models、mcpServers、mcpToolPolicies、browserSitePolicies、pluginSources、ignoredSkillPaths、voice、memory、subtasksEnabled、worktreeCleanup、shortcuts、resources）逐键报错并给出理由，单元测试对每个键断言拒绝且理由出现在错误里。工具动作名用 settings.apply，避免与 settings.patch op 撞名。
+- W4b 文件与批注：`manage_files`（list/read/write/open/reveal/search/searchCancel）与 `manage_comments`（list/add/remove/locate），全部复用 file.*/comment.* op，写入与批注锚点都走渲染层同一套版本 CAS，路径仍受项目目录约束。另补 `git.cancel` 与 `terminal.resize`。目录动作 62 → 79，工具 39 → 42。
+- 原生回归：单独跑 harness-tools.nonvisual 32 passed；此前与 desktop:check 并行时的 focus_in_pi 失败为负载抖动，重跑稳定通过(已单独复跑 + 全量复跑各一次)。
+- W4c 服务族落地：`manage_browser_data`（history/downloads/download/find/annotation read·remove·attach）、`manage_pr`（status、start view·create，create 对外可见受审批）、`manage_resources`（inspect/refresh/open，rescan 受审批）、`manage_mcp`（list/test/testCancel/retry/resource；test 与 retry 会启动进程，受审批；list 只投影用户已可见的 id、状态与工具名）。另补 `sessions.quickChat`（chat.create）、`sessions.bindProject`、`ui.openExternal`（限 http(s) + 审批）。
+- 明确不做且不进目录：`browser.site` 站点放行策略、`browser.clear`/`clearSite`/`clearAll` 数据清理、`browser.annotationCapture/Save`（需要用户的拖拽选区）、`mcp.secret*` 与 `mcp.oauth*`、`resource.pick`、`plugin.start/pick/cancel`、`approval.reply`、`provider.key`、`terminal.input`。目录动作 79 → 97，工具 42 → 46。
+- 验证：desktop:check 0；守卫/投影单元 6/6（97 个动作逐个可被 worker 协议解析、权限面探针全拒绝、白名单逐键断言）；harness-tools.nonvisual 32 passed。
+- W5 落地：`manage_windows`（open/minimize/maximize/close/retryShortcut/revealWorktreePath，close 受审批）与 `manage_preview`（previews.open/close/refresh + artifacts.open/close/status/stop/capture/annotation，previews.open 只接受本地 http(s)）。`thread.inWorktree` 收进 windows.revealWorktreePath。
+- 明确不做：artifact.network 与 browser.site（站点放行）、browser.clear/clearCancel 与 browser.action 的 clearSite/clearAll/permissions（数据清理与权限）、artifact.bounds 与 preview.bounds（几何对模型无意义）、artifact.annotationSave/Discard 与 browser.annotationCapture|Save|Discard（需要用户拖拽选区）、resource.create/plugin.catalog（留待评估）、插件安装与凭据类永不做。覆盖文档已按「已完成 / 仍未做（含理由）」重写。
+- 数量：目录动作 97 → 112，工具 46 → 48（新增 manage_windows、manage_preview）。验证：desktop:check 0；守卫/投影单元 6/6（112 个动作逐个可被 worker 协议解析）；harness-tools.nonvisual 32 passed。
+- W6 原生用例：新增 `test/e2e/desktop-tools.nonvisual.spec.ts`（4 例，真实 Worker + 主进程 + IPC）：read_sessions 跨会话列出与读取且不含另一会话的未发送草稿；send_to_session 在 ask 策略下产生审批卡片、批准前不送达、批准后送达；settings.apply 用 patch.policy 被 schema 拒绝（tool 报错、settings.policy 与 thread.policy 均不变、不消耗审批），混入白名单键同样整体拒绝，单独 theme 生效；manage_ui 的 ui.summary 与 ui.openPanel 产生可见视图变化且不产生审批。spec 已加入 playwright.nonvisual.config.ts 的 testMatch。
+- 验证汇总：desktop:check 0；desktop-tool-surface + session-context 单元 6/6；原生 desktop-tools 4/4、harness-tools 32/32，合并 36 passed（2.7 分钟）。

@@ -23,7 +23,8 @@ test('native OAuth UI signs in during a run, uses private worker tokens, refresh
   fixture.setMode('hold'); await fixture.invoke({ op: 'thread.send', id: 't', text: '保持运行', attachments: [] }); await expect.poll(() => fixture.calls.length).toBe(1);
   await fixture.page.keyboard.press('Control+,'); await fixture.page.getByRole('button', { name: 'MCP', exact: true }).click();
   await fixture.page.getByRole('button', { name: '添加', exact: true }).click(); await fixture.page.getByLabel('名称', { exact: true }).fill(service.config.name);
-  await fixture.page.getByLabel(/^传输/).selectOption('http'); await fixture.page.getByLabel(/^URL/).fill(service.config.url);
+  await fixture.page.getByLabel(/^传输/).click();
+  await fixture.page.getByRole('menuitemradio', { name: 'Streamable HTTP', exact: true }).click(); await fixture.page.getByLabel(/^URL/).fill(service.config.url);
   await fixture.page.getByLabel('使用 OAuth 登录', { exact: true }).check(); await fixture.page.getByLabel(/^启用/).check();
   await fixture.page.getByRole('button', { name: '保存并登录' }).click(); await job('login');
   expect(service.counts.exchange).toBe(1); expect((await fixture.snapshot()).data.threads.find(item => item.id === 't')?.status).toBe('running');

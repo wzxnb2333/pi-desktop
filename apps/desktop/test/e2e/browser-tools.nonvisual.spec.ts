@@ -95,7 +95,8 @@ test('website management applies real settings, survives restart and task ask mo
   const dialog = fixture.page.getByRole('dialog', { name: '网站访问权限' });
   await dialog.getByLabel('网站来源', { exact: true }).fill(site); await dialog.getByRole('button', { name: '添加网站规则' }).click();
   await expect.poll(async () => (await fixture.snapshot()).data.settings.browserSitePolicies[site]).toBe('allow');
-  await dialog.getByLabel('网站规则 ' + site, { exact: true }).selectOption('deny');
+  await dialog.getByLabel('网站规则 ' + site, { exact: true }).click();
+  await fixture.page.locator('.menu-item[data-value="deny"]').click();
   await expect.poll(async () => (await fixture.snapshot()).data.settings.browserSitePolicies[site]).toBe('deny');
   await dialog.getByRole('button', { name: '移除网站规则 ' + site }).click();
   await expect.poll(async () => (await fixture.snapshot()).data.settings.browserSitePolicies[site]).toBeUndefined();
@@ -149,7 +150,8 @@ test('website save disk failure retains the committed policy and retries through
   await fixture.page.getByLabel('视图菜单').click(); await fixture.page.getByRole('menuitem', { name: '切换浏览器预览', exact: true }).click();
   await fixture.page.getByLabel('浏览器操作', { exact: true }).click(); await fixture.page.getByRole('menuitem', { name: '智能体网站访问', exact: true }).click();
   const panel = fixture.page.getByRole('dialog', { name: '网站访问权限' });
-  await panel.getByLabel('网站来源', { exact: true }).fill(site); await panel.getByLabel('网站规则', { exact: true }).selectOption('deny');
+  await panel.getByLabel('网站来源', { exact: true }).fill(site); await panel.getByLabel('网站规则', { exact: true }).click();
+  await fixture.page.locator('.menu-item[data-value="deny"]').click();
   const path = join(fixture.storage, 'desktop.json');
   await fixture.app.evaluate((_electron, path) => {
     const fs = process.getBuiltinModule('node:fs/promises'), { syncBuiltinESMExports } = process.getBuiltinModule('node:module'), rename = fs.rename;
@@ -163,9 +165,9 @@ test('website save disk failure retains the committed policy and retries through
   await expect(panel.getByRole('alert')).toContainText('SITE_POLICY_DISK_FAILURE');
   expect((await fixture.snapshot()).data.settings.browserSitePolicies[site]).toBeUndefined();
   expect(JSON.parse(await readFile(path, 'utf8')).settings.browserSitePolicies[site]).toBeUndefined();
-  await expect(panel.getByLabel('网站来源', { exact: true })).toHaveValue(site); await expect(panel.getByLabel('网站规则', { exact: true })).toHaveValue('deny');
+  await expect(panel.getByLabel('网站来源', { exact: true })).toHaveValue(site); await expect(panel.getByLabel('网站规则', { exact: true })).toContainText('始终拒绝此网站');
   await panel.getByRole('button', { name: '重试保存网站规则', exact: true }).click();
-  await expect(panel.getByLabel('网站规则 ' + site, { exact: true })).toHaveValue('deny');
+  await expect(panel.getByLabel('网站规则 ' + site, { exact: true })).toContainText('始终拒绝此网站');
   await expect(panel.getByRole('alert')).toHaveCount(0);
   await Promise.all([fixture.invoke({ op: 'browser.site', origin: other, policy: 'deny' }), fixture.invoke({ op: 'browser.site', origin: site, policy: 'allow' })]);
   await fixture.restart(); expect((await fixture.snapshot()).data.settings.browserSitePolicies).toMatchObject({ [site]: 'allow', [other]: 'deny' });

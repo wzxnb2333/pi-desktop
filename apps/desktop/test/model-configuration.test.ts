@@ -37,7 +37,8 @@ test('a built-in provider keeps its catalog namespace and validates models again
   assert.deepEqual(model.thinkingLevels, limited.thinkingLevels);
   assert.ok(!('hasKey' in model));
   assert.doesNotThrow(() => validateModel(model, provider, catalog));
-  assert.throws(() => validateModel({ ...model, thinkingLevels: ['max'] }, provider, catalog), /支持的范围/);
+  // The catalogue's levels seed the model; the user may add levels the pinned catalogue does not list.
+  assert.doesNotThrow(() => validateModel({ ...model, thinkingLevels: ['max'] }, provider, catalog));
   assert.throws(() => validateModel({ ...model, model: 'not-in-catalog' }, provider, catalog), /不在该提供商/);
   assert.throws(() => validateProvider({ ...provider, namespace: 'missing' }, catalog), /内置供应商已不存在/);
   assert.throws(() => validateProvider(provider, null), /尚未加载/);

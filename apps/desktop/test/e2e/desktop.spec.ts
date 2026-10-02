@@ -194,7 +194,8 @@ test('Windows desktop: streaming, approvals, review, terminals, preview, themes 
     await page.keyboard.press('Control+,');
     await expect(page.getByRole('heading', { name: '设置', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '通用', exact: true }).click();
-    await page.getByLabel('主题', { exact: true }).selectOption('dark');
+    await page.getByLabel('主题', { exact: true }).click();
+    await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
     await page.getByRole('button', { name: '保存设置' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.screenshot({ path: join(shots, 'settings-dark.png') });
@@ -292,7 +293,8 @@ test('first run registers a project and saves a model key through Windows encryp
       'desktop-fake-secret-for-test',
     );
     await page.getByRole('button', { name: '通用', exact: true }).click();
-    await page.getByLabel('主题', { exact: true }).selectOption('dark');
+    await page.getByLabel('主题', { exact: true }).click();
+    await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
     await page.getByRole('button', { name: '保存设置' }).click();
     await page.locator('.thread-row').first().click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

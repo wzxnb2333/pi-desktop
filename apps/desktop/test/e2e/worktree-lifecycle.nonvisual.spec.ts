@@ -85,7 +85,8 @@ test('managed archive UI preserves dirty and staged contents across restart and 
   await expect(access(record.checkoutPath)).rejects.toMatchObject({ code: 'ENOENT' });
   await expect(fixture.invoke({ op: 'thread.send', id: 't', text: 'archived', attachments: [] })).rejects.toThrow(/已归档/);
   await manager.getByLabel('自动归档闲置 Worktree', { exact: true }).check();
-  await manager.getByLabel('闲置天数', { exact: true }).selectOption('7');
+  await manager.getByLabel('闲置天数', { exact: true }).click();
+  await fixture.page.locator('.menu-item[data-value="7"]').click();
   await expect.poll(async () => (await state()).data.settings.worktreeCleanup).toEqual({ enabled: true, days: 7 });
   await fixture.restart(); expect((await state()).data.worktrees[0].status).toBe('archived'); expect((await state()).data.settings.worktreeCleanup).toEqual({ enabled: true, days: 7 });
   await taskAction(fixture.page, 'Worktree 管理'); manager = fixture.page.getByRole('dialog', { name: 'Worktree 管理', exact: true });

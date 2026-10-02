@@ -107,7 +107,11 @@ test('stopping and provider failures leave process visible and recovery creates 
   fixture.release(); fixture.setMode('fail');
   await fixture.invoke({ op: 'thread.send', id: 't', text: '失败过程', attachments: [] });
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('error');
-  await expect(fixture.page.locator('.thread-error')).toContainText('ACCEPTANCE_PROVIDER_ERROR');
+  // The failure stays visible as the red notice in the process line; no headline row and no retry card.
+  await expect(fixture.page.locator('.notice.danger').filter({ hasText: 'ACCEPTANCE_PROVIDER_ERROR' })).toBeVisible();
+  await expect(fixture.page.locator('.thread-error')).toHaveCount(0);
+  await expect(fixture.page.locator('.turn-head')).toHaveCount(0);
+  await expect(fixture.page.getByRole('button', { name: '继续 / 重试', exact: true })).toHaveCount(0);
   fixture.setMode('reply');
   await fixture.invoke({ op: 'thread.send', id: 't', text: '恢复过程', attachments: [] });
   await idle();

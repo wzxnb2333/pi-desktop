@@ -84,6 +84,26 @@ test('new chat without a project requests a folder and cancellation or failure n
   expect((await page.evaluate(() => window.conversationUi.calls)).filter(call => call.op === 'chat.create')).toHaveLength(0);
 });
 
+test('an empty project opens the composer and sends its first message without a create step', async () => {
+  await page.evaluate(() => window.conversationUi.emptyWorkspace());
+  await page.evaluate(() => window.conversationUi.pickProject('project'));
+  // A project without conversations, added without the sidebar's own chat-creating shortcut.
+  await page.evaluate(async () => { await window.desktop.invoke({ op: 'project.add' }); });
+  // No "create a chat" step: the project gets its conversation and the regular composer.
+  await expect.poll(async () => (await page.evaluate(() => window.conversationUi.calls)).filter(call => call.op === 'thread.create').length).toBe(1);
+  const input = page.locator('.welcome-task .composer-input');
+  await expect(input).toBeVisible();
+  await expect(page.locator('.welcome-start-actions')).toHaveCount(0);
+  await input.fill('第一句话就是任务');
+  await page.locator('.welcome-task .send-button').click();
+  await expect.poll(async () => (await page.evaluate(() => window.conversationUi.calls)).filter(call => call.op === 'thread.send').length).toBe(1);
+  const sent = (await page.evaluate(() => window.conversationUi.calls)).find(call => call.op === 'thread.send') as { id: string; text: string };
+  expect(sent.text).toBe('第一句话就是任务');
+  const created = (await page.evaluate(async () => (await window.desktop.invoke({ op: 'bootstrap' }) as Bootstrap).data.threads)).at(-1)!;
+  expect(sent.id).toBe(created.id);
+  expect(created.projectId).toBe('selected');
+});
+
 test('header search and Ctrl K share the command palette without changing drafts or project collapse state', async () => {
   await page.locator('.composer-input').fill('SEARCH_KEEPS_DRAFT');
   await page.getByLabel('折叠 测试项目', { exact: true }).click();

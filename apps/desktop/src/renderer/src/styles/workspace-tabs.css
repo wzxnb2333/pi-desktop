@@ -1,4 +1,4 @@
-/* One strip owns tool and web tabs. Session/file tabs stay inside their tool. */
+/* One strip owns tool, web and opened-file tabs. */
 .workspace-tab-header.panel-strip { display: flex; gap: 4px; height: 46px; min-height: 46px; padding: 6px 8px; overflow: hidden; }
 .workspace-tab-header > .workspace-tabs { display: flex; flex: 1 1 0; min-width: 0; gap: 4px; height: 34px; padding: 0; border: 0; overflow-x: auto; scrollbar-width: none; }
 .workspace-tabs::-webkit-scrollbar { display: none; }
@@ -23,6 +23,13 @@
 .review-tool-content .terminal-find > .icon-button { grid-area: 1 / 4; }
 .review-tool-content .terminal-find > [role="status"] { grid-area: 2 / 1 / auto / -1; min-height: 18px; }
 .review-tool-content > .review-findings { flex: 1; min-height: 0; overflow: auto; }
+/* The 文件 tool tab is the whole project tree; each opened file owns a tab of its own. */
+.review-tool-content > .files-navigator { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.files-navigator[hidden] { display: none; }
+.files-navigator .file-tree { flex: 1; max-height: none; }
+.review-tool-content > .files-workbench { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.files-workbench > .file-source { flex: 1; min-height: 0; }
+.file-source > .file-editor { flex: 1; min-height: 0; resize: none; }
 .workspace-tab-header [role="tab"] > .workspace-tab-title { font-size: inherit; color: inherit; }
 .workspace-tool-actions { display: flex; justify-content: flex-end; padding: 2px 8px; }
 .preview-surface { position: relative; overflow: hidden; }

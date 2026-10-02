@@ -229,11 +229,11 @@ test('geometry literals hold at both window sizes', async () => {
 test('the timeline groups one answer per user request, not per item', async () => {
   const { page, close } = await open('light', 1440, 940);
   try {
-    // Two user turns seeded, so the assistant head must render twice - once per turn, not per item.
-    await expect(page.locator('.turn-head')).toHaveCount(2);
+    // Two user turns seeded, so each answer renders once - one turn section per request, not per item.
+    await expect(page.locator('.turn')).toHaveCount(2);
     await expect(page.locator('.turn-body')).toHaveCount(2);
-    // Contiguous tool activity collapses into one block per run.
-    await expect(page.locator('.activity')).toHaveCount(2);
+    // Each run collapses behind one process block, so the timeline shows a single one per turn.
+    await expect(page.locator('.turn-body > .disclosure-process')).toHaveCount(2);
     await expect(page.locator('.notice')).toHaveCount(1);
     // thread.plan is thread-level, so the timeline shows it only on the live turn. This seeded
     // thread is idle, so the honest assertion is absence - and the data must still surface in the

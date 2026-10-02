@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { annotationCaptureSchema, type AnnotationCapture, type AnnotationRect, type BrowserAnnotation } from '../../../../shared/browser-annotations.ts';
 import { localizeAppError, tr } from '../../../../shared/localization.ts';
+import { Menu } from '../primitives/menu.tsx';
 import { useLocale } from '../../hooks/use-locale.ts';
 import { useApp } from '../../state/app.tsx';
 import { Button } from '../primitives/button.tsx';
@@ -67,9 +68,12 @@ function AnnotationPanel({ threadId, tabId, create, onClose }: PanelProps) {
       {capture && <>
         <p>{tr('在截图中点选元素，或拖动选择区域。也可以使用下方控件精确选择。')}</p>
         <div className="row" role="group" aria-label={tr('标注方式')}><Button disabled={pending} aria-pressed={mode === 'element'} onClick={() => setMode('element')}>{tr('选择元素')}</Button><Button disabled={pending} aria-pressed={mode === 'region'} onClick={() => { setMode('region'); setRect(current => current ?? { x: 0, y: 0, width: Math.min(100, capture.page.width), height: Math.min(100, capture.page.height) }); }}>{tr('选择区域')}</Button></div>
-        {mode === 'element' ? <select aria-label={tr('页面元素')} value={elementId} onChange={event => setElementId(Number(event.target.value))} disabled={pending}>
-          <option value={-1}>{tr('请选择元素')}</option>{capture.page.elements.map(item => <option key={item.id} value={item.id}>{item.tag} · {item.label || item.selector}</option>)}
-        </select> : <div className="annotation-coordinates">{(['x', 'y', 'width', 'height'] as const).map(key => <label key={key}>{tr(({ x: '水平位置', y: '垂直位置', width: '区域宽度', height: '区域高度' } as const)[key])}<input type="number" min={key === 'width' || key === 'height' ? 1 : 0} max={key === 'x' || key === 'width' ? capture.page.width : capture.page.height} value={rect?.[key] ?? 0} disabled={pending} onChange={event => setRect(current => ({ x: 0, y: 0, width: 1, height: 1, ...current, [key]: Number(event.target.value) }))} /></label>)}</div>}
+        {mode === 'element' ? <Menu label={tr('页面元素')} value={String(elementId)} disabled={pending} matchTriggerWidth
+          options={[
+            { value: '-1', label: tr('请选择元素') },
+            ...capture.page.elements.map(item => ({ value: String(item.id), label: item.tag + ' · ' + (item.label || item.selector) })),
+          ]}
+          onChange={value => setElementId(Number(value))} /> : <div className="annotation-coordinates">{(['x', 'y', 'width', 'height'] as const).map(key => <label key={key}>{tr(({ x: '水平位置', y: '垂直位置', width: '区域宽度', height: '区域高度' } as const)[key])}<input type="number" min={key === 'width' || key === 'height' ? 1 : 0} max={key === 'x' || key === 'width' ? capture.page.width : capture.page.height} value={rect?.[key] ?? 0} disabled={pending} onChange={event => setRect(current => ({ x: 0, y: 0, width: 1, height: 1, ...current, [key]: Number(event.target.value) }))} /></label>)}</div>}
       </>}
       {(capture || view) && dimensions && <>
         <div className="annotation-image" style={{ aspectRatio: dimensions.width + ' / ' + dimensions.height, width: 'min(100%, ' + 46 * dimensions.width / dimensions.height + 'vh)' }}

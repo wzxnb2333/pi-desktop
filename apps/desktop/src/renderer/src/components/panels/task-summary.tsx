@@ -7,7 +7,6 @@ import { useSubtaskNavigation } from '../../hooks/use-subtask-navigation.ts';
 import type { GitStatus } from '../../../../shared/contracts.ts';
 import { useTaskGit } from '../../hooks/use-task-git.ts';
 import { useOpenLink } from '../../hooks/use-open-link.ts';
-import { gitStatusLabel } from '../../lib/git-status.ts';
 import { statusText } from '../../lib/labels.ts';
 import { groupTurns } from '../../lib/timeline-groups.ts';
 import { turnPlans } from '../../lib/turn-plans.ts';
@@ -40,7 +39,7 @@ export function TaskSummary({ git, pending, error, refresh }: { git: GitStatus; 
   const connections = thread.mcp?.filter(server => server.state === 'connected') ?? [];
   const openChanges = (path?: string) => { if (path) setSelectedPath(path); setReviewTab('changes'); setReviewOpen(true); };
   return <div className="task-summary" role="region" aria-label={tr("任务摘要")} data-thread-id={activeId}>
-    <header className="summary-heading"><h2 title={project?.name || thread.title}>{project?.name || thread.title}</h2><Menu kind="action" label={tr("摘要操作")} value="" align="end" className="summary-menu" placeholder={<MoreHorizontal size={18} />} options={[
+    <header className="summary-heading"><h2 title={project?.name || thread.title}>{project?.name || thread.title}</h2><Menu kind="action" label={tr("摘要操作")} value="" align="end" iconOnly className="summary-menu" placeholder={<MoreHorizontal size={18} />} options={[
       { value: 'refresh', label: tr("刷新 Git"), disabled: !project }, { value: 'project', label: tr("打开项目"), disabled: !project },
       { value: 'export', label: tr("导出会话") }, { value: 'hide', label: tr("隐藏摘要") },
     ]} onChange={value => {
@@ -61,13 +60,14 @@ export function TaskSummary({ git, pending, error, refresh }: { git: GitStatus; 
     {steps.length > 0 && latestPlan && <section aria-label={tr("任务计划")}><h3>{tr("计划 ·")} {steps.filter(step => step.status === 'completed').length}/{steps.length}</h3>{steps.map((step, index) => (expanded || index === steps.findIndex(item => item.status === 'in_progress')) && <button type="button" className={'summary-step ' + step.status} key={index} aria-label={tr("定位计划步骤 ") + (index + 1) + '：' + step.text + ' · ' + stepStatus[step.status]} onClick={() => focusTimeline({ kind: 'plan', turnKey: latestPlan[0], index, text: step.text })}>
       <span aria-hidden="true">{step.status === 'completed' ? '✓' : step.status === 'in_progress' ? '◉' : '○'}</span> {step.text}
     </button>)}</section>}
-    {(pending || gitError || expanded && git.files.length > 0) && <section aria-label={tr("项目文件变更")} aria-busy={pending}>
-      <h3>{tr("文件变更")}{git.available ? ' · ' + git.files.length : ''}</h3>
+    {/*
+      Only the Git read states stay here. The expanded card used to repeat the file list that the
+      branch row and the review pane already own, which made the summary a second, staler copy.
+    */}
+    {(pending || gitError) && <section aria-label={tr("项目文件变更")} aria-busy={pending}>
+      <h3>{tr("文件变更")}</h3>
       {pending && <p className="hint" role="status">{tr("正在读取 Git 变更…")}</p>}
       {gitError && <div className="summary-error" role="alert"><p>{localizeAppError(gitError)}</p><button type="button" aria-disabled={pending} onClick={() => { if (!pending) void refresh(); }}>{tr("重试读取变更")}</button></div>}
-      {expanded && git.files.slice(0, 5).map(file => <button type="button" className="summary-file" key={file.path} onClick={() => openChanges(file.path)}><span className="summary-file-status">{gitStatusLabel(file.status)}</span><span>{file.path}</span></button>)}
-      {expanded && git.files.length > 5 && <button type="button" className="summary-more-files" onClick={() => openChanges()}>{tr("查看全部")} {git.files.length}  {tr("个变更文件")}</button>}
-      {expanded && git.files.length > 0 && <p className="hint">{tr("当前项目的工作区变更，可能包含其他任务的修改。")}</p>}
     </section>}
     {expanded && thread.artifacts.length > 0 && <section aria-label={tr("任务产物")}><h3>{tr("产物 ·")} {thread.artifacts.length}</h3>{thread.artifacts.map(path => <button type="button" className="wide-button subtle" key={path} onClick={() => openLink(encodeURIComponent(path))}>{path}</button>)}</section>}
     <section aria-label={tr("任务来源")} className="summary-sources"><h3>{tr("来源")}</h3>{(expanded ? connections : connections.slice(0, 2)).map(server => <div className="summary-source" key={server.id} title={tr("已连接的工具服务")}><Plug size={16} aria-hidden="true" /><span>{data.settings.mcpServers.find(item => item.id === server.id)?.name || server.id}</span></div>)}{(expanded ? sources : sources.slice(0, 2)).map(url => <button type="button" className="summary-source" key={url} title={url} onClick={() => openLink(url)}><Link size={16} aria-hidden="true" /><span>{url}</span></button>)}{!connections.length && !sources.length && <p className="hint">{tr("暂无外部来源")}</p>}</section>

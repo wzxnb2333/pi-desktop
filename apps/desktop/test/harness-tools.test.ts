@@ -296,7 +296,7 @@ test('artifact view is limited to the current task artifacts and opens the files
   };
   const opened = await openDesktopView(runtime, { kind: 'artifact', path: 'preview.html' }, new AbortController().signal);
   assert.deepEqual(opened, { status: 'opened', kind: 'artifact', directoryId: 'p', path: 'preview.html' });
-  assert.equal(data.ui.reviewOpen, true); assert.equal(data.ui.threads.t.reviewTab, 'files');
+  assert.equal(data.ui.reviewOpen, true); assert.equal(data.ui.threads.t.reviewTab, 'file');
   assert.equal(data.ui.threads.t.selectedPath, 'preview.html'); assert.deepEqual(data.ui.threads.t.openFiles, ['preview.html']);
   await assert.rejects(openDesktopView(runtime, { kind: 'artifact', path: 'notes.txt' }, new AbortController().signal), /只能打开当前任务产物/);
   await assert.rejects(openDesktopView(runtime, { kind: 'artifact', path: '../preview.html' }, new AbortController().signal), /路径超出项目目录/);

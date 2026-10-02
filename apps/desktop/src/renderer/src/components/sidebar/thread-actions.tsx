@@ -1,10 +1,31 @@
 import { tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
+import { Archive, ArchiveRestore, Pin, PinOff } from 'lucide-react';
 import { useState } from 'react';
 import type { Thread } from '../../../../shared/contracts.ts';
 import { useApp } from '../../state/app.tsx';
 import { ConfirmDialog } from '../primitives/dialog.tsx';
+import { IconButton } from '../primitives/icon-button.tsx';
 import { Menu } from '../primitives/menu.tsx';
+
+/**
+ * The actions a row offers on hover: pin and archive. Everything else (rename, export, fork, delete)
+ * stays in the context menu the row already opens on right click, so the row keeps a quiet edge.
+ */
+export function ThreadRowActions({ thread }: { thread: Thread }) {
+  useLocale();
+  const { act } = useApp();
+  return <>
+    <IconButton label={thread.pinned ? tr("取消置顶") : tr("置顶此任务")} active={thread.pinned}
+      onClick={() => act({ op: 'thread.update', id: thread.id, pinned: !thread.pinned })}>
+      {thread.pinned ? <PinOff size={13} /> : <Pin size={13} />}
+    </IconButton>
+    <IconButton label={thread.archived ? tr("恢复此任务") : tr("归档此任务")}
+      onClick={() => act({ op: 'thread.update', id: thread.id, archived: !thread.archived })}>
+      {thread.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+    </IconButton>
+  </>;
+}
 
 export function ThreadActions({ thread, entryId }: { thread: Thread; entryId?: string }) {
   useLocale();
@@ -12,9 +33,7 @@ export function ThreadActions({ thread, entryId }: { thread: Thread; entryId?: s
   const [rename, setRename] = useState(false);
   const [title, setTitle] = useState(thread.title);
   const busy = ['running', 'waiting'].includes(thread.status);
-  const options = thread.deletedAt ? [
-    { value: 'restore', label: tr("从回收站恢复") }, { value: 'purge', label: tr("永久删除"), disabled: busy },
-  ] : entryId ? [
+  const options = entryId ? [
     { value: 'sidechat', label: tr('从此消息创建侧聊') },
     { value: 'fork', label: tr("从此消息分叉"), disabled: busy || !thread.sessionFile },
     { value: 'fork-worktree', label: tr("从此消息在新 worktree 分叉"), disabled: busy || !thread.sessionFile || !thread.projectId },
@@ -30,7 +49,7 @@ export function ThreadActions({ thread, entryId }: { thread: Thread; entryId?: s
     { value: 'fork-worktree', label: tr("在新 worktree 中分叉"), disabled: busy || !thread.sessionFile || !thread.projectId },
     { value: 'compact', label: tr("压缩上下文"), disabled: busy || !thread.sessionFile },
     { value: busy ? 'stop' : 'resume', label: busy ? tr("停止任务") : tr("继续任务") },
-    { value: 'delete', label: tr("移入回收站"), disabled: busy },
+    { value: 'delete', label: tr("删除任务"), disabled: busy },
   ];
   const choose = async (action: string) => {
     if (action === 'sidechat') await invoke({ op: 'sidechat.create', threadId: thread.id, anchorItemId: entryId });
@@ -50,10 +69,10 @@ export function ThreadActions({ thread, entryId }: { thread: Thread; entryId?: s
       if (!draft?.text && !draft?.attachments.length) act({ op: 'ui.threadPatch', threadId: thread.id, patch: { draft: { text: tr("请继续上次任务"), attachments: [] } } });
       requestAnimationFrame(() => composerRef.current?.focus());
     }
-    if (action === 'delete' || action === 'restore') act({ op: 'thread.update', id: thread.id, deletedAt: action === 'restore' ? null : Date.now() });
-    if (action === 'purge') act({ op: 'thread.purge', id: thread.id });
+    // Deleting removes the task and its session outright; the main process confirms before it does.
+    if (action === 'delete') act({ op: 'thread.purge', id: thread.id });
   };
-  return <span data-thread-menu="true"><Menu kind="action" label={entryId ? tr("消息操作") : tr("任务更多操作")} value="" options={options} placeholder="…" size="sm" align="end" onChange={value => void choose(value).catch(() => {})} />
+  return <span data-thread-menu="true"><Menu kind="action" label={entryId ? tr("消息操作") : tr("任务更多操作")} value="" options={options} iconOnly placeholder="…" size="sm" align="end" onChange={value => void choose(value).catch(() => {})} />
     {rename && <ConfirmDialog title={tr("重命名任务")} description={<input aria-label={tr("任务名称")} value={title} onChange={event => setTitle(event.target.value)} />} confirmLabel={tr("保存")} onCancel={() => setRename(false)} onConfirm={() => { if (title.trim()) { act({ op: 'thread.update', id: thread.id, title: title.trim() }); setRename(false); } }} />}
   </span>;
 }

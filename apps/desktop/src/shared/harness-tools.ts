@@ -18,7 +18,7 @@ export function isHarnessToolName(toolName: string | undefined): boolean {
 
 export const harnessToolSchema = z.object({
   action: z.literal('harness.inspect'),
-  section: z.enum(['all', 'session', 'workspace', 'operations', 'view']).default('all'),
+  section: z.enum(['all', 'session', 'workspace', 'operations', 'view', 'desktop']).default('all'),
 }).strict();
 export type HarnessSection = z.infer<typeof harnessToolSchema>['section'];
 

@@ -94,7 +94,8 @@ test('time-scoped history and site data cleanup preserves older unrelated sites 
   await expect.poll(async () => (await fixture.snapshot()).data.operations.find(item => item.id === rejected)?.result).toEqual({ cancelled: true }); expect(await script(other, 'localStorage.getItem("remove")')).toBe('new');
   await fixture.app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false }); });
   await menu('清除浏览数据'); const panel = fixture.page.getByRole('dialog', { name: '浏览历史', exact: true });
-  await panel.getByLabel('清理时间范围').selectOption('day'); await panel.getByLabel('网站 Cookie 和存储').check(); await panel.getByLabel('全部浏览器缓存').check();
+  await panel.getByLabel('清理时间范围').click();
+  await fixture.page.locator('.menu-item[data-value="day"]').click(); await panel.getByLabel('网站 Cookie 和存储').check(); await panel.getByLabel('全部浏览器缓存').check();
   await panel.getByRole('button', { name: '清除选定数据', exact: true }).click(); await expect(panel.getByText('浏览数据已清理', { exact: true })).toBeVisible();
   expect((await history('recent')).total).toBe(0); expect((await history('old')).total).toBe(1);
   expect(await script(site, '({local:localStorage.getItem("keep"),cookie:document.cookie})')).toEqual({ local: 'old', cookie: 'keep=old' });
@@ -120,7 +121,8 @@ test('history disk failure keeps visits visible and retries after partial site c
     syncBuiltinESMExports();
   }, path);
   await menu('清除浏览数据'); let panel = fixture.page.getByRole('dialog', { name: '浏览历史', exact: true });
-  await panel.getByLabel('清理时间范围').selectOption('all'); await panel.getByLabel('网站 Cookie 和存储').check();
+  await panel.getByLabel('清理时间范围').click();
+  await fixture.page.locator('.menu-item[data-value="all"]').click(); await panel.getByLabel('网站 Cookie 和存储').check();
   await panel.getByRole('button', { name: '清除选定数据', exact: true }).click();
   await expect(panel.getByRole('alert').filter({ hasText: 'HISTORY_DISK_FAILURE' }).first()).toBeVisible();
   await expect(panel.getByText('清理失败前已完成的部分不会撤销；可重试所选操作。', { exact: true })).toBeVisible();
@@ -135,7 +137,8 @@ test('history disk failure keeps visits visible and retries after partial site c
   await fixture.app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false }); });
   await fixture.page.getByLabel('Browser actions', { exact: true }).click(); await fixture.page.getByRole('menuitem', { name: 'Clear browsing data', exact: true }).click();
   panel = fixture.page.getByRole('dialog', { name: 'Browsing history', exact: true });
-  await panel.getByLabel('Time range to clear').selectOption('all'); await panel.getByRole('button', { name: 'Clear selected data', exact: true }).click();
+  await panel.getByLabel('Time range to clear').click();
+  await fixture.page.locator('.menu-item[data-value="all"]').click(); await panel.getByRole('button', { name: 'Clear selected data', exact: true }).click();
   await expect(panel.getByText('Browsing data cleared', { exact: true })).toBeVisible();
   expect((await history()).total).toBe(0);
   for (const file of [path, path + '.bak']) expect(JSON.parse(await readFile(file, 'utf8')).entries).toEqual([]);

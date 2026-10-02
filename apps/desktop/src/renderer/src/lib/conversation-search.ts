@@ -1,7 +1,10 @@
 import { tr } from "../../../shared/localization.ts";
 import type { TimelineItem } from '../../../shared/contracts.ts';
+import { itemSearchTexts, literalMatches } from '../../../shared/conversation-search.ts';
 import { activity } from './activity.ts';
 import { groupTurns, turnBlocks } from './timeline-groups.ts';
+
+export { itemSearchTexts, literalMatches };
 
 export interface ConversationSource {
   key: string;
@@ -59,11 +62,6 @@ export function conversationSources(items: TimelineItem[], running: boolean): Co
   return sources;
 }
 
-/** Literal Unicode search preserves source offsets instead of lowercasing and shifting indexes. */
-export function literalMatches(text: string, query: string): IterableIterator<RegExpMatchArray> {
-  return text.matchAll(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'giu'));
-}
-
 export function findConversation(sources: ConversationSource[], query: string, limit = 200, offset = 0): { matches: ConversationMatch[]; total: number } {
   const needle = query.trim();
   const matches: ConversationMatch[] = [];
@@ -78,10 +76,4 @@ export function findConversation(sources: ConversationSource[], query: string, l
     }
   }
   return { matches, total };
-}
-
-/** Sidebar content filtering includes real reasoning, arguments and diffs, without synthetic labels. */
-export function itemSearchTexts(item: TimelineItem): string[] {
-  return [item.text, item.thinking ?? '', item.args ?? '', item.details?.diff ?? '',
-    ...(item.blocks ?? []).flatMap(block => block.type === 'text' || block.type === 'thinking' ? [block.text] : [])];
 }

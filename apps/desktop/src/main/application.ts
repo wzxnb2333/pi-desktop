@@ -2,7 +2,7 @@ import { translate } from '../shared/localization.ts';
 import { execFile } from 'node:child_process';
 import { copyFile, mkdir, readFile, realpath, rm, rmdir, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join } from 'node:path';
-import { app, type BrowserWindow, dialog, globalShortcut, Notification, powerSaveBlocker, safeStorage, shell } from 'electron';
+import { app, type BrowserWindow, clipboard, dialog, globalShortcut, Notification, powerSaveBlocker, safeStorage, shell } from 'electron';
 import {
   type Approval,
   type Automation,
@@ -32,7 +32,7 @@ import { GitService, gitRun } from './git.ts';
 import { GitWorkflow } from './git-workflow.ts';
 import { gitProcessProblems, onGitProcessProblems, ownGitController, retryGitProcessStop } from './git-process.ts';
 import { modelCatalog } from './model-catalog.ts';
-import { catalogModel } from '../shared/model-configuration.ts';
+import { catalogModel, findModel } from '../shared/model-configuration.ts';
 import { safeProjectPath } from './policy.ts';
 import { sandboxPowerShell } from './windows-sandbox.ts';
 import { PreviewService } from './preview.ts';
@@ -51,6 +51,12 @@ import { changedWorkerSettingGroups } from './settings-diff.ts';
 import { applySettingsPatch, sameSetting, settingsChanges } from '../shared/settings-updates.ts';
 import { createSharedSkill, discoverSharedSkills, updateIgnoredSkills } from './skills.ts';
 import { inspectResources } from './resource-inspection.ts';
+import { listSessions, searchSessions, sessionMessages, sessionSummary } from './desktop-session-tools.ts';
+import { fileSelectionPatch, panelSelectionPatch } from '../shared/panel-tabs.ts';
+import type { DesktopSessionToolRequest } from '../shared/session-tools.ts';
+import { workbenchToolActions, type WorkbenchToolRequest } from '../shared/workbench-tools.ts';
+import { allowedSettingsKeys, deniedSettingsKeys, type ManageSettingsToolRequest } from '../shared/settings-tools.ts';
+import { serviceToolActions, type ServiceToolRequest } from '../shared/service-tools.ts';
 import { JsonStore, SecretVault, StoreRecoveryError, type ProjectDirectoryConfig } from './store.ts';
 import { TerminalService } from './terminal.ts';
 import { inspectTerminal } from './terminal-inspection.ts';
@@ -320,8 +326,8 @@ export class DesktopApplication {
       const entry = catalogModel(settings.modelProviders.find(({ id }) => id === model.provider), model, catalog);
       if (!entry) continue;
       model.reasoning = entry.reasoning;
-      const levels = model.thinkingLevels?.filter((level) => entry.thinkingLevels.includes(level));
-      model.thinkingLevels = levels?.length ? levels : [...entry.thinkingLevels];
+      // Only fill in the catalogue list when the user has none: their own selection is the source of truth.
+      if (!model.thinkingLevels?.length) model.thinkingLevels = [...entry.thinkingLevels];
     }
     if (!updateThreads) return;
     for (const thread of this.store.data.threads) {
@@ -599,8 +605,608 @@ export class DesktopApplication {
       this.broadcastApprovals();
     });
   }
-  private workerEvent(thread: Thread, event: WorkerEvent, host: AgentHost): void {
-    if (this.workers.get(thread.id) !== host) return;
+  /** Shared by the folder-picker op and the model surface: one code path, same validation. */
+  private async addProjectPath(rawPath: string): Promise<Project | null> {
+    const path = await realpath(rawPath).catch(() => '');
+    if (!path) return null;
+    const existing = this.store.data.projects.find(project => project.path.toLowerCase() === path.toLowerCase());
+    if (existing) return existing;
+    const project: Project = { id: crypto.randomUUID(), path, name: basename(path), trusted: false, createdAt: Date.now() };
+    this.store.data.projects.push(project);
+    await this.store.save();
+    this.changed();
+    return project;
+  }
+
+  private async addProjectDirectory(project: Project, rawPath: string): Promise<{ id: string; name: string; path: string; trusted: boolean } | null> {
+    const path = await realpath(rawPath).catch(() => '');
+    if (!path) return null;
+    const existing = projectDirectories(project).find(item => item.path.toLocaleLowerCase() === path.toLocaleLowerCase());
+    if (existing) return existing;
+    if ((project.directories?.length ?? 0) >= 50) throw new Error('每个项目最多添加 50 个附加目录');
+    const directory = { id: crypto.randomUUID(), name: basename(path), path, trusted: false };
+    const base = this.projectDirectoryConfig(project);
+    const next = { ...base, directories: [...(base.directories ?? []), directory] };
+    await this.store.saveProjectDirectories(project.id, next, base);
+    await this.invalidateWorkers(this.store.data.threads.filter(item => item.projectId === project.id).map(item => item.id));
+    this.changed();
+    return directory;
+  }
+
+  /**
+   * Wave 1 of the model-facing desktop surface. Reads are pure projections; writes reuse the exact op the
+   * matching UI control calls, so validation, persistence and renderer updates cannot drift. Risky actions
+   * (approval: 'policy' in the catalog) go through `ask`, which is a no-op under auto/full and a refusal
+   * under deny or plan mode.
+   */
+  private async runDesktopSessionTool(thread: Thread, captured: Thread, request: DesktopSessionToolRequest, signal: AbortSignal): Promise<{ result: { content: { type: 'text'; text: string }[] } }> {
+    const respond = (value: unknown) => ({ result: { content: [{ type: 'text' as const, text: JSON.stringify(value) }] } });
+    const data = this.store.data;
+    const source = this.windows.owner(thread.id)?.window ?? this.window;
+    const target = (id: string) => {
+      const found = this.thread(id);
+      if (!found.deletedAt) return found;
+      throw new Error('会话已删除');
+    };
+    const guard = () => {
+      signal.throwIfAborted();
+      if (this.disposing || thread.deletedAt || !this.activeSends.has(thread.id)) throw new Error('此会话不能访问桌面会话接口');
+      if (thread.planMode || captured.planMode) throw new Error('计划模式下不能修改桌面状态');
+    };
+    const every = async (op: Parameters<DesktopApplication['handle']>[0]) => { guard(); return this.handle(op, false, source); };
+
+    switch (request.action) {
+      case 'sessions.list':
+        return respond(listSessions(data, request));
+      case 'sessions.read': {
+        const found = target(request.threadId);
+        return respond(sessionMessages(found, request));
+      }
+      case 'sessions.search':
+        return respond(searchSessions(data, request));
+      case 'sessions.create': {
+        guard();
+        const created = await this.handle({ op: 'thread.create', projectId: request.projectId, directoryId: request.directoryId, worktree: request.worktree }, false, source) as Thread;
+        if (!created?.id) throw new Error('创建会话失败');
+        await this.handle({ op: 'window.open', kind: 'task', threadId: created.id }, false, source);
+        return respond(sessionSummary(data, created));
+      }
+      case 'sessions.select': {
+        const found = target(request.threadId);
+        if (!this.windows.owner(found.id)) await every({ op: 'window.open', kind: 'task', threadId: found.id });
+        await every({ op: 'ui.update', ui: { ...this.store.data.ui, activeThreadId: found.id, view: 'thread' } });
+        return respond(sessionSummary(this.store.data, found));
+      }
+      case 'sessions.rename':
+      case 'sessions.pin':
+      case 'sessions.archive':
+      case 'sessions.markRead': {
+        const found = target(request.threadId);
+        const patch: Parameters<DesktopApplication['handle']>[0] = request.action === 'sessions.rename' ? { op: 'thread.update', id: found.id, title: request.title }
+          : request.action === 'sessions.pin' ? { op: 'thread.update', id: found.id, pinned: request.pinned }
+            : request.action === 'sessions.archive' ? { op: 'thread.update', id: found.id, archived: request.archived }
+              : { op: 'thread.update', id: found.id, readAt: request.read ? Date.now() : 0 };
+        await every(patch);
+        return respond(sessionSummary(this.store.data, this.thread(found.id)));
+      }
+      case 'sessions.stop':
+        await every({ op: 'thread.stop', id: target(request.threadId).id });
+        return respond({ stopped: request.threadId });
+      case 'sessions.resume':
+        await every({ op: 'thread.resume', id: target(request.threadId).id });
+        return respond({ resumed: request.threadId });
+      case 'sessions.fork': {
+        guard();
+        const forked = await this.handle({ op: 'thread.fork', id: target(request.threadId).id, entryId: request.entryId, worktree: request.worktree }, false, source) as Thread;
+        await this.handle({ op: 'window.open', kind: 'task', threadId: forked.id }, false, source);
+        return respond(sessionSummary(this.store.data, forked));
+      }
+      case 'sessions.delete': {
+        guard();
+        const found = target(request.threadId);
+        if (['running', 'waiting'].includes(found.status)) throw new Error('请先停止任务再删除');
+        await this.handle({ op: 'thread.purge', id: found.id }, false, source);
+        return respond({ deleted: found.id, deletedAt: Date.now() });
+      }
+      case 'sessions.quickChat': {
+        guard();
+        const created = await this.handle({ op: 'chat.create', requestId: request.requestId ?? crypto.randomUUID() }, false, source) as Thread | null;
+        if (!created?.id) throw new Error('未能创建快速聊天');
+        await this.handle({ op: 'window.open', kind: 'task', threadId: created.id }, false, source);
+        return respond(sessionSummary(this.store.data, created));
+      }
+      case 'sessions.bindProject': {
+        guard();
+        const project = this.project(request.projectId);
+        if (request.directoryId && !projectDirectories(project).some(directory => directory.id === request.directoryId))
+          throw new Error('目录不属于此项目');
+        await this.handle({ op: 'thread.bindProject', id: thread.id, projectId: project.id, directoryId: request.directoryId }, false, source);
+        return respond({ threadId: thread.id, projectId: project.id, directoryId: request.directoryId ?? null });
+      }
+      case 'sessions.keepSidechat':
+      case 'sessions.appendSidechat': {
+        guard();
+        await this.handle(request.action === 'sessions.keepSidechat'
+          ? { op: 'sidechat.keep', threadId: target(request.threadId).id }
+          : { op: 'sidechat.append', threadId: target(request.threadId).id, itemId: request.itemId }, false, source);
+        return respond({ [request.action === 'sessions.keepSidechat' ? 'kept' : 'appended']: request.threadId });
+      }
+      case 'sessions.send': {
+        guard();
+        const found = target(request.threadId);
+        if (found.id !== thread.id && !(await this.ask(thread, 'send_to_session', `给会话「${found.title}」发送消息：\n\n${request.text.slice(0, 2000)}`)))
+          throw new Error('用户未批准给其他会话发送消息');
+        const sent = await this.handle({ op: 'thread.send', id: found.id, text: request.text, attachments: [], queue: found.id === thread.id ? undefined : request.queue, requestId: request.requestId }, false, source);
+        return respond({ sent: found.id, queue: request.queue, receipt: sent ?? null });
+      }
+      case 'projects.list':
+        return respond({ projects: data.projects.map(project => ({
+          id: project.id, name: project.name, path: project.path, trusted: !!project.trusted,
+          directories: projectDirectories(project).map(directory => ({ id: directory.id, path: directory.path, trusted: !!directory.trusted })),
+          sessions: data.threads.filter(item => item.projectId === project.id && !item.deletedAt).length,
+        })) });
+      case 'projects.add': {
+        guard();
+        // The picker is the user's own gate when no path is given; a model-supplied path still asks.
+        if (request.path && !(await this.ask(thread, 'manage_projects', `添加项目目录：${request.path}`))) throw new Error('用户未批准添加项目');
+        const project = await this.handle({ op: 'project.add', path: request.path }, false, source) as Project | null;
+        if (!project) return respond({ added: null, canceled: true });
+        return respond({ added: { id: project.id, name: project.name, path: project.path, trusted: !!project.trusted } });
+      }
+      case 'projects.trust': {
+        guard();
+        const project = this.project(request.projectId);
+        await this.handle({ op: 'project.trust', id: project.id, trusted: request.trusted }, false, source);
+        return respond({ id: project.id, trusted: request.trusted });
+      }
+      case 'projects.directoryAdd': {
+        guard();
+        if (request.path && !(await this.ask(thread, 'manage_projects', `添加项目附加目录：${request.path}`))) throw new Error('用户未批准添加目录');
+        const directory = await this.handle({ op: 'project.directoryAdd', projectId: request.projectId, path: request.path }, false, source);
+        return respond({ added: directory ?? null });
+      }
+      case 'projects.directoryRemove': {
+        guard();
+        if (!(await this.ask(thread, 'manage_projects', `移除项目附加目录：${request.directoryId}`))) throw new Error('用户未批准移除目录');
+        await this.handle({ op: 'project.directoryRemove', projectId: request.projectId, directoryId: request.directoryId }, false, source);
+        return respond({ removed: request.directoryId });
+      }
+      case 'projects.directoryUpdate': {
+        guard();
+        await this.handle({ op: 'project.directoryUpdate', projectId: request.projectId, directoryId: request.directoryId, trusted: request.trusted, primary: request.primary }, false, source);
+        return respond({ updated: request.directoryId, trusted: request.trusted, primary: request.primary });
+      }
+      case 'ui.collapseProject': {
+        guard();
+        const collapsed = new Set(this.store.data.ui.collapsedProjects ?? []);
+        if (request.collapsed) collapsed.add(request.projectId); else collapsed.delete(request.projectId);
+        await every({ op: 'ui.update', ui: { ...this.store.data.ui, collapsedProjects: [...collapsed] } });
+        return respond({ collapsed: [...collapsed] });
+      }
+      case 'ui.summary': {
+        guard();
+        await every({ op: 'ui.update', ui: { ...this.store.data.ui, summaryOpen: request.open, activeThreadId: request.threadId ?? this.store.data.ui.activeThreadId } });
+        return respond({ summaryOpen: request.open });
+      }
+      case 'ui.openPanel': {
+        guard();
+        const threadId = request.threadId ?? thread.id;
+        target(threadId);
+        const uiThread = this.store.data.ui.threads[threadId] ?? {};
+        const patch = panelSelectionPatch(uiThread, { reviewTab: request.panel });
+        await this.handle({ op: 'ui.threadPatch', threadId, patch }, false, source);
+        await this.handle({ op: 'ui.update', ui: { ...this.store.data.ui, reviewOpen: true } }, false, source);
+        return respond({ panel: request.panel, threadId });
+      }
+      case 'ui.closePanel': {
+        guard();
+        await every({ op: 'ui.update', ui: { ...this.store.data.ui, reviewOpen: false } });
+        return respond({ reviewOpen: false });
+      }
+      case 'ui.selectFile': {
+        guard();
+        const threadId = request.threadId ?? thread.id;
+        target(threadId);
+        const uiThread = this.store.data.ui.threads[threadId] ?? {};
+        const patch = fileSelectionPatch(uiThread, request.path);
+        await this.handle({ op: 'ui.threadPatch', threadId, patch }, false, source);
+        await this.handle({ op: 'ui.update', ui: { ...this.store.data.ui, reviewOpen: true, activeThreadId: threadId } }, false, source);
+        return respond({ selectedPath: request.path, threadId });
+      }
+      case 'ui.selectDirectory': {
+        guard();
+        const threadId = request.threadId ?? thread.id;
+        const found = target(threadId);
+        const project = found.projectId ? data.projects.find(item => item.id === found.projectId) : undefined;
+        if (project && !projectDirectories(project).some(directory => directory.id === request.directoryId))
+          throw new Error('目录不属于当前项目');
+        await this.handle({ op: 'ui.threadPatch', threadId, patch: { directoryId: request.directoryId } }, false, source);
+        return respond({ directoryId: request.directoryId, threadId });
+      }
+      case 'ui.openExternal': {
+        guard();
+        // Only http(s) URLs reach the operating system; the op re-validates, and js/file/data are refused.
+        if (!/^https?:\/\//i.test(request.url)) throw new Error('只能打开 http(s) 链接');
+        if (thread.policy === 'ask' && !(await this.ask(thread, 'manage_ui', `用系统浏览器打开：${request.url}`))) throw new Error('用户未批准打开外部链接');
+        await this.handle({ op: 'external.open', url: request.url }, false, source);
+        return respond({ opened: request.url });
+      }
+      /*
+       * Wave 2 — the caller's own conversation controls. The schemas carry no threadId, so these always act
+       * on the calling chat; each one reuses the op behind the matching composer/timeline control.
+       */
+      case 'messages.copy': {
+        guard();
+        const item = thread.items.find(entry => entry.id === request.itemId);
+        if (!item) throw new Error('消息不属于当前会话');
+        const text = item.role === 'user' ? item.input?.text ?? item.text : item.text;
+        clipboard.writeText(text ?? '');
+        return respond({ copied: item.id, characters: (text ?? '').length });
+      }
+      case 'messages.revise': {
+        guard();
+        const result = await this.handle({ op: 'thread.revise', threadId: thread.id, itemId: request.itemId, requestId: request.requestId ?? crypto.randomUUID(), kind: request.kind, text: request.text }, false, source) as { thread: Thread } | null;
+        if (!result?.thread) throw new Error('未能创建修订会话');
+        await this.handle({ op: 'window.open', kind: 'task', threadId: result.thread.id }, false, source);
+        return respond({ revised: result.thread.id, kind: request.kind, title: result.thread.title });
+      }
+      case 'messages.setModel': {
+        guard();
+        const model = findModel(this.store.data.settings, request.modelId);
+        if (!model) throw new Error('模型不存在，请先用 get_harness 查看可用模型');
+        await every({ op: 'thread.update', id: thread.id, modelId: model.id });
+        return respond({ modelId: model.id, name: model.name });
+      }
+      case 'messages.setThinking': {
+        guard();
+        const model = findModel(this.store.data.settings, thread.modelId);
+        const allowed = model ? allowedThinkingLevels(model) : ['off'];
+        if (!allowed.includes(request.thinking)) throw new Error('该模型不允许此思考程度：' + allowed.join('/'));
+        await every({ op: 'thread.update', id: thread.id, thinking: request.thinking });
+        return respond({ thinking: request.thinking, allowed });
+      }
+      case 'messages.createSidechat': {
+        guard();
+        const sidechat = await this.handle({ op: 'sidechat.create', threadId: thread.id, anchorItemId: request.anchorItemId, requestId: crypto.randomUUID() }, false, source) as Thread | null;
+        if (!sidechat) throw new Error('未能创建侧聊');
+        await this.handle({ op: 'window.open', kind: 'task', threadId: sidechat.id }, false, source);
+        return respond({ sidechatId: sidechat.id, parentThreadId: thread.id });
+      }
+    }
+  }
+
+  /**
+   * Wave 3 — Review, Git, worktrees and terminals. Reads pass through; writes ask under the `ask` policy
+   * (no-op under auto/full, refusal under deny or plan mode) and then reuse the exact op the UI calls.
+   */
+  private async runWorkbenchTool(thread: Thread, captured: Thread, request: WorkbenchToolRequest, signal: AbortSignal): Promise<{ result: { content: { type: 'text'; text: string }[] } }> {
+    const respond = (value: unknown) => ({ result: { content: [{ type: 'text' as const, text: JSON.stringify(value) }] } });
+    const source = this.windows.owner(thread.id)?.window ?? this.window;
+    const guard = () => {
+      signal.throwIfAborted();
+      if (this.disposing || thread.deletedAt || thread.archived || !this.activeSends.has(thread.id)) throw new Error('此会话不能访问工作台接口');
+      if (thread.planMode || captured.planMode || thread.policy === 'deny' || captured.policy === 'deny') throw new Error('计划模式或拒绝策略下不能修改工作台');
+    };
+    const run = (op: Parameters<DesktopApplication['handle']>[0]) => this.handle(op, false, source);
+    const allow = async (tool: string, description: string) => {
+      if (thread.policy === 'full' || thread.policy === 'auto') return;
+      if (!(await this.ask(thread, tool, description))) throw new Error('用户未批准此操作');
+    };
+    const directoryId = (request as { directoryId?: string }).directoryId;
+
+    switch (request.action) {
+      case 'review.start': {
+        guard();
+        await allow('manage_review', `对当前任务发起代码审查（范围 ${request.scope}${request.ref ? ' / ' + request.ref : ''}）`);
+        return respond(await run({ op: 'review.start', threadId: thread.id, directoryId, scope: request.scope, ref: request.ref, instructions: request.instructions }));
+      }
+      case 'review.cancel': {
+        guard();
+        await allow('manage_review', '取消当前任务的代码审查');
+        return respond(await run({ op: 'review.cancel', threadId: thread.id }));
+      }
+      case 'review.inspect':
+        return respond(await run({ op: 'review.inspect', threadId: thread.id }));
+      case 'review.read':
+        return respond(await run({ op: 'review.file', threadId: thread.id, path: request.path }));
+      case 'review.finding':
+        return respond(await run({ op: 'review.finding', threadId: thread.id, findingId: request.findingId, ignored: request.ignored, feedback: request.feedback }));
+      case 'review.locate':
+        return respond(await run({ op: 'review.locate', threadId: thread.id, findingId: request.findingId }));
+
+      case 'git.status': return respond(await run({ op: 'git.status', threadId: thread.id, directoryId }));
+      case 'git.inspect': return respond(await run({ op: 'git.inspect', threadId: thread.id, directoryId }));
+      case 'git.diff': return respond(await run({ op: 'git.diff', threadId: thread.id, directoryId, path: request.path, mode: request.mode }));
+      case 'git.range': return respond(await run({ op: 'git.range', threadId: thread.id, directoryId, path: request.path, mode: request.mode, ref: request.ref }));
+      case 'git.commitInfo': return respond(await run({ op: 'git.show', threadId: thread.id, directoryId, ref: request.ref }));
+      case 'git.recoveries': return respond(await run({ op: 'git.recoveries', threadId: thread.id, directoryId, path: request.path }));
+      case 'git.processProblems': return respond(await run({ op: 'git.processProblems', threadId: thread.id, directoryId }));
+      case 'git.hunkVersion': return respond(await run({ op: 'git.hunkVersion', threadId: thread.id, directoryId, path: request.path }));
+      case 'git.run': {
+        guard();
+        await allow('manage_git', `在仓库里执行 git ${request.operation}${request.value ? ' ' + request.value : ''}${request.paths.length ? '（' + request.paths.join(', ') + '）' : ''}`);
+        return respond(await run({ op: 'git.action', threadId: thread.id, directoryId, requestId: crypto.randomUUID(), action: request.operation, paths: request.paths, value: request.value, startPoint: request.startPoint, remote: request.remote, strategy: request.strategy, patch: request.patch }));
+      }
+      case 'git.commit': {
+        guard();
+        await allow('manage_git', `提交 ${request.paths.length} 个文件：${request.message}`);
+        return respond(await run({ op: 'git.commit', threadId: thread.id, directoryId, message: request.message, paths: request.paths }));
+      }
+      case 'git.apply': {
+        guard();
+        await allow('manage_git', '把审查建议应用到工作区');
+        return respond(await run({ op: 'git.apply', threadId: thread.id, directoryId }));
+      }
+      case 'git.revert': {
+        guard();
+        await allow('manage_git', `丢弃 ${request.path} 的未提交修改`);
+        return respond(await run({ op: 'git.revert', threadId: thread.id, directoryId, path: request.path }));
+      }
+      case 'git.hunkRevert': {
+        guard();
+        await allow('manage_git', `撤销 ${request.path} 的一个代码块`);
+        return respond(await run({ op: 'git.hunkRevert', threadId: thread.id, directoryId, path: request.path, patch: request.patch, version: request.version, mode: request.mode }));
+      }
+      case 'git.hunkRestore': {
+        guard();
+        await allow('manage_git', '恢复最近撤销的代码块');
+        return respond(await run({ op: 'git.hunkRestore', threadId: thread.id, directoryId, recoveryId: request.recoveryId }));
+      }
+      case 'git.conflict': {
+        guard();
+        await allow('manage_git', `把 ${request.path} 的冲突交给外部工具处理`);
+        return respond(await run({ op: 'git.conflict', threadId: thread.id, directoryId, path: request.path }));
+      }
+      case 'git.retryStop': {
+        guard();
+        await allow('manage_git', '停止一个 Git 后台进程');
+        return respond(await run({ op: 'git.retryStop', threadId: thread.id, directoryId, processId: request.processId }));
+      }
+      case 'git.cancel': {
+        guard();
+        await allow('manage_git', '取消一个进行中的 Git 操作');
+        return respond(await run({ op: 'git.cancel', threadId: thread.id, directoryId, requestId: request.requestId }));
+      }
+
+      case 'worktrees.create':
+      case 'worktrees.migrate': {
+        guard();
+        const verb = request.action === 'worktrees.create' ? '创建' : '迁移到';
+        await allow('manage_worktrees', `${verb} git worktree（起点 ${request.startPoint}，目标 ${'destination' in request ? request.destination : 'worktree'}）`);
+        return respond(await run({ op: 'worktree.start', threadId: thread.id, directoryId, requestId: request.requestId ?? crypto.randomUUID(), action: request.action === 'worktrees.create' ? 'create' : 'migrate', startPoint: request.startPoint, destination: 'destination' in request ? request.destination : 'worktree' }));
+      }
+      case 'worktrees.manage': {
+        guard();
+        if (request.operation !== 'usage') await allow('manage_worktrees', `对 worktree 执行 ${request.operation}`);
+        return respond(await run({ op: 'worktree.manage', threadId: thread.id, worktreeId: request.worktreeId, requestId: request.requestId ?? crypto.randomUUID(), action: request.operation }));
+      }
+      case 'worktrees.recycle': {
+        guard();
+        await allow('manage_worktrees', '回收当前任务的 worktree');
+        return respond(await run({ op: 'worktree.recycle', threadId: thread.id, requestId: request.requestId ?? crypto.randomUUID() }));
+      }
+      case 'worktrees.recovery': {
+        guard();
+        if (request.retry) await allow('manage_worktrees', '重试 worktree 操作');
+        return respond(await run({ op: 'worktree.recovery', threadId: thread.id, requestId: request.requestId ?? crypto.randomUUID(), recoveryId: request.recoveryId, action: request.retry ? 'retry' : 'open' }));
+      }
+      case 'worktrees.creationRecovery': {
+        guard();
+        return respond(await run({ op: 'worktree.creationRecovery', threadId: thread.id, recoveryId: request.recoveryId, requestId: request.requestId ?? crypto.randomUUID(), action: request.open ? 'open' : 'refresh' }));
+      }
+
+      case 'terminal.open': {
+        guard();
+        if (!thread.projectId) throw new Error('请先为这个聊天绑定项目目录');
+        const opened = await run({ op: 'terminal.open', threadId: thread.id, profileId: request.profileId });
+        return respond({ terminal: opened ?? null });
+      }
+      case 'terminal.rename': {
+        guard();
+        await run({ op: 'terminal.rename', id: request.terminalId, title: request.title });
+        return respond({ renamed: request.terminalId, title: request.title });
+      }
+      case 'terminal.close': {
+        guard();
+        await allow('manage_terminal', '关闭一个集成终端（可能中断正在运行的命令）');
+        await run({ op: 'terminal.close', id: request.terminalId });
+        return respond({ closed: request.terminalId });
+      }
+      case 'terminal.resize': {
+        guard();
+        await run({ op: 'terminal.resize', id: request.terminalId, cols: request.cols, rows: request.rows });
+        return respond({ resized: request.terminalId });
+      }
+
+      /*
+       * Files and comments: the op layer already enforces project-directory containment and CAS versions,
+       * so a stale write or a path outside the workspace is refused by the same code the editor uses.
+       */
+      case 'files.list':
+        return respond(await run({ op: 'file.list', threadId: thread.id, directoryId, path: request.path }));
+      case 'files.read':
+        return respond(await run({ op: 'file.read', threadId: thread.id, directoryId, path: request.path }));
+      case 'files.write': {
+        guard();
+        await allow('manage_files', `保存文件 ${request.path}`);
+        return respond(await run({ op: 'file.write', threadId: thread.id, directoryId, path: request.path, content: request.content, version: request.version }));
+      }
+      case 'files.open':
+        return respond(await run({ op: 'file.open', threadId: thread.id, directoryId, path: request.path }));
+      case 'files.reveal':
+        return respond(await run({ op: 'file.reveal', threadId: thread.id, directoryId, path: request.path }));
+      case 'files.search': {
+        const requestId = request.cursor ?? crypto.randomUUID();
+        const found = await run({ op: 'file.search', threadId: thread.id, directoryId, requestId, query: request.query, content: request.content });
+        return respond({ requestId, result: found });
+      }
+      case 'files.searchCancel':
+        return respond(await run({ op: 'file.search.cancel', threadId: thread.id, directoryId, requestId: request.requestId ?? '' }));
+
+      case 'comments.list':
+        return respond(await run({ op: 'comment.list', threadId: thread.id }));
+      case 'comments.add': {
+        guard();
+        return respond(await run({ op: 'comment.add', threadId: thread.id, directoryId, path: request.path, version: request.version, line: request.line, endLine: request.endLine, body: request.body }));
+      }
+      case 'comments.remove':
+        return respond(await run({ op: 'comment.remove', threadId: thread.id, commentId: request.commentId }));
+      case 'comments.locate':
+        return respond(await run({ op: 'comment.locate', threadId: thread.id, commentId: request.commentId }));
+
+      /*
+       * Wave 5 — windows and previews. Window control targets the window this chat lives in; closing it asks.
+       * Preview network permissions are deliberately absent: allowing an origin is the user's click.
+       */
+      case 'windows.open': {
+        guard();
+        const opened = await run({ op: 'window.open', kind: request.kind, threadId: request.threadId });
+        return respond({ opened: opened ?? null, kind: request.kind, threadId: request.threadId ?? null });
+      }
+      case 'windows.minimize':
+      case 'windows.maximize':
+      case 'windows.close': {
+        guard();
+        if (request.action === 'windows.close') await allow('manage_windows', '关闭当前窗口（会隐藏这个聊天）');
+        const window = this.windows.owner(thread.id)?.window ?? this.window;
+        const action = request.action === 'windows.minimize' ? 'minimize' : request.action === 'windows.maximize' ? 'maximize' : 'close';
+        await run({ op: 'window', action });
+        return respond({ window: action, title: window.getTitle() });
+      }
+      case 'windows.retryShortcut':
+        return respond(await run({ op: 'window.shortcut', retry: true }));
+      case 'windows.revealWorktreePath': {
+        guard();
+        const project = this.project(request.projectId);
+        if (request.directoryId && !projectDirectories(project).some(directory => directory.id === request.directoryId))
+          throw new Error('目录不属于此项目');
+        await run({ op: 'thread.inWorktree', projectId: project.id, directoryId: request.directoryId, path: request.path, reveal: request.reveal });
+        return respond({ revealed: request.path, reveal: request.reveal });
+      }
+      case 'previews.open':
+        return respond(await run({ op: 'preview.open', url: request.url }));
+      case 'previews.close':
+        return respond(await run({ op: 'preview.close' }));
+      case 'previews.refresh':
+        return respond(await run({ op: 'preview.refresh' }));
+      case 'artifacts.open': {
+        guard();
+        return respond(await run({ op: 'artifact.open', threadId: thread.id, directoryId: request.directoryId, path: request.path, requestId: request.requestId ?? crypto.randomUUID() }));
+      }
+      case 'artifacts.close':
+        return respond(await run({ op: 'artifact.close', threadId: thread.id, previewId: request.previewId }));
+      case 'artifacts.status':
+        return respond(await run({ op: 'artifact.status', threadId: thread.id, previewId: request.previewId }));
+      case 'artifacts.stop':
+        return respond(await run({ op: 'artifact.stop', threadId: thread.id, previewId: request.previewId }));
+      case 'artifacts.capture':
+        return respond(await run({ op: 'artifact.capture', threadId: thread.id, previewId: request.previewId }));
+      case 'artifacts.annotation':
+        return respond(await run({ op: 'artifact.annotation', threadId: thread.id, annotationId: request.annotationId, action: request.operation }));
+    }
+  }
+
+  /**
+   * Wave 4a — settings. Reads are projections; `settings.patch` is limited to `allowedSettingsKeys`, and
+   * anything on the permission plane (`policy`, providers, MCP, plugin sources, capabilities) is refused
+   * with the reason instead of being silently dropped.
+   */
+  private async runSettingsTool(thread: Thread, captured: Thread, request: ManageSettingsToolRequest, signal: AbortSignal): Promise<{ result: { content: { type: 'text'; text: string }[] } }> {
+    const respond = (value: unknown) => ({ result: { content: [{ type: 'text' as const, text: JSON.stringify(value) }] } });
+    const source = this.windows.owner(thread.id)?.window ?? this.window;
+    signal.throwIfAborted();
+    if (this.disposing || thread.deletedAt || !this.activeSends.has(thread.id)) throw new Error('此会话不能访问桌面设置接口');
+    const settings = this.store.data.settings;
+    if (request.action === 'settings.read') {
+      const appearance = Object.fromEntries(allowedSettingsKeys.filter(key => key in settings).map(key => [key, settings[key as keyof typeof settings]]));
+      return respond({ settings: appearance, deniedKeys: deniedSettingsKeys });
+    }
+    if (request.action === 'settings.models') return respond(await this.handle({ op: 'models.catalog' }, false, source));
+    if (request.action === 'settings.inputCatalog') return respond(await this.handle({ op: 'input.catalog', threadId: thread.id }, false, source));
+    if (thread.planMode || captured.planMode || thread.policy === 'deny' || captured.policy === 'deny') throw new Error('计划模式或拒绝策略下不能修改设置');
+    const keys = Object.keys(request.patch);
+    for (const key of keys)
+      if (!(allowedSettingsKeys as readonly string[]).includes(key))
+        throw new Error(`不允许修改 ${key}${deniedSettingsKeys[key] ? '（' + deniedSettingsKeys[key] + '）' : ''}，这属于用户自己的权限与配置面`);
+    if (thread.policy === 'ask' && !(await this.ask(thread, 'manage_settings', `修改设置：${keys.join(', ')}`))) throw new Error('用户未批准修改设置');
+    const base = Object.fromEntries(keys.map(key => [key, settings[key as keyof typeof settings]]));
+    const next = await this.handle({ op: 'settings.patch', patch: request.patch, base }, false, source);
+    return respond({ patched: keys, settings: Object.fromEntries(keys.map(key => [key, (next as Record<string, unknown>)[key]])) });
+  }
+
+  /**
+   * Wave 4c — browser data, pull requests, resources and MCP. Reads pass through, process-spawning and
+   * outward-facing actions ask under the `ask` policy. Site policies, data clearing and credentials are not
+   * reachable from here at all.
+   */
+  private async runServiceTool(thread: Thread, captured: Thread, request: ServiceToolRequest, signal: AbortSignal): Promise<{ result: { content: { type: 'text'; text: string }[] } }> {
+    const respond = (value: unknown) => ({ result: { content: [{ type: 'text' as const, text: JSON.stringify(value) }] } });
+    const source = this.windows.owner(thread.id)?.window ?? this.window;
+    const guard = () => {
+      signal.throwIfAborted();
+      if (this.disposing || thread.deletedAt || thread.archived || !this.activeSends.has(thread.id)) throw new Error('此会话不能访问桌面服务接口');
+    };
+    const planBlocked = thread.planMode || captured.planMode || thread.policy === 'deny' || captured.policy === 'deny';
+    const allow = async (tool: string, description: string) => {
+      if (planBlocked) throw new Error('计划模式或拒绝策略下不能执行此操作');
+      if (thread.policy === 'full' || thread.policy === 'auto') return;
+      if (!(await this.ask(thread, tool, description))) throw new Error('用户未批准此操作');
+    };
+    const run = (op: Parameters<DesktopApplication['handle']>[0]) => this.handle(op, false, source);
+    const directoryId = (request as { directoryId?: string }).directoryId;
+
+    switch (request.action) {
+      case 'browser.history': return respond(await run({ op: 'browser.history', query: request.query, offset: request.offset, limit: request.limit }));
+      case 'browser.downloads': return respond(await run({ op: 'browser.downloads' }));
+      case 'browser.download': return respond(await run({ op: 'browser.download', id: request.downloadId, action: request.operation }));
+      case 'browser.find': {
+        // Without an explicit tab the model searches the tab its own window shows — never another chat's.
+        const tabId = request.tabId ?? this.store.data.ui.threads[thread.id]?.activeBrowserTab;
+        if (!tabId) throw new Error('当前没有可搜索的浏览器标签页');
+        return respond(await run({ op: 'browser.find', threadId: thread.id, tabId, text: request.text, forward: request.forward }));
+      }
+      case 'browser.annotation': return respond(await run({ op: 'browser.annotation', threadId: thread.id, annotationId: request.annotationId, action: request.operation }));
+
+      case 'pr.status':
+        return respond(await run({ op: 'pr.status', threadId: thread.id, directoryId }));
+      case 'pr.start': {
+        guard();
+        if (request.operation === 'create') await allow('manage_pr', `创建拉取请求：${request.title}`);
+        return respond(await run({ op: 'pr.start', threadId: thread.id, directoryId, requestId: crypto.randomUUID(), action: request.operation, selector: request.selector, title: request.title, body: request.body, base: request.base, draft: request.draft }));
+      }
+
+      case 'resources.inspect': return respond(await run({ op: 'resource.inspect' }));
+      case 'resources.refresh': {
+        guard();
+        await allow('manage_resources', '重新扫描本地技能与扩展');
+        return respond(await run({ op: 'resource.refresh' }));
+      }
+      case 'resources.open':
+        return respond(await run({ op: 'resource.open', id: request.resourceId, reveal: request.reveal }));
+
+      case 'mcp.list': {
+        // Names and tool counts the user already sees in the MCP panel: never secrets, never other chats' servers.
+        const servers = (thread.mcp ?? []).map(server => ({ id: server.id, state: server.state, tools: server.tools.map(tool => tool.name), error: server.error ?? '' }));
+        return respond({ servers });
+      }
+      case 'mcp.test': {
+        guard();
+        await allow('manage_mcp', `测试 MCP 服务器连接：${request.serverId}`);
+        return respond(await run({ op: 'mcp.test', id: request.serverId, requestId: request.requestId ?? crypto.randomUUID() }));
+      }
+      case 'mcp.testCancel':
+        return respond(await run({ op: 'mcp.testCancel', requestId: request.requestId }));
+      case 'mcp.retry': {
+        guard();
+        await allow('manage_mcp', '重试连接本会话断开的 MCP 服务器');
+        return respond(await run({ op: 'mcp.retry', threadId: thread.id, requestId: request.requestId ?? crypto.randomUUID() }));
+      }
+      case 'mcp.resource':
+        return respond(await run({ op: 'mcp.resource', threadId: thread.id, itemId: request.itemId, index: request.index, requestId: request.requestId ?? crypto.randomUUID() }));
+    }
+  }
+
+  private workerEvent(thread: Thread, event: WorkerEvent, host: AgentHost): void {    if (this.workers.get(thread.id) !== host) return;
     if (event.type === 'item') {
       const index = thread.items.findIndex((item) => item.id === event.item.id);
       if (index < 0) thread.items.push(event.item);
@@ -1180,9 +1786,17 @@ export class DesktopApplication {
           }
           if (request.action === 'automations.list' || request.action === 'automations.save' || request.action === 'automations.remove' || request.action === 'automations.run' || request.action === 'automations.cancel')
             return this.runAutomationTool(thread, configuration.thread, request, signal);
+          if (request.action.startsWith('sessions.') || request.action.startsWith('projects.') || request.action.startsWith('ui.') || request.action.startsWith('messages.'))
+            return this.runDesktopSessionTool(thread, configuration.thread, request as DesktopSessionToolRequest, signal);
+          if (workbenchToolActions.includes(request.action))
+            return this.runWorkbenchTool(thread, configuration.thread, request as WorkbenchToolRequest, signal);
+          if (serviceToolActions.includes(request.action))
+            return this.runServiceTool(thread, configuration.thread, request as ServiceToolRequest, signal);
+          if (request.action === 'settings.read' || request.action === 'settings.models' || request.action === 'settings.inputCatalog' || request.action === 'settings.apply')
+            return this.runSettingsTool(thread, configuration.thread, request as ManageSettingsToolRequest, signal);
           if (request.action === 'subtasks.list' || request.action === 'subtasks.create' || request.action === 'subtasks.read' || request.action === 'subtasks.stop' || request.action === 'subtasks.reply' || request.action === 'subtasks.wait')
             return this.runSubtaskTool(thread, configuration.thread, request, signal);
-          return this.runBrowserTool(thread, configuration.thread, configuration.trusted, id, request, signal);
+          return this.runBrowserTool(thread, configuration.thread, configuration.trusted, id, request as BrowserToolRequest, signal);
         },
       );
       this.workers.set(thread.id, host);
@@ -2155,42 +2769,24 @@ export class DesktopApplication {
           version: app.getVersion(),
         };
       case 'project.add': {
+        if (request.path) {
+          const project = await this.addProjectPath(request.path);
+          if (!project) throw new Error('项目目录不存在或不可访问');
+          return project;
+        }
         const result = await dialog.showOpenDialog(source, {
           title: translate(this.store.data.ui.locale, "添加项目"),
           properties: ['openDirectory'],
         });
         if (result.canceled) return null;
-        const path = await realpath(result.filePaths[0]);
-        const existing = this.store.data.projects.find(
-          (project) => project.path.toLowerCase() === path.toLowerCase(),
-        );
-        if (existing) return existing;
-        const project: Project = {
-          id: crypto.randomUUID(),
-          path,
-          name: basename(path),
-          trusted: false,
-          createdAt: Date.now(),
-        };
-        this.store.data.projects.push(project);
-        await this.store.save();
-        this.changed();
-        return project;
+        return this.addProjectPath(result.filePaths[0]);
       }
       case 'project.directoryAdd': {
         const project = this.project(request.projectId);
+        if (request.path) return this.addProjectDirectory(project, request.path);
         const result = await dialog.showOpenDialog(source, { title: translate(this.store.data.ui.locale, '添加项目目录'), properties: ['openDirectory'] });
         if (result.canceled) return null;
-        const path = await realpath(result.filePaths[0]);
-        const existing = projectDirectories(project).find(item => item.path.toLocaleLowerCase() === path.toLocaleLowerCase());
-        if (existing) return existing;
-        if ((project.directories?.length ?? 0) >= 50) throw new Error('每个项目最多添加 50 个附加目录');
-        const directory = { id: crypto.randomUUID(), name: basename(path), path, trusted: false };
-        const base = this.projectDirectoryConfig(project);
-        const next = { ...base, directories: [...(base.directories ?? []), directory] };
-        await this.store.saveProjectDirectories(project.id, next, base);
-        await this.invalidateWorkers(this.store.data.threads.filter(item => item.projectId === project.id).map(item => item.id));
-        this.changed(); return directory;
+        return this.addProjectDirectory(project, result.filePaths[0]);
       }
       case 'project.directoryUpdate': {
         const project = this.project(request.projectId);
@@ -2386,8 +2982,9 @@ export class DesktopApplication {
         const thread = this.thread(request.id);
         await this.browserAnnotations.closeThread(thread.id);
         await this.artifactPreview.closeThread(thread.id);
-        if (!thread.deletedAt || ['running', 'waiting'].includes(thread.status)) throw new Error('只能永久删除回收站中的空闲任务');
-        const result = await dialog.showMessageBox(source, { type: 'warning', message: translate(this.store.data.ui.locale, "永久删除此任务？"), detail: translate(this.store.data.ui.locale, "将删除桌面记录及应用管理的会话和独占附件，无法在回收站恢复。分叉引用、外部导入记录、项目文件与 worktree 不受影响。"), buttons: [translate(this.store.data.ui.locale, "取消"), translate(this.store.data.ui.locale, "永久删除")], defaultId: 0, cancelId: 0 });
+        // Deleting is the only removal the UI offers: any idle task can go, trashed or not.
+        if (['running', 'waiting'].includes(thread.status)) throw new Error('请先停止任务再删除');
+        const result = await dialog.showMessageBox(source, { type: 'warning', message: translate(this.store.data.ui.locale, "删除此任务？"), detail: translate(this.store.data.ui.locale, "将删除桌面记录及应用管理的会话和独占附件，无法恢复。分叉引用、外部导入记录、项目文件与 worktree 不受影响。"), buttons: [translate(this.store.data.ui.locale, "取消"), translate(this.store.data.ui.locale, "删除")], defaultId: 0, cancelId: 0 });
         if (result.response !== 1) return null;
         const reviews = this.store.data.threads.filter(item => item.review?.parentThreadId === thread.id);
         for (const review of reviews) {
@@ -2739,12 +3336,9 @@ export class DesktopApplication {
         if (settingKeys.includes('mcpServers')) for (const server of next.mcpServers) validateMcpConfiguration(server);
         if (settingKeys.includes('models') || settingKeys.includes('modelProviders')) {
           const catalog = modelCatalog();
-          for (const model of next.models) {
-            const entry = catalogModel(next.modelProviders.find(item => item.id === model.provider), model, catalog);
-            if (entry && model.thinkingLevels?.some(level => !entry.thinkingLevels.includes(level)))
-              throw new Error(model.name + '：所选思考程度不在此内置模型支持的范围内');
-          }
           for (const provider of next.modelProviders) provider.hasKey = await this.vault.has(`provider:${provider.id}`);
+          // The catalogue is a default, not a fence: the settings page lets the user own the level list, and
+          // `normalizeThinking` only fills in the catalogue levels when the user left none.
           this.normalizeThinking(next, false);
         }
         updateIgnoredSkills(this.store.data.settings, next);

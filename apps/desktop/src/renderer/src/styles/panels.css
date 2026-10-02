@@ -80,7 +80,6 @@
 .git-commit-row small { color: var(--muted); }
 .git-commit-detail { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
 .thread-row [data-thread-menu] .menu-trigger { padding: 2px; min-width: 22px; }
-.thread-row [data-thread-menu] .menu-trigger > svg { display: none; }
 /*
  * One header strip for every pane - Review's tabs, the terminal's tabs, the preview's toolbar - so
  * `--height-toolbar-pane` is the only pane-header height in the app (design-tokens.md §1.2; the

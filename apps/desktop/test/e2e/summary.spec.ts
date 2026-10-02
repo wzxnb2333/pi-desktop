@@ -168,7 +168,8 @@ test('summary Git loading and retries isolate stale success and errors across se
   await summary.getByRole('button', { name: '查看全部', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__summary.pending().some(item => item.threadId === 'other'))).toBe(true);
   await page.evaluate(() => { for (const request of window.__summary.pending()) window.__summary.complete(request.id, request.threadId === 't' ? 'OLD_TASK_ERROR' : { available: true, branch: 'main', files: [{ path: 'NEW.txt', status: 'M', staged: false }] }); });
-  await expect(summary).toContainText('NEW.txt');
+  // The summary does not list files; the branch row is what proves the fresh read landed here.
+  await expect(summary.getByRole('button', { name: /查看项目变更：main，1 个文件/ })).toBeVisible();
   await expect(page.getByText('OLD_TASK_ERROR')).toHaveCount(0);
   await expect(summary.getByRole('alert')).toHaveCount(0);
 });
@@ -218,8 +219,11 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(summary.getByRole('button', { name: /查看项目变更/ })).toContainText('+128');
     await expect(page.getByRole('tablist', { name: '任务标签', exact: true })).toHaveCount(0);
     await expect(page.locator('.review-pane')).toHaveCount(0);
-    await expect(summary.locator('.summary-file')).toHaveCount(0);
     await expect(summary).not.toContainText('??');
+    // Source rows are a left-aligned list: `.btn` centers its content, which the rows must opt out of.
+    const source = summary.locator('.summary-source').first();
+    const sourceBox = (await source.boundingBox())!, iconBox = (await source.locator('svg').first().boundingBox())!;
+    expect(iconBox.x - sourceBox.x).toBeCloseTo(2, 0);
     const box = (await summary.boundingBox())!;
     const toolbar = (await page.locator('.toolbar').boundingBox())!;
     expect(box.width).toBeLessThanOrEqual(302);
@@ -243,9 +247,9 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByRole('region', { name: '只读审查', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '关闭辅助栏', exact: true }).click();
     await summary.getByRole('button', { name: '查看全部', exact: true }).click();
-    await expect(summary.locator('.summary-file')).toHaveCount(5);
-    await expect(summary.getByRole('button', { name: '查看全部 5531 个变更文件' })).toBeVisible();
-    await expect(summary.getByRole('button', { name: '未跟踪 example-0.txt' })).toBeVisible();
+    // Expanding no longer repeats the changed files: the branch row is the single entry point.
+    await expect(summary.locator('.summary-file')).toHaveCount(0);
+    await expect(summary.getByRole('button', { name: /查看项目变更/ })).toBeVisible();
     await taskAction(page, '查看变更');
     await page.getByRole('tab', { name: /^变更/ }).click();
     await expect(page.getByRole('tab', { name: /^变更/ })).toHaveAttribute('aria-selected', 'true');
@@ -277,10 +281,10 @@ test('an empty new task does not open changes or summary, and summary can be ope
 test('compact toolbar keeps secondary actions in a keyboard-accessible menu', async () => {
   await page.goto(url);
   await expect(page.locator('.toolbar-actions button')).toHaveCount(4);
-  for (const name of ['项目目录', 'Worktree 管理', '在独立窗口打开', '集成终端', '管理可选子任务'])
+  for (const name of ['项目目录', 'Worktree 管理', '在独立窗口打开', '集成终端', '查看子智能体'])
     await expect(page.locator('.toolbar-actions').getByRole('button', { name, exact: true })).toHaveCount(0);
   const more = page.getByRole('button', { name: '工作台更多操作', exact: true });
-  for (const [name, title] of [['项目目录', '项目目录'], ['Worktree 管理', 'Worktree 管理'], ['设置持续目标', '持续目标'], ['管理可选子任务', '可选子任务']]) {
+  for (const [name, title] of [['项目目录', '项目目录'], ['Worktree 管理', 'Worktree 管理'], ['设置持续目标', '持续目标']]) {
     await more.click();
     await page.getByRole('menuitem', { name, exact: true }).click();
     await expect(page.getByRole('dialog', { name: title, exact: true })).toBeVisible();
@@ -289,6 +293,12 @@ test('compact toolbar keeps secondary actions in a keyboard-accessible menu', as
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(more).toBeFocused();
   }
+  // The subtask entry switches the auxiliary pane instead of opening a dialog of its own.
+  await more.click();
+  await page.getByRole('menuitem', { name: '查看子智能体', exact: true }).click();
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(page.locator('.review-pane')).toBeVisible();
+  await expect(page.locator('.review-pane [role="tab"][aria-selected="true"]')).toContainText('子智能体');
   await more.press('ArrowDown');
   await expect(page.getByRole('menuitem', { name: '在独立窗口打开', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');

@@ -56,6 +56,8 @@ window.desktop = {
         data.ui.reviewOpen = true; broadcast(); return child;
       }
       case 'comment.list': return [];
+      case 'composer.preflight': return { issues: [], estimatedTokens: 12, contextWindow: 128000, images: 0 };
+      case 'thread.send': return { id: request.requestId ?? crypto.randomUUID(), fingerprint: JSON.stringify(request), at: Date.now(), status: 'accepted' };
       default: return null;
     }
   },

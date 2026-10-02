@@ -59,8 +59,8 @@ let data: DesktopData = dataSchema.parse({
     modelId: params.has('noprovider') ? '' : 'fast',
     modelProviders: [{ id: 'faux-provider', name: 'Faux', kind: 'builtin', namespace: 'faux', baseUrl: '', api: 'openai-completions', hasKey: true }],
     models: [
-      { id: 'fast', provider: 'faux-provider', name: '快速模型', model: 'fastr', reasoning: false, contextWindow: 128000, maxTokens: 8192 },
-      { id: 'deep', provider: 'faux-provider', name: '深度模型特别长以便测试省略号', model: 'deep', reasoning: false, contextWindow: 128000, maxTokens: 8192 },
+      { id: 'fast', provider: 'faux-provider', name: '快速模型', model: 'fastr', reasoning: true, contextWindow: 128000, maxTokens: 8192 },
+      { id: 'deep', provider: 'faux-provider', name: '深度模型特别长以便测试省略号', model: 'deep', reasoning: true, contextWindow: 128000, maxTokens: 8192 },
     ],
   },
   automations: [],

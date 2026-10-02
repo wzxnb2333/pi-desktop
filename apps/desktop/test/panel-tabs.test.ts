@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { requestSchema, uiSchema, uiThreadSchema } from '../src/shared/contracts.ts';
-import { panelSelectionPatch, panelTabs, panelUiState, selectPanelTab } from '../src/shared/panel-tabs.ts';
+import { fileSelectionPatch, panelSelectionPatch, panelTabs, panelUiState, selectPanelTab } from '../src/shared/panel-tabs.ts';
 
 test('legacy profiles keep browser ownership and add only the selected tool', () => {
   const ui = uiThreadSchema.parse({ reviewTab: 'files', browserTabs: [{ id: 'a', url: '', title: '' }] });
@@ -52,4 +52,28 @@ test('separate child conversation selections persist through validated UI patche
   assert.equal(request.op, 'ui.threadPatch');
   assert.equal(next.activePanelTab, 'subtask:b'); assert.equal(next.panelTabs?.length, 2);
   assert.equal(panelTabs(uiThreadSchema.parse({ reviewTab: 'subtask', panelTabs: [] })).length, 0);
+});
+
+test('opened files own one panel tab each, derived from openFiles', () => {
+  const ui = uiThreadSchema.parse({ reviewTab: 'files', openFiles: ['a.txt', 'b.txt'] });
+  assert.deepEqual(panelTabs(ui), [{ id: 'tool:files', kind: 'files' }, { id: 'file:a.txt', kind: 'file' }, { id: 'file:b.txt', kind: 'file' }]);
+});
+
+test('persisted file tabs follow openFiles and new files join the navigator group', () => {
+  const ui = uiThreadSchema.parse({ reviewTab: 'file', activePanelTab: 'file:c.txt', openFiles: ['a.txt', 'c.txt'], browserTabs: [{ id: 'b', url: '', title: '' }],
+    panelTabs: [{ id: 'tool:files', kind: 'files' }, { id: 'file:a.txt', kind: 'file' }, { id: 'file:gone.txt', kind: 'file' }, { id: 'b', kind: 'browser' }] });
+  assert.deepEqual(panelTabs(ui), [
+    { id: 'tool:files', kind: 'files' }, { id: 'file:a.txt', kind: 'file' }, { id: 'file:c.txt', kind: 'file' }, { id: 'b', kind: 'browser' },
+  ]);
+});
+
+test('selecting a file tab keeps file view state on the thread patch', () => {
+  const ui = uiThreadSchema.parse({ reviewTab: 'files', openFiles: ['a.txt'] });
+  const patch = fileSelectionPatch(ui, 'b.txt', { fileLocation: undefined });
+  assert.equal(patch.reviewTab, 'file');
+  assert.equal(patch.activePanelTab, 'file:b.txt');
+  assert.deepEqual(patch.openFiles, ['a.txt', 'b.txt']);
+  assert.equal(patch.fileLocation, undefined);
+  const request = requestSchema.parse({ op: 'ui.threadPatch', threadId: 't', patch: panelSelectionPatch({ ...ui, ...patch }, patch) });
+  assert.equal(request.op, 'ui.threadPatch');
 });

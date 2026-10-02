@@ -91,7 +91,7 @@ test('completed thinking keeps its measured duration and post-answer notices rem
       { id: 'notice', role: 'notice', text: '扩展通知' },
     ], 'idle');
     const process = page.locator('[data-disclosure="process:u"] > .disclosure-header > button');
-    await expect(process).toHaveAccessibleName('已完成过程 · 2 秒');
+    await expect(process).toHaveAccessibleName('耗时 2 秒');
     await expect(process).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator('.turn-answer .markdown')).toHaveText('最终回答');
     await expect(page.locator('.turn-notices')).toHaveText('扩展通知');
@@ -151,9 +151,33 @@ test('streamed thinking keeps the view pinned to the bottom until the reader mov
     // Returning to the bottom re-attaches the stream.
     await preview.evaluate(node => { node.scrollTop = node.scrollHeight; });
     await expect.poll(distance).toBeLessThanOrEqual(1);
+    // Let the browser deliver that scroll event before the next delta arrives, as a real reader would.
+    await page.waitForTimeout(50);
     (items[1].blocks as { type: string; text: string }[])[0].text += '重新跟随。\n\n';
     await update(page, items);
     await expect.poll(distance).toBeLessThanOrEqual(1);
+  } finally { await page.close(); }
+});
+
+test('process narration carries no message actions until the turn has its answer', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await open(page, 'behavior');
+    const items: Partial<TimelineItem>[] = [
+      { id: 'u', role: 'user', text: '开始' },
+      { id: 'a1', role: 'assistant', state: 'done', stopReason: 'toolUse', text: '中间说明' },
+      { id: 'c1', role: 'tool', toolName: 'read', state: 'done', args: '{"path":"a.ts"}', text: '内容' },
+      { id: 'a2', role: 'assistant', state: 'running', stopReason: 'pending', text: '继续中' },
+    ];
+    await update(page, items, 'running');
+    await expect(page.locator('.turn-prose').first()).toContainText('中间说明');
+    // Copy, sidechat and regenerate belong to a finished answer, not to work in progress.
+    await expect(page.locator('.turn-prose .message-actions')).toHaveCount(0);
+    items[3] = { id: 'a2', role: 'assistant', state: 'done', stopReason: 'stop', text: '最终回答' };
+    await update(page, items, 'idle');
+    await expect(page.locator('.turn-answer')).toContainText('最终回答');
+    await expect(page.locator('.turn-answer .message-actions')).toHaveCount(1);
+    await expect(page.locator('.turn-prose .message-actions')).toHaveCount(0);
   } finally { await page.close(); }
 });
 
@@ -225,3 +249,41 @@ test('active summary changes are throttled but completion is immediate', async (
     await expect(page.locator('output')).toHaveText('已完成');
   } finally { await page.close(); }
 });
+
+test('notices keep a complete hairline and the model switch stays a flat, centred divider', async () => {
+  const page = await browser.newPage({ viewport: { width: 900, height: 720 } });
+  try {
+    await open(page, 'behavior');
+    await update(page, [
+      { id: 'u', role: 'user', text: '检查' },
+      { id: 'a', role: 'assistant', state: 'done', stopReason: 'stop', startedAt: 100, completedAt: 3000, text: '最终回答', blocks: [{ type: 'text', text: '最终回答' }] },
+      { id: 'n1', role: 'notice', noticeKind: 'model-switch', text: '已将模型从 8ae0b310-c056-407c-bc4f-95cf0221f4b2 切换到 DeepSeek V4.1 Flash' },
+      { id: 'n2', role: 'notice', text: '设置已恢复，可以继续检查当前工作区。' },
+      { id: 'n3', role: 'notice', state: 'error', text: '过程遇到错误，请稍后重试。' },
+    ] as Partial<TimelineItem>[], 'idle');
+    // A sub-pixel ring shadow renders as a broken outline at 1x, so the pill owns a real border.
+    const plain = page.locator('.turn-notices .notice:not(.model-switch):not(.danger)');
+    await expect(plain).toHaveCSS('border-top-width', '1px');
+    await expect(page.locator('.turn-notices .notice.danger')).toHaveCSS('border-top-width', '1px');
+    expect(await page.locator('.turn-notices .notice.danger').evaluate(node => getComputedStyle(node).borderTopColor))
+      .not.toBe(await plain.evaluate(node => getComputedStyle(node).borderTopColor));
+    // The switch notice is a divider, not a card: no padding, radius, background or shadow, and both
+    // rules sit on the label's optical middle rather than at the top of its line box.
+    const geometry = await page.evaluate(() => {
+      const centre = (selector: string) => {
+        const rect = document.querySelector(selector)!.getBoundingClientRect();
+        return rect.y + rect.height / 2;
+      };
+      const style = getComputedStyle(document.querySelector('.notice.model-switch')!);
+      return { rule: centre('.notice.model-switch .notice-rule'), text: centre('.notice.model-switch .notice-text'),
+        padding: style.padding, radius: style.borderRadius, background: style.backgroundColor, shadow: style.boxShadow, align: style.alignItems };
+    });
+    expect(geometry.padding).toBe('0px');
+    expect(geometry.radius).toBe('0px');
+    expect(geometry.background).toBe('rgba(0, 0, 0, 0)');
+    expect(geometry.shadow).toBe('none');
+    expect(geometry.align).toBe('center');
+    expect(Math.abs(geometry.rule - geometry.text)).toBeLessThanOrEqual(0.5);
+  } finally { await page.close(); }
+});
+

@@ -28,7 +28,8 @@ test('latest run diff persists across restart and distinguishes run workspace ch
   expect(range.attribution).toBe('workspace'); expect(range.diff).toContain('external editor change'); expect(range.diff).toContain('produced by task');
   expect(await readFile(join(fixture.project, '.git', 'index'))).toEqual(index);
   await taskAction(fixture.page, '查看变更');
-  await fixture.page.getByLabel('差异范围', { exact: true }).selectOption('turn');
+  await fixture.page.getByLabel('差异范围', { exact: true }).click();
+  await fixture.page.locator('.menu-item[data-value="turn"]').click();
   await expect(fixture.page.getByText('本次运行开始至结束的工作区快照，包含追加消息及可能的外部修改，不代表 Pi 独占改动。', { exact: true })).toBeVisible();
   await fixture.page.getByRole('button', { name: '新增 generated.txt', exact: true }).click();
   await expect(fixture.page.locator('.diff')).toContainText('produced by task');

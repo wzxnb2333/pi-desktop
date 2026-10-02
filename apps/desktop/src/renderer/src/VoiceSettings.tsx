@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { DesktopRequest } from '../../shared/contracts.ts';
 import type { VoiceModelId, VoicePreferences, VoiceStatus } from '../../shared/voice.ts';
+import { Menu } from './components/primitives/menu.tsx';
 import { VOICE_MODELS } from '../../shared/voice-models.ts';
 import { localizeAppError, localizeLabel, tr } from '../../shared/localization.ts';
 import { useLocale } from './hooks/use-locale.ts';
@@ -27,9 +28,19 @@ export function VoiceSettings({ preferences, savedDirectory, onChange, invoke, a
   return <div className="voice-settings" hidden={!active}>
     <SettingsSection title={tr('录音与朗读')} description={tr('录音只在内存中处理，不上传语音服务。识别文字按当前聊天模型发送。')}>
       <FieldRow label={tr('模型目录')} description={tr('修改模型目录前需要卸载现有模型。模型持久保存，不属于测试缓存。')}><div className="voice-directory"><code>{preferences.modelDirectory || status?.directory}</code><button type="button" disabled={running} onClick={() => void invoke({ op: 'voice.directory' }).then(path => { if (typeof path === 'string') patch({ modelDirectory: path }); }).catch(reason => setError(localizeAppError(String(reason))))}>{tr('选择目录')}</button></div></FieldRow>
-      <FieldRow label={tr('录音设备')} htmlFor="voice-device"><div className="voice-device"><select id="voice-device" value={preferences.deviceId} onChange={event => patch({ deviceId: event.target.value })}><option value="">{tr('系统默认麦克风')}</option>{devices.filter(item => item.deviceId).map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || tr('麦克风 {p0}', { p0: index + 1 })}</option>)}{preferences.deviceId && !devices.some(item => item.deviceId === preferences.deviceId) && <option value={preferences.deviceId}>{tr('录音设备已断开，请选择其他设备后重试。')}</option>}</select><button type="button" onClick={() => void listDevices()}>{tr('刷新录音设备')}</button></div></FieldRow>
-      <FieldRow label={tr('识别语言')} htmlFor="voice-language"><select id="voice-language" value={preferences.language} onChange={event => patch({ language: event.target.value as VoicePreferences['language'] })}><option value="auto">{tr('自动识别')}</option><option value="zh">{tr('中文')}</option><option value="en">{tr('英语')}</option></select></FieldRow>
-      <FieldRow label={tr('合成音色')} htmlFor="voice-speaker"><select id="voice-speaker" value={preferences.speaker} onChange={event => patch({ speaker: Number(event.target.value) })}>{VOICE_CHOICES.map(item => <option value={item.id} key={item.id}>{tr(item.label)} · {item.id}</option>)}</select></FieldRow>
+      <FieldRow label={tr('录音设备')}><div className="voice-device"><Menu id="voice-device" label={tr('录音设备')} value={preferences.deviceId} matchTriggerWidth className="settings-select"
+        options={[
+          { value: '', label: tr('系统默认麦克风') },
+          ...devices.filter(item => item.deviceId).map((item, index) => ({ value: item.deviceId, label: item.label || tr('麦克风 {p0}', { p0: index + 1 }) })),
+          ...(preferences.deviceId && !devices.some(item => item.deviceId === preferences.deviceId) ? [{ value: preferences.deviceId, label: tr('录音设备已断开，请选择其他设备后重试。') }] : []),
+        ]}
+        onChange={value => patch({ deviceId: value })} /><button type="button" onClick={() => void listDevices()}>{tr('刷新录音设备')}</button></div></FieldRow>
+      <FieldRow label={tr('识别语言')}><Menu id="voice-language" label={tr('识别语言')} value={preferences.language} matchTriggerWidth className="settings-select"
+        options={[{ value: 'auto', label: tr('自动识别') }, { value: 'zh', label: tr('中文') }, { value: 'en', label: tr('英语') }]}
+        onChange={value => patch({ language: value as VoicePreferences['language'] })} /></FieldRow>
+      <FieldRow label={tr('合成音色')}><Menu id="voice-speaker" label={tr('合成音色')} value={String(preferences.speaker)} matchTriggerWidth className="settings-select"
+        options={VOICE_CHOICES.map(item => ({ value: String(item.id), label: tr(item.label) + ' · ' + item.id }))}
+        onChange={value => patch({ speaker: Number(value) })} /></FieldRow>
       <FieldRow label={tr('朗读速度')} htmlFor="voice-speed"><input id="voice-speed" type="number" min={0.5} max={2} step={0.1} value={preferences.speed} onChange={event => patch({ speed: Number(event.target.value) })} /></FieldRow>
     </SettingsSection>
     {pendingDirectory && <p role="status">{tr('先保存目录设置，再管理模型。')}</p>}

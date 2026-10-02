@@ -6,6 +6,7 @@ import { useLocale } from '../../hooks/use-locale.ts';
 import { useApp } from '../../state/app.tsx';
 import { statusText } from '../../lib/labels.ts';
 import '../../styles/review-findings.css';
+import { Menu } from '../primitives/menu.tsx';
 
 interface FindingDraft { feedback: string; pending: boolean; error: string; }
 interface ReviewControls {
@@ -60,7 +61,7 @@ function Finding({ scopeId, run, finding, stale, locate, snapshot, reading }: { 
 
 export function ReviewFindings() {
   useLocale();
-  const { data, thread, activeId, directoryId, fileScopeId, patchThread, updateDraft } = useApp();
+  const { data, thread, activeId, directoryId, fileScopeId, openFileTab, updateDraft } = useApp();
   const runs = data.threads.filter(item => item.review?.parentThreadId === activeId && item.directoryId === directoryId);
   const { selected, scope, ref, instructions, error, starting, cancelling, removing } = useSyncExternalStore(subscribe, () => controlsFor(fileScopeId));
   const run = runs.find(item => item.id === selected) ?? runs[0];
@@ -93,7 +94,7 @@ export function ReviewFindings() {
     void window.desktop.invoke(request).then(result => {
       if (!current()) return;
       const location = result as NonNullable<UiThread['fileLocation']> & { directoryId: string };
-      patchThread({ directoryId: location.directoryId, selectedPath: location.path, fileLocation: { id: location.id, path: location.path, line: location.line }, reviewTab: 'files' });
+      openFileTab(location.path, { line: location.line }, location.directoryId);
     }).catch(error => { if (current()) { setError(String(error)); setRefresh(value => value + 1); } });
   };
   const snapshot = async (runId: string, path: string) => {
@@ -115,13 +116,17 @@ export function ReviewFindings() {
         .then(result => { if (controlsFor(fileScopeId).selected === selected) updateControls(fileScopeId, { selected: (result as Thread).id }); })
         .catch(error => setError(String(error))).finally(() => updateControls(fileScopeId, { starting: false }));
     }}>
-      <label>{tr('审查范围')}<select value={scope} onChange={event => updateControls(fileScopeId, { scope: event.target.value as typeof scope })}><option value="uncommitted">{tr('未提交改动')}</option><option value="branch">{tr('对比基准分支')}</option><option value="commit">{tr('指定提交')}</option></select></label>
+      <label>{tr('审查范围')}<Menu label={tr('审查范围')} value={scope} matchTriggerWidth
+    options={[{ value: 'uncommitted', label: tr('未提交改动') }, { value: 'branch', label: tr('对比基准分支') }, { value: 'commit', label: tr('指定提交') }]}
+    onChange={value => updateControls(fileScopeId, { scope: value as typeof scope })} /></label>
       {scope !== 'uncommitted' && <label>{scope === 'branch' ? tr('基准分支') : tr('提交引用')}<input value={ref} onChange={event => updateControls(fileScopeId, { ref: event.target.value })} required maxLength={3000} /></label>}
       <label>{tr('自定义审查要求')}<textarea value={instructions} maxLength={20000} onChange={event => updateControls(fileScopeId, { instructions: event.target.value })} /></label>
       <button type="submit" disabled={starting || anyBusy || !thread?.projectId || !thread.modelId}>{tr('开始只读审查')}</button>
       {starting && <p role="status">{tr('正在启动审查…')}</p>}
     </form>
-    {runs.length > 0 && <label>{tr('审查记录')}<select value={run?.id ?? ''} onChange={event => { snapshotRequest.current++; locationRequest.current++; setReading(''); updateControls(fileScopeId, { selected: event.target.value }); setCaptured(undefined); }}>{runs.map(item => <option key={item.id} value={item.id}>{new Date(item.createdAt).toLocaleString()} · {item.review?.ref || tr('未提交改动')}</option>)}</select></label>}
+    {runs.length > 0 && <label>{tr('审查记录')}<Menu label={tr('审查记录')} value={run?.id ?? ''} matchTriggerWidth
+    options={runs.map(item => ({ value: item.id, label: new Date(item.createdAt).toLocaleString() + ' · ' + (item.review?.ref || tr('未提交改动')) }))}
+    onChange={value => { snapshotRequest.current++; locationRequest.current++; setReading(''); updateControls(fileScopeId, { selected: value }); setCaptured(undefined); }} /></label>}
     {run?.review && <section aria-label={tr('审查结果')}>
       <div className="workbench-actions"><span role="status">{run.review.phase === 'capturing' ? tr('正在捕获审查范围…') : run.review.phase === 'cancelled' ? tr('审查已取消') : run.review.phase === 'complete' ? tr('审查已完成') : statusText[run.status]}</span>
         {busy && <button disabled={cancelling === run.id} onClick={() => {

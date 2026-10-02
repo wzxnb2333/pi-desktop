@@ -196,7 +196,8 @@ test('Git file and conflict reads stay attached to the selected path and range',
   await expect(conflict).toHaveCount(0);
   await expect.poll(() => pending('git.diff')).toHaveLength(1);
   const [all] = await pending('git.diff');
-  await page.getByLabel('差异范围').selectOption('staged');
+  await page.getByLabel('差异范围').click();
+  await page.locator('.menu-item[data-value="staged"]').click();
   await expect.poll(() => pending('git.diff')).toHaveLength(2);
   await complete((await pending('git.diff')).at(-1)!.id);
   await complete(all.id);
@@ -246,7 +247,8 @@ test('Git status refresh ignores superseded responses and surfaces recovery', as
 test('remote tracking and upstream use the selected remote reference and separate local name', async () => {
   await page.getByRole('button', { name: 'Git 操作', exact: true }).click();
   await page.getByText('分支与远端', { exact: true }).click();
-  await page.getByLabel('远端分支', { exact: true }).selectOption('origin/feature/topic');
+  await page.getByLabel('远端分支', { exact: true }).click();
+  await page.locator('.menu-item[data-value="origin/feature/topic"]').click();
   await page.getByLabel('分支名称', { exact: true }).fill('local-topic');
   await page.getByRole('button', { name: '从远端创建跟踪分支' }).click();
   await expect.poll(() => page.evaluate(() => window.__git.calls().filter(request => request.op === 'git.action'))).toEqual([expect.objectContaining({ action: 'branchTrack', value: 'local-topic', startPoint: 'origin/feature/topic' })]);
@@ -540,7 +542,8 @@ test('reopening the same Git file restores the selected hunk after its diff fini
   for (const read of await pending('git.diff')) await complete(read.id, patch);
   await expect(page.locator('.diff')).toContainText('SECOND_HUNK');
   await expect(page.getByRole('button', { name: '下一块', exact: true })).toBeDisabled();
-  await page.getByLabel('差异范围', { exact: true }).selectOption('unstaged');
+  await page.getByLabel('差异范围', { exact: true }).click();
+  await page.locator('.menu-item[data-value="unstaged"]').click();
   await expect.poll(async () => (await pending('git.diff')).length).toBeGreaterThan(0);
   for (const read of await pending('git.diff')) await complete(read.id, patch);
   await expect(page.locator('.diff')).toContainText('FIRST_HUNK');

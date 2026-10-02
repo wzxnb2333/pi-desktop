@@ -142,7 +142,7 @@
 @container task-toolbar (max-width: 620px) {
   .toolbar-actions { gap: 0; }
   .toolbar-actions .icon-button, .toolbar-actions .project-action-trigger { width: 24px; height: 30px; min-height: 0; padding: 0; }
-  .toolbar-actions .status, .toolbar-actions .project-action-label, .toolbar-actions .project-action-trigger > svg { display: none; }
+  .toolbar-actions .project-action-label, .toolbar-actions .project-action-trigger > svg { display: none; }
   .toolbar-actions .project-action-icon { display: block; }
 }
 .breadcrumb {
@@ -197,20 +197,34 @@
 .status.error > span {
   background: var(--danger);
 }
+/*
+ * Errors are a transient toast over the conversation pane: centered at the top, floating above the
+ * toolbar so the workbench never reflows, sized to its message, and gone on its own. It has no close
+ * button, so the layout is a single text block rather than a row of message and control.
+ */
 .error-banner {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  padding: 8px 16px;
-  background: #b1453e15;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  max-width: min(560px, calc(100% - 32px));
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  border-radius: 12px;
+  background: var(--surface);
   color: var(--danger);
   font-size: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.error-banner > span {
-  flex: 1;
+  line-height: 18px;
   overflow-wrap: anywhere;
+  box-shadow: var(--elevation-popover);
+  animation: error-banner-in 160ms ease-out;
 }
+@keyframes error-banner-in {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .error-banner { animation: none; } }
 .statusbar {
   display: flex;
   gap: 7px;

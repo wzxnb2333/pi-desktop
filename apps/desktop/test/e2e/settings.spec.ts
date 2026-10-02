@@ -187,6 +187,42 @@ test.afterAll(cleanupTemporaryDirectories);
 
 const heading = () => page.locator('.settings-page h1');
 const status = () => page.locator('.settings-footer').getByRole('status');
+
+test('the model section keeps its add entry on the header and its key reveal inside the field', async () => {
+  await page.getByRole('button', { name: '模型', exact: true }).click();
+  const section = page.locator('.settings-section').filter({ has: page.getByRole('heading', { name: '模型', exact: true }) });
+  // The list's entry point sits on the section header, like the reference's list toolbar.
+  await expect(section.locator('.section-heading').getByRole('button', { name: '添加模型', exact: true })).toBeVisible();
+  await expect(section.locator('.model-models > button')).toHaveCount(0);
+  // Capability figures stay compact, with the exact numbers on the tooltip.
+  const capabilities = page.locator('.model-row-capabilities').first();
+  await expect(capabilities).toHaveText(/^\d+(\.\d)?[KM] · \d+(\.\d)?[KM]/);
+  expect(await capabilities.getAttribute('title')).toMatch(/^\d{1,3}(,\d{3})* · \d{1,3}(,\d{3})*$/);
+  // A pasted key has to be checkable: the reveal control lives inside the field.
+  const key = page.locator('.model-key-input input');
+  await key.fill('sk-live-value');
+  await expect(key).toHaveAttribute('type', 'password');
+  await page.getByRole('button', { name: '显示密钥', exact: true }).click();
+  await expect(key).toHaveAttribute('type', 'text');
+  await expect(key).toHaveValue('sk-live-value');
+  await page.getByRole('button', { name: '隐藏密钥', exact: true }).click();
+  await expect(key).toHaveAttribute('type', 'password');
+});
+
+test('the model row keeps its name and id on the section content edge', async () => {
+  await page.getByRole('button', { name: '模型', exact: true }).click();
+  const row = page.locator('.model-row').first();
+  await expect(row).toBeVisible();
+  const [name, id, label] = await Promise.all([
+    row.locator('.model-row-name').boundingBox(),
+    row.locator('.model-row-id').boundingBox(),
+    page.locator('.model-editor .field-row-title').first().boundingBox(),
+  ]);
+  // `button` centres its content, so a column-flex row button would centre both lines instead of
+  // letting them share the field labels' left edge.
+  expect(name!.x).toBeCloseTo(label!.x, 0);
+  expect(id!.x).toBeCloseTo(label!.x, 0);
+});
 const levelNames: Record<string, string> = { off: '关闭思考', minimal: '极低', low: '低', medium: '中等', high: '高', xhigh: '极高', max: '最高' };
 /**
  * Rows are found by their title span rather than `getByLabel`: a row's accessible name also carries
@@ -207,7 +243,7 @@ test('the settings page opens on the model category with a labelled row per fiel
   await expect(page.getByRole('button', { name: '通用', exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: '测试模型' })).toHaveAttribute('aria-selected', 'true');
   await expect(rowFor('显示名称')).toHaveCSS('min-height', '60px');
-  await expect(page.getByLabel('供应商', { exact: true })).toHaveRole('combobox');
+  await expect(page.getByLabel('供应商', { exact: true })).toHaveRole('button');
   // A built-in connection has no protocol field and keeps its endpoint override collapsed.
   await expect(page.getByLabel('Base URL', { exact: true })).toBeHidden();
   await expect(page.getByLabel('API 协议', { exact: true })).toHaveCount(0);
@@ -300,7 +336,8 @@ test('invalid hidden model opens its editor without dropping other settings draf
   await page.getByLabel('显示名称', { exact: true }).fill('');
   await page.getByRole('tab', { name: '第二模型', exact: true }).click();
   await page.getByRole('button', { name: '通用', exact: true }).click();
-  await page.locator('#settings-follow-up').selectOption('steer');
+  await page.locator('#settings-follow-up').click();
+  await page.getByRole('menuitemradio', { name: '引导当前任务', exact: true }).click();
   await page.getByRole('button', { name: '保存设置' }).click();
   await expect(heading()).toHaveText('模型');
   await expect(page.getByLabel('显示名称', { exact: true })).toBeFocused();
@@ -309,7 +346,7 @@ test('invalid hidden model opens its editor without dropping other settings draf
   await page.getByLabel('显示名称', { exact: true }).fill('修复后的模型');
   await expect(page.locator('.model-editor [role=alert]')).toHaveCount(0);
   await page.getByRole('button', { name: '通用', exact: true }).click();
-  await expect(page.locator('#settings-follow-up')).toHaveValue('steer');
+  await expect(page.locator('#settings-follow-up')).toContainText('引导当前任务');
   await page.getByRole('button', { name: '保存设置' }).click();
   await expect(status()).toHaveText('设置已保存');
 });
@@ -318,11 +355,13 @@ test('settings groups distinguish draft changes, immediate preferences and local
   await page.getByRole('button', { name: '通用', exact: true }).click();
   await expect(page.getByRole('region', { name: '界面与输入', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: '通知与运行', exact: true })).toBeVisible();
-  await page.locator('#settings-send-shortcut').selectOption('ctrl-enter');
+  await page.locator('#settings-send-shortcut').click();
+  await page.getByRole('menuitemradio', { name: 'Ctrl + Enter', exact: true }).click();
   await expect(page.getByText('Ctrl + Enter 发送，Enter 换行', { exact: true })).toBeVisible();
   await expect(page.locator('.settings-save-hint')).toHaveText('有未保存的更改');
   await page.getByRole('button', { name: '外观', exact: true }).click();
-  await page.locator('#settings-theme').selectOption('dark');
+  await page.locator('#settings-theme').click();
+  await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
   await expect(page.locator('.appearance-preview')).toHaveCSS('background-color', 'rgb(35, 35, 35)');
   await page.locator('#settings-code-font-size').fill('18');
   await page.locator('#settings-accentColor').fill('#123abc');
@@ -341,10 +380,12 @@ test('compact model picker preserves drafts without consuming the editor viewpor
   await expect(picker).toBeVisible();
   await expect(page.locator('.model-tabs')).toBeHidden();
   await page.locator('input[type=password]').fill('compact-first-key');
-  await picker.selectOption('model-2-provider');
+  await picker.click();
+  await page.getByRole('menuitemradio', { name: '第二模型', exact: true }).click();
   await expect(page.getByLabel('显示名称', { exact: true })).toHaveValue('第二模型');
   await page.locator('input[type=password]').fill('compact-second-key');
-  await picker.selectOption('model-1-provider');
+  await picker.click();
+  await page.getByRole('menuitemradio', { name: '测试模型', exact: true }).click();
   await expect(page.locator('input[type=password]')).toHaveValue('compact-first-key');
   expect((await page.locator('.model-collection').boundingBox())!.height).toBeLessThan(90);
   await page.getByRole('button', { name: '添加提供商', exact: true }).click();
@@ -377,13 +418,14 @@ test('the category nav swaps one panel and keeps every control where it is', asy
   const theme = page.getByLabel('主题', { exact: true });
   // A native <select>: the shared desktop spec drives it with selectOption, and the Menu primitive
   // would turn it into a button.
-  await expect(theme).toHaveRole('combobox');
+  await expect(theme).toHaveRole('button');
   await expect(rowFor('主题')).toHaveCSS('min-height', '60px');
-  await theme.selectOption('dark');
+  await theme.click();
+  await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
   await page.getByRole('button', { name: '保存设置' }).click();
   await expect(page.getByTestId('ops')).toHaveText('settings.patch');
   await page.getByRole('button', { name: '审批与信任', exact: true }).click();
-  await expect(page.getByLabel('默认审批', { exact: true })).toHaveRole('combobox');
+  await expect(page.getByLabel('默认审批', { exact: true })).toHaveRole('button');
   await expect(page.getByRole('button', { name: '信任项目' })).toBeVisible();
 });
 
@@ -450,18 +492,20 @@ test('settings stay editable while a task runs and explain when runtime changes 
   await expect(status()).not.toHaveAttribute('data-error', 'true');
   await page.getByTestId('busy').click();
   await page.getByRole('button', { name: '通用', exact: true }).click();
-  await page.locator('#settings-follow-up').selectOption('steer');
+  await page.locator('#settings-follow-up').click();
+  await page.getByRole('menuitemradio', { name: '引导当前任务', exact: true }).click();
   await page.getByRole('button', { name: '保存设置' }).click();
   await expect(status()).toHaveText('设置已保存');
   await expect(status()).not.toHaveAttribute('data-error', 'true');
   expect(JSON.parse(await page.getByTestId('saved').textContent() ?? '{}').followUpMode).toBe('steer');
   await page.getByTestId('remount').click();
   await page.getByRole('button', { name: '通用', exact: true }).click();
-  await expect(page.locator('#settings-follow-up')).toHaveValue('steer');
+  await expect(page.locator('#settings-follow-up')).toContainText('引导当前任务');
 });
 
 test('built-in provider changes select a matching model and save no endpoint override', async () => {
-  await page.getByLabel('供应商', { exact: true }).selectOption('opencode-go');
+  await page.getByLabel('供应商', { exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'opencode-go', exact: true }).click();
   // The namespace changed, so the previous catalogue model is flagged instead of silently kept.
   await page.locator('.model-row-toggle').first().click();
   await expect(page.locator('.model-row-editor [role=alert]')).toContainText('当前模型不在内置目录中');
@@ -472,15 +516,20 @@ test('built-in provider changes select a matching model and save no endpoint ove
   await page.locator('.model-catalog-options input[value="deepseek-v4.1-flash"]').check();
   await page.getByRole('button', { name: '添加所选模型', exact: true }).click();
   await page.locator('.model-row-toggle').first().click();
-  await expect(page.getByRole('group', { name: '允许的思考程度' }).getByRole('checkbox')).toHaveCount(2);
+  // The catalogue seeds the levels; it does not fence them off, so every level stays selectable.
+  const thinkingGroup = page.getByRole('group', { name: '允许的思考程度' });
+  await expect(thinkingGroup.getByRole('checkbox')).toHaveCount(7);
   await expect(page.getByRole('checkbox', { name: '低', exact: true })).toBeChecked();
   await expect(page.getByRole('checkbox', { name: '高', exact: true })).toBeChecked();
-  await expect(page.getByRole('checkbox', { name: '最高', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: '最高', exact: true })).not.toBeChecked();
+  await expect(thinkingGroup.locator('.hint')).toContainText('内置目录把');
+  await page.getByRole('checkbox', { name: '最高', exact: true }).check();
   await page.getByRole('button', { name: '保存设置' }).click();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(saved.modelProviders[0]).toMatchObject({ namespace: 'opencode-go', kind: 'builtin', baseUrl: '' });
   expect(saved.models[0]).toMatchObject({ model: 'deepseek-v4.1-flash', contextWindow: 256000 });
+  expect(saved.models[0].thinkingLevels).toEqual(['low', 'high', 'max']);
 });
 
 test('custom mode has no provider input, keeps independent drafts, and survives settings remount', async () => {
@@ -490,15 +539,17 @@ test('custom mode has no provider input, keeps independent drafts, and survives 
   await expect(page.getByLabel('供应商 ID', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('内置模型', { exact: true })).toHaveCount(0);
   await page.getByLabel('Base URL', { exact: true }).fill('http://127.0.0.1:9876/v1');
-  await page.getByLabel('API 协议', { exact: true }).selectOption('openai-completions');
+  await page.getByLabel('API 协议', { exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'OpenAI 兼容（Chat Completions）', exact: true }).click();
   await page.getByLabel('显示名称', { exact: true }).fill('本地接口');
   await page.getByRole('radio', { name: '内置供应商', exact: true }).check();
-  await expect(page.getByLabel('供应商', { exact: true })).toHaveValue('openai');
-  await page.getByLabel('供应商', { exact: true }).selectOption('opencode-go');
+  await expect(page.getByLabel('供应商', { exact: true })).toContainText('openai');
+  await page.getByLabel('供应商', { exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'opencode-go', exact: true }).click();
   // Both modes keep their own draft: coming back to the custom mode still shows its endpoint.
   await page.getByRole('radio', { name: '自定义接口', exact: true }).check();
   await expect(page.getByLabel('Base URL', { exact: true })).toHaveValue('http://127.0.0.1:9876/v1');
-  await expect(page.getByLabel('API 协议', { exact: true })).toHaveValue('openai-completions');
+  await expect(page.getByLabel('API 协议', { exact: true })).toContainText('OpenAI 兼容');
   await expect(page.getByLabel('显示名称', { exact: true })).toHaveValue('本地接口');
   await page.getByRole('button', { name: '创建提供商', exact: true }).click();
   await page.getByRole('button', { name: '添加模型', exact: true }).click();
@@ -515,7 +566,7 @@ test('custom mode has no provider input, keeps independent drafts, and survives 
   await page.getByTestId('remount').click();
   await page.getByRole('tab', { name: '本地接口', exact: true }).click();
   await expect(page.getByLabel('Base URL', { exact: true })).toHaveValue('http://127.0.0.1:9876/v1');
-  await expect(page.getByLabel('API 协议', { exact: true })).toHaveValue('openai-completions');
+  await expect(page.getByLabel('API 协议', { exact: true })).toContainText('OpenAI 兼容');
 });
 
 test('missing and invalid custom URLs prevent a save and numeric capabilities are validated', async () => {
@@ -542,7 +593,7 @@ test('missing and invalid custom URLs prevent a save and numeric capabilities ar
 
 test('built-in endpoint overrides stay optional and never rewrite the catalogue model', async () => {
   await page.goto(pageUrl + '?scenario=override');
-  await expect(page.getByLabel('供应商', { exact: true })).toHaveValue('openai');
+  await expect(page.getByLabel('供应商', { exact: true })).toContainText('openai');
   await expect(page.getByLabel('API 协议', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Base URL', { exact: true })).toBeHidden();
   await page.locator('.connection-advanced summary').click();
@@ -604,7 +655,8 @@ test('catalog failures do not block unrelated preferences and unsaved model edit
   await expect(page.getByRole('alert')).toContainText('加载失败');
   await page.getByTestId('busy').click();
   await page.getByRole('button', { name: '外观', exact: true }).click();
-  await page.getByLabel('主题', { exact: true }).selectOption('dark');
+  await page.getByLabel('主题', { exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
   await page.getByRole('button', { name: '保存设置' }).click();
   await expect(status()).toHaveText('设置已保存', { timeout: 3000 });
   expect(await page.evaluate(() => window.__settingsRequests.filter(request => request.op === 'settings.patch'))).toEqual([
@@ -612,18 +664,19 @@ test('catalog failures do not block unrelated preferences and unsaved model edit
   ]);
   await page.getByTestId('remount').click();
   await page.getByRole('button', { name: '外观', exact: true }).click();
-  await expect(page.getByLabel('主题', { exact: true })).toHaveValue('dark');
+  await expect(page.getByLabel('主题', { exact: true })).toContainText('深色');
   await page.getByRole('button', { name: '模型', exact: true }).click();
   await page.getByLabel('显示名称', { exact: true }).fill('未保存的模型修改');
   await page.getByRole('button', { name: '通用', exact: true }).click();
-  await page.locator('#settings-follow-up').selectOption('steer');
+  await page.locator('#settings-follow-up').click();
+  await page.getByRole('menuitemradio', { name: '引导当前任务', exact: true }).click();
   await page.getByRole('button', { name: '保存设置' }).click();
   await expect(status()).toContainText('内置模型目录尚未加载');
   expect(await page.evaluate(() => window.__settingsRequests.filter(request => request.op === 'settings.patch'))).toHaveLength(1);
   await expect(heading()).toHaveText('模型');
   await expect(page.getByLabel('显示名称', { exact: true })).toHaveValue('未保存的模型修改');
   await page.getByRole('button', { name: '通用', exact: true }).click();
-  await expect(page.locator('#settings-follow-up')).toHaveValue('steer');
+  await expect(page.locator('#settings-follow-up')).toContainText('引导当前任务');
 });
 
 test('mode selection supports native keyboard navigation and removes hidden controls from focus', async () => {

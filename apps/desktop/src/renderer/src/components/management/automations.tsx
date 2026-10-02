@@ -6,6 +6,7 @@ import type { Automation, AutomationRun, DesktopRequest, Thread } from '../../..
 import { projectDirectories } from '../../../../shared/project-directories.ts';
 import { automationConfigurationKey } from '../../../../shared/automation-configuration.ts';
 import { findModel, providerModels } from '../../../../shared/model-configuration.ts';
+import { Menu } from '../primitives/menu.tsx';
 import { useApp } from '../../state/app.tsx';
 import { Button } from '../primitives/button.tsx';
 import { FieldRow } from '../primitives/field-row.tsx';
@@ -150,28 +151,62 @@ export function AutomationsPage() {
         <Button size="sm" onClick={() => { replaceEditor({ ...draft, id: '', base: undefined }); baseline.current = { ...initial, projectId: draft.projectId }; }}>{tr('另存为新自动化')}</Button>
       </div></div>}
       <FieldRow label={tr("名称")} htmlFor="automation-name"><input ref={nameInput} id="automation-name" {...field('name')} value={draft.name} onChange={event => patch({ name: event.target.value })} /></FieldRow>
-      <FieldRow label={tr('执行位置')} htmlFor="automation-destination"><select id="automation-destination" value={draft.destination} onChange={event => patch({ destination: event.target.value as Draft['destination'], environment: 'local', directoryId: '' })}><option value="new">{tr('每次创建新任务')}</option><option value="thread">{tr('继续已有聊天')}</option></select></FieldRow>
-      {draft.destination === 'thread' ? <FieldRow label={tr('目标聊天')} htmlFor="automation-target" description={tr('已有聊天会等待当前轮次结束，保留草稿和配置；自动化不能扩大该聊天的权限。')}><select id="automation-target" {...field('target')} value={draft.targetThreadId} onChange={event => patch({ targetThreadId: event.target.value })}><option value="">{tr('请选择聊天')}</option>{data.threads.filter(item => !item.subtaskId && !item.deletedAt && !item.archived && !item.review && !item.sidechat?.temporary).map(item => <option key={item.id} value={item.id}>{item.title} · {data.projects.find(project => project.id === item.projectId)?.name ?? tr('独立聊天')}</option>)}</select></FieldRow> : <FieldRow label={tr("项目")} htmlFor="automation-project"><select id="automation-project" {...field('project')} value={draft.projectId || project?.id || ''} onChange={event => patch({ projectId: event.target.value, directoryId: '' })}>
-        {!data.projects.length && <option value="">{tr("请先添加项目")}</option>}
-        {data.projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </select></FieldRow>}
-      <FieldRow label={tr('运行模型')} htmlFor="automation-model" description={tr('先选提供商，再选它下面的模型')}><select id="automation-model" value={draft.modelId} onChange={event => patch({ modelId: event.target.value })}><option value="">{tr('沿用聊天或默认设置')}</option>{data.settings.modelProviders.map(provider => {
-        const models = providerModels(data.settings.models, provider.id);
-        return models.length ? <optgroup key={provider.id} label={provider.name}>{models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</optgroup> : null;
-      })}</select></FieldRow>
-      <FieldRow label={tr('运行权限')} htmlFor="automation-policy"><select id="automation-policy" value={draft.policy} onChange={event => patch({ policy: event.target.value as Draft['policy'] })}><option value="">{tr('沿用聊天或默认设置')}</option>{draft.policy === 'deny' && <option value="deny" hidden>{policyLabels.deny}</option>}{permissionModes.map(value => <option key={value} value={value}>{policyLabels[value]}</option>)}</select></FieldRow>
-      <FieldRow label={tr('自动化思考程度')} htmlFor="automation-thinking"><select id="automation-thinking" value={draft.thinking} onChange={event => patch({ thinking: event.target.value as Draft['thinking'] })}><option value="">{tr('沿用聊天或默认设置')}</option>{(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const).map(level => <option value={level} key={level}>{thinkingLabels[level]}</option>)}</select></FieldRow>
-      {draft.destination === 'new' && <><FieldRow label={tr('运行目录')} htmlFor="automation-directory"><select id="automation-directory" value={draft.directoryId} onChange={event => patch({ directoryId: event.target.value })}><option value="">{tr('项目主目录')}</option>{selectedProject && projectDirectories(selectedProject).map(item => <option value={item.id} key={item.id}>{item.name} · {item.path}</option>)}</select></FieldRow>
-      <FieldRow label={tr('运行环境')} htmlFor="automation-environment"><select id="automation-environment" value={draft.environment} onChange={event => patch({ environment: event.target.value as Draft['environment'] })}><option value="local">{tr('本地')}</option><option value="worktree">{tr('独立 Worktree')}</option></select></FieldRow>
+      <FieldRow label={tr('执行位置')} htmlFor="automation-destination"><Menu id="automation-destination" label={tr('执行位置')} value={draft.destination} matchTriggerWidth className="settings-select"
+      options={[{ value: 'new', label: tr('每次创建新任务') }, { value: 'thread', label: tr('继续已有聊天') }]}
+      onChange={value => patch({ destination: value as Draft['destination'], environment: 'local', directoryId: '' })} /></FieldRow>
+      {draft.destination === 'thread' ? <FieldRow label={tr('目标聊天')} htmlFor="automation-target" description={tr('已有聊天会等待当前轮次结束，保留草稿和配置；自动化不能扩大该聊天的权限。')}><Menu id="automation-target" label={tr('目标聊天')} value={draft.targetThreadId} matchTriggerWidth className="settings-select"
+        options={[
+          { value: '', label: tr('请选择聊天') },
+          ...data.threads.filter(item => !item.subtaskId && !item.deletedAt && !item.archived && !item.review && !item.sidechat?.temporary)
+            .map(item => ({ value: item.id, label: item.title + ' · ' + (data.projects.find(project => project.id === item.projectId)?.name ?? tr('独立聊天')) })),
+        ]}
+        onChange={value => patch({ targetThreadId: value })} /></FieldRow> : <FieldRow label={tr("项目")}><Menu id="automation-project" label={tr('项目')} value={draft.projectId || project?.id || ''} matchTriggerWidth className="settings-select"
+        options={data.projects.length ? data.projects.map(item => ({ value: item.id, label: item.name })) : [{ value: '', label: tr('请先添加项目') }]}
+        onChange={value => patch({ projectId: value, directoryId: '' })} /></FieldRow>}
+      <FieldRow label={tr('运行模型')} description={tr('先选提供商，再选它下面的模型')}><Menu id="automation-model" label={tr('运行模型')} value={draft.modelId} matchTriggerWidth className="settings-select"
+        options={[
+          { value: '', label: tr('沿用聊天或默认设置') },
+          ...data.settings.modelProviders.flatMap(provider => providerModels(data.settings.models, provider.id)
+            .map(model => ({ value: model.id, label: provider.name + ' · ' + model.name }))),
+        ]}
+        onChange={value => patch({ modelId: value })} /></FieldRow>
+      <FieldRow label={tr('运行权限')} htmlFor="automation-policy"><Menu id="automation-policy" label={tr('运行权限')} value={draft.policy} matchTriggerWidth className="settings-select"
+      options={[
+        { value: '', label: tr('沿用聊天或默认设置') },
+        ...(draft.policy === 'deny' ? [{ value: 'deny', label: policyLabels.deny }] : []),
+        ...permissionModes.map(value => ({ value, label: policyLabels[value] })),
+      ]}
+      onChange={value => patch({ policy: value as Draft['policy'] })} /></FieldRow>
+      <FieldRow label={tr('自动化思考程度')} htmlFor="automation-thinking"><Menu id="automation-thinking" label={tr('自动化思考程度')} value={draft.thinking} matchTriggerWidth className="settings-select"
+      options={[
+        { value: '', label: tr('沿用聊天或默认设置') },
+        ...(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const).map(level => ({ value: level, label: thinkingLabels[level] })),
+      ]}
+      onChange={value => patch({ thinking: value as Draft['thinking'] })} /></FieldRow>
+      {draft.destination === 'new' && <><FieldRow label={tr('运行目录')} htmlFor="automation-directory"><Menu id="automation-directory" label={tr('运行目录')} value={draft.directoryId} matchTriggerWidth className="settings-select"
+        options={[
+          { value: '', label: tr('项目主目录') },
+          ...(selectedProject ? projectDirectories(selectedProject).map(item => ({ value: item.id, label: item.name + ' · ' + item.path })) : []),
+        ]}
+        onChange={value => patch({ directoryId: value })} /></FieldRow>
+      <FieldRow label={tr('运行环境')} htmlFor="automation-environment"><Menu id="automation-environment" label={tr('运行环境')} value={draft.environment} matchTriggerWidth className="settings-select"
+        options={[{ value: 'local', label: tr('本地') }, { value: 'worktree', label: tr('独立 Worktree') }]}
+        onChange={value => patch({ environment: value as Draft['environment'] })} /></FieldRow>
       {draft.environment === 'worktree' && <FieldRow label={tr('起始分支或提交')} htmlFor="automation-start"><input id="automation-start" value={draft.startPoint} onChange={event => patch({ startPoint: event.target.value })} /></FieldRow>}</>}
       <label className="field-block" htmlFor="automation-prompt">{tr("任务描述")}<textarea id="automation-prompt" aria-label={tr('任务描述')} {...field('prompt')} rows={3} value={draft.prompt} onChange={event => patch({ prompt: event.target.value })} /></label>
-      <FieldRow label={tr("计划类型")} htmlFor="automation-mode"><select id="automation-mode" value={draft.mode} onChange={event => patch({ mode: event.target.value as Draft['mode'] })}>
-        <option value="interval">{tr("固定间隔")}</option><option value="daily">{tr("每天")}</option><option value="weekly">{tr("每周")}</option><option value="monthly">{tr("每月")}</option>
-      </select></FieldRow>
+      <FieldRow label={tr("计划类型")}><Menu id="automation-mode" label={tr('计划类型')} value={draft.mode} matchTriggerWidth className="settings-select"
+        options={[
+          { value: 'interval', label: tr('固定间隔') }, { value: 'daily', label: tr('每天') },
+          { value: 'weekly', label: tr('每周') }, { value: 'monthly', label: tr('每月') },
+        ]}
+        onChange={value => patch({ mode: value as Draft['mode'] })} /></FieldRow>
       {draft.mode === 'interval' ? <FieldRow label={tr("间隔（分钟）")} htmlFor="automation-interval"><input id="automation-interval" {...field('interval')} type="number" min={1} max={525600} step={1} value={draft.intervalMinutes} onChange={event => patch({ intervalMinutes: Number(event.target.value) })} /></FieldRow> : <>
-        <FieldRow label={tr("时间")} htmlFor="automation-time"><input id="automation-time" {...field('time')} type="time" value={draft.time} onChange={event => patch({ time: event.target.value })} /></FieldRow>
+        <FieldRow label={tr("时间")} htmlFor="automation-time">{/* A native time input opens the operating system's own picker; this stays a plain field with the same value. */}
+      <input id="automation-time" {...field('time')} type="text" inputMode="numeric" placeholder="09:00" pattern="^([01]\d|2[0-3]):[0-5]\d$" value={draft.time} onChange={event => patch({ time: event.target.value })} /></FieldRow>
         <FieldRow label={tr("时区")} htmlFor="automation-timezone" description={tr("例如 Asia/Shanghai 或 America/New_York")}><input id="automation-timezone" {...field('timezone')} value={draft.timezone} onChange={event => patch({ timezone: event.target.value })} /></FieldRow>
-        {draft.mode === 'weekly' && <FieldRow label={tr("星期")} htmlFor="automation-weekday"><select id="automation-weekday" value={draft.weekday} onChange={event => patch({ weekday: Number(event.target.value) })}>{[tr("日"),tr("一"),tr("二"),tr("三"),tr("四"),tr("五"),tr("六")].map((day,index) => <option key={day} value={index}>{tr("星期")}{day}</option>)}</select></FieldRow>}
+        {draft.mode === 'weekly' && <FieldRow label={tr("星期")} htmlFor="automation-weekday"><Menu id="automation-weekday" label={tr('星期')} value={String(draft.weekday)} matchTriggerWidth className="settings-select"
+        options={[tr('日'), tr('一'), tr('二'), tr('三'), tr('四'), tr('五'), tr('六')].map((day, index) => ({ value: String(index), label: tr('星期') + day }))}
+        onChange={value => patch({ weekday: Number(value) })} /></FieldRow>}
         {draft.mode === 'monthly' && <FieldRow label={tr("日期")} htmlFor="automation-monthday"><input id="automation-monthday" {...field('monthday')} type="number" min={1} max={31} step={1} value={draft.monthday} onChange={event => patch({ monthday: Number(event.target.value) })} /></FieldRow>}
       </>}
       <div className="row"><Button type="submit" variant="primary" size="sm" disabled={conflict}>{busy === 'save' ? tr("正在保存…") : draft.id ? tr("保存自动化") : tr("创建自动化")}</Button><Button size="sm" onClick={() => { setDraft(initial); setErrors({}); setEditorOpen(false); createButton.current?.focus(); }}>{draft.id ? tr("取消编辑") : tr("取消创建")}</Button></div>

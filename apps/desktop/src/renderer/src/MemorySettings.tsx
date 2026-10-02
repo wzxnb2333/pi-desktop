@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DesktopData, DesktopRequest, Settings } from '../../shared/contracts.ts';
 import { memoryEntrySchema, memorySnapshotSchema, memoryScopeKey, type MemoryEntry, type MemoryScope, type MemorySnapshot } from '../../shared/memories.ts';
+import { Menu } from './components/primitives/menu.tsx';
 import { localizeAppError, localizeLabel, tr } from '../../shared/localization.ts';
 import { findModel } from '../../shared/model-configuration.ts';
 import { useLocale } from './hooks/use-locale.ts';
@@ -106,9 +107,12 @@ export function MemorySettings({ data, preferences, onChange, invoke, active, on
       <FieldRow label={tr('自动生成记忆候选')} htmlFor="memory-auto" description={tr('默认关闭。仅在普通聊天成功结束后处理用户文字；候选必须确认后才会使用。')}><input id="memory-auto" aria-label={tr('自动生成记忆候选')} type="checkbox" checked={preferences.autoGenerate} onChange={event => onChange({ ...preferences, autoGenerate: event.target.checked })} /></FieldRow>
     </SettingsSection>
     <div className="section-heading"><h2>{tr('记忆库')}</h2></div>
-    <FieldRow label={tr('记忆范围')} htmlFor="memory-scope"><select id="memory-scope" value={memoryScopeKey(scope)} disabled={!!draft} onChange={event => { const key = event.target.value; setScope(key === 'user' ? { kind: 'user' } : { kind: 'project', projectId: key.slice(8) }); }}>
-      <option value="user">{tr('当前用户 · 所有项目')}</option>{data.projects.map(project => <option key={project.id} value={'project:' + project.id}>{project.name}</option>)}
-    </select></FieldRow>
+    <FieldRow label={tr('记忆范围')}><Menu label={tr('记忆范围')} value={memoryScopeKey(scope)} disabled={!!draft} matchTriggerWidth className="settings-select"
+      options={[
+        { value: 'user', label: tr('当前用户 · 所有项目') },
+        ...data.projects.map(project => ({ value: 'project:' + project.id, label: project.name })),
+      ]}
+      onChange={key => setScope(key === 'user' ? { kind: 'user' } : { kind: 'project', projectId: key.slice(8) })} /></FieldRow>
     <div className="memory-toolbar"><input aria-label={tr('搜索记忆')} placeholder={tr('搜索记忆')} value={query} onChange={event => setQuery(event.target.value)} /><Button ref={addButton} disabled={busy || !!draft} onClick={() => edit()}>{tr('新增记忆')}</Button><Button ref={refreshButton} disabled={busy} aria-disabled={loading || undefined} onClick={() => void refresh()}>{tr('刷新')}</Button></div>
     {loading && <p role="status">{tr('正在读取记忆…')}</p>}
     {readError && <div><p role="alert" className="form-feedback" data-error>{localizeAppError(readError)}</p><Button ref={retryButton} disabled={busy} aria-disabled={loading || undefined} onClick={() => void refresh()}>{tr('重试读取记忆')}</Button></div>}
@@ -125,7 +129,9 @@ export function MemorySettings({ data, preferences, onChange, invoke, active, on
       <div className="row"><Button disabled={busy || !!draft} onClick={() => edit(entry)}>{tr('编辑或确认')}</Button><Button disabled={busy} variant="danger" onClick={() => { setFeedback(undefined); setConfirm({ kind: 'entry', entry }); }}>{tr('删除这条记忆')}</Button></div>
     </article>)}</div>
     {loaded && !loading && !readError && !visible.length && <p className="hint">{tr('没有匹配的记忆')}</p>}
-    <div className="config-card memory-generation"><FieldRow label={tr('生成来源聊天')} htmlFor="memory-source"><select id="memory-source" value={sources.some(thread => thread.id === sourceId) ? sourceId : ''} disabled={operation?.status === 'running'} onChange={event => setSourceId(event.target.value)}><option value="">{tr('请选择聊天')}</option>{sources.map(thread => <option key={thread.id} value={thread.id}>{thread.title}</option>)}</select></FieldRow>
+    <div className="config-card memory-generation"><FieldRow label={tr('生成来源聊天')}><Menu label={tr('生成来源聊天')} value={sources.some(thread => thread.id === sourceId) ? sourceId : ''} disabled={operation?.status === 'running'} matchTriggerWidth className="settings-select"
+      options={[{ value: '', label: tr('请选择聊天') }, ...sources.map(thread => ({ value: thread.id, label: thread.title }))]}
+      onChange={setSourceId} /></FieldRow>
       <Button disabled={busy || operation?.status === 'running' || !sources.some(thread => thread.id === sourceId)} onClick={() => void perform({ op: 'memory.generate', scope, threadId: sourceId, requestId: crypto.randomUUID() })}>{tr('从聊天生成候选')}</Button>
       {operation?.status === 'running' && <><p role="status">{localizeLabel(operation.stage)}</p><Button aria-disabled={busy || undefined} onClick={() => void perform({ op: 'operation.cancel', threadId: sourceId, requestId: operation.id })}>{tr('取消记忆生成')}</Button></>}
       {operation?.error && <p role="alert">{localizeAppError(operation.error)}</p>}

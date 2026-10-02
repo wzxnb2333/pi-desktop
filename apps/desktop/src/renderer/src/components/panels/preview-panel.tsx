@@ -105,7 +105,7 @@ export function PreviewPanel({ active = true, pending = false, launcher }: { act
       <BrowserAddressInput key={identity} value={address} error={!!draft?.error} errorId={errorId} composing={composing} disabled={busy} onChange={text => setDrafts(previous => ({ ...previous, [identity]: { text, dirty: true } }))} onOpen={open} onReset={resetAddress} />
       {draft?.dirty && <button className="browser-submit" type="submit" aria-label={tr("打开")} disabled={!address.trim() || busy}><ArrowRight size={16} /></button>}
       {state?.zoom !== undefined && state.zoom !== 1 && <output aria-label={tr("网页缩放")}>{Math.round(state.zoom * 100)}%</output>}
-      <Menu label={tr("浏览器操作")} kind="action" value="" className="browser-overflow" size="sm" placeholder={<MoreVertical size={16} />} align="end" options={[
+      <Menu label={tr("浏览器操作")} kind="action" value="" iconOnly className="browser-overflow" size="sm" placeholder={<MoreVertical size={16} />} align="end" options={[
         { value: 'find', label: tr("网页内查找"), disabled: !selected?.url },
         { value: 'copy', label: tr("复制地址"), disabled: !currentUrl },
         { value: 'external', label: tr("外部打开"), disabled: !currentUrl },

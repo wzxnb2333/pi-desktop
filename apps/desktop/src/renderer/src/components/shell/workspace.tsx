@@ -39,7 +39,7 @@ export function Workspace() {
   const [drag, setDrag] = useState<Drag>(undefined);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory>('models');
   const home = view === 'thread' && !thread?.items.length;
-  const panelOpen = reviewOpen && ['changes', 'files', 'browser', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask'].includes(reviewTab);
+  const panelOpen = reviewOpen && ['changes', 'files', 'file', 'browser', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask'].includes(reviewTab);
   const summaryOpen = ui.summaryOpen !== false && (!home || ui.summaryOpen === true);
   const previewOpen = reviewOpen && reviewTab === 'browser';
   const setPreviewOpen = (open: boolean) => { setReviewTab('browser'); setReviewOpen(open); };

@@ -53,8 +53,9 @@ test('permission choices gate native sandbox commands and full access persists a
     await fixture.page.keyboard.press('Control+,');
     await fixture.page.getByRole('button', { name: '审批与信任', exact: true }).click();
     const preference = fixture.page.getByLabel('默认审批', { exact: true });
-    await expect(preference.locator('option')).toHaveText(['请求批准', '替我批准', '完全访问']);
-    await preference.selectOption('full');
+    await expect(preference).toContainText('请求批准');
+    await preference.click();
+  await fixture.page.getByRole('menuitemradio', { name: '完全访问', exact: true }).click();
     await fixture.page.getByRole('button', { name: '保存设置', exact: true }).click();
     await expect(fixture.page.locator('.settings-footer [role=status]')).toHaveText('设置已保存');
     await fixture.page.getByRole('button', { name: '返回工作台', exact: true }).click();

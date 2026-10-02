@@ -4,6 +4,7 @@ import { localizeAppError, localizeLabel, tr } from '../../../../shared/localiza
 import { useLocale } from '../../hooks/use-locale.ts';
 import { useApp } from '../../state/app.tsx';
 import { ConfirmDialog } from '../primitives/dialog.tsx';
+import { Menu } from '../primitives/menu.tsx';
 import { IconButton } from '../primitives/icon-button.tsx';
 
 export function WorktreeManager({ open: controlledOpen, onOpenChange }: { open?: boolean; onOpenChange?(open: boolean): void } = {}) {
@@ -58,7 +59,9 @@ export function WorktreeManager({ open: controlledOpen, onOpenChange }: { open?:
         <p>{project.name}</p><p className="hint">{tr('归档保存提交、暂存和未提交内容后回收目录。活动、已打开、固定或共享的工作区不会自动回收，忽略文件需先自行清理。')}</p>
         <fieldset><legend>{tr('可选自动回收')}</legend>
           <label className="check"><input type="checkbox" checked={cleanup.enabled} disabled={pending} onChange={event => void save({ ...cleanup, enabled: event.target.checked })} />{tr('自动归档闲置 Worktree')}</label>
-          <label>{tr('闲置天数')}<select aria-label={tr('闲置天数')} disabled={pending} value={cleanup.days} onChange={event => void save({ ...cleanup, days: Number(event.target.value) })}>{[...new Set([1, 7, 14, 30, 90, cleanup.days])].sort((a, b) => a - b).map(days => <option key={days} value={days}>{days}</option>)}</select></label>
+          <label>{tr('闲置天数')}<Menu label={tr('闲置天数')} value={String(cleanup.days)} disabled={pending} matchTriggerWidth
+            options={[...new Set([1, 7, 14, 30, 90, cleanup.days])].sort((a, b) => a - b).map(days => ({ value: String(days), label: String(days) }))}
+            onChange={value => void save({ ...cleanup, days: Number(value) })} /></label>
           <p className="hint">{tr('默认关闭。仅在应用运行时检查；恢复证据不完整或清理失败的目录会保留。')}</p>
           <button disabled={pending || !!running} onClick={() => void recycle()}>{tr('回收符合条件的闲置工作区')}</button>
         </fieldset>

@@ -10,7 +10,7 @@ import { Disclosure } from './disclosure.tsx';
 import { Button } from '../primitives/button.tsx';
 
 function CapturedPart({ item, part, index }: { item: TimelineItem; part: MessageInputPart; index: number }) {
-  const { thread, invoke, patchThread, selectDirectory, setReviewOpen, focusTimeline } = useApp();
+  const { thread, invoke, patchThread, openFileTab, selectDirectory, setReviewOpen, focusTimeline } = useApp();
   const [image, setImage] = useState<AttachmentInfo>(), [error, setError] = useState(''), [retry, setRetry] = useState(0);
   useEffect(() => {
     if (!part.mime || !part.path || !thread) return;
@@ -25,8 +25,8 @@ function CapturedPart({ item, part, index }: { item: TimelineItem; part: Message
     if (reference.kind === 'quote') focusTimeline({ kind: 'message', id: reference.id });
     else if (reference.kind === 'file' || reference.kind === 'folder') {
       if (reference.directoryId) selectDirectory(reference.directoryId);
-      patchThread({ directoryId: reference.directoryId, reviewTab: 'files', ...(reference.kind === 'folder' ? { fileDirectory: reference.id }
-        : { selectedPath: reference.id, fileLocation: { id: crypto.randomUUID(), path: reference.id, line: reference.range?.start ?? 1 } }) });
+      if (reference.kind === 'folder') patchThread({ directoryId: reference.directoryId, fileDirectory: reference.id });
+      else openFileTab(reference.id, { line: reference.range?.start ?? 1 }, reference.directoryId);
       setReviewOpen(true);
     }
   };

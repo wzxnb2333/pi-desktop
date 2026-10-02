@@ -275,8 +275,8 @@ export const SIDEBAR_WIDTH = { min: 240, max: 520, default: 275 } as const;
 export const REVIEW_WIDTH = { min: 280, max: 1920, default: 390 } as const;
 export const TERMINAL_HEIGHT = { min: 120, max: 800, default: 240 } as const;
 
-export const reviewTabSchema = z.enum(['summary', 'changes', 'files', 'browser', 'plan', 'artifacts', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask']);
-export const panelTabSchema = z.object({ id: z.string().min(1).max(200), kind: z.enum(['browser', 'changes', 'files', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask']) }).strict();
+export const reviewTabSchema = z.enum(['summary', 'changes', 'files', 'file', 'browser', 'plan', 'artifacts', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask']);
+export const panelTabSchema = z.object({ id: z.string().min(1).max(2100), kind: z.enum(['browser', 'changes', 'files', 'file', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask']) }).strict();
 export type PanelTab = z.infer<typeof panelTabSchema>;
 export const viewSchema = z.enum(['thread', 'settings', 'skills', 'automations', 'inbox']);
 
@@ -307,7 +307,7 @@ export const uiThreadSchema = z
     browserTabs: z.array(z.object({ id: z.string(), url: z.string(), title: z.string() })).optional(),
     closedBrowserTabs: z.array(z.object({ id: z.string(), url: z.string(), title: z.string() })).optional(),
     activeBrowserTab: z.string().optional(),
-    activePanelTab: z.string().max(200).optional(),
+    activePanelTab: z.string().max(2100).optional(),
     panelTabs: z.array(panelTabSchema).max(500).optional(),
   })
   .strict();
@@ -432,8 +432,8 @@ export const requestSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('comment.remove'), threadId: id, commentId: id }).strict(),
   z.object({ op: z.literal('bootstrap') }).strict(),
   z.object({ op: z.literal('models.catalog') }).strict(),
-  z.object({ op: z.literal('project.add') }).strict(),
-  z.object({ op: z.literal('project.directoryAdd'), projectId: id }).strict(),
+  z.object({ op: z.literal('project.add'), path: z.string().min(1).max(2000).optional() }).strict(),
+  z.object({ op: z.literal('project.directoryAdd'), projectId: id, path: z.string().min(1).max(2000).optional() }).strict(),
   z.object({ op: z.literal('project.directoryUpdate'), projectId: id, directoryId: id, primary: z.boolean().optional(), trusted: z.boolean().optional() }).strict(),
   z.object({ op: z.literal('project.directoryRemove'), projectId: id, directoryId: id }).strict(),
   z.object({ op: z.literal('project.trust'), id, trusted: z.boolean() }).strict(),

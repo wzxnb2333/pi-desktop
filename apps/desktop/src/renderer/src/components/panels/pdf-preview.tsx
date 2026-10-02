@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getDocument, PDFWorker, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist';
 import type { ArtifactDocument } from '../../../../shared/artifacts.ts';
 import { tr } from '../../../../shared/localization.ts';
+import { Menu } from '../primitives/menu.tsx';
 import { Button } from '../primitives/button.tsx';
 
 const positions = new Map<string, { page: number; zoom: number }>();
@@ -72,7 +73,9 @@ export function PdfPreview({ document: source, identity, capturing = false, onCa
         <Button disabled={page <= 1} onClick={() => setPage(value => value - 1)}>{tr('上一页')}</Button>
         <label>{tr('页码')} <input aria-label={tr('PDF 页码')} type="number" min={1} max={pdf.numPages} value={page} onChange={event => setPage(Math.max(1, Math.min(pdf.numPages, Number(event.target.value) || 1)))} /></label><span>/ {pdf.numPages}</span>
         <Button disabled={page >= pdf.numPages} onClick={() => setPage(value => value + 1)}>{tr('下一页')}</Button>
-        <select aria-label={tr('PDF 缩放')} value={zoom} onChange={event => setZoom(Number(event.target.value))}>{[.25, .5, .75, 1, 1.25, 1.5, 2, 3].map(value => <option key={value} value={value}>{value * 100}%</option>)}</select>
+        <Menu label={tr('PDF 缩放')} value={String(zoom)} matchTriggerWidth className="artifact-choice"
+          options={[.25, .5, .75, 1, 1.25, 1.5, 2, 3].map(value => ({ value: String(value), label: value * 100 + '%' }))}
+          onChange={value => setZoom(Number(value))} />
         <Button disabled={capturing || rendering || !!error || rendered?.page !== page || rendered?.zoom !== zoom} onClick={() => { if (canvas.current && rendered?.page === page && rendered.zoom === zoom) onCapture({ page: rendered.page, image: canvas.current.toDataURL('image/png') }); }}>{tr('标注此页')}</Button>
       </div>
       <form className="artifact-toolbar" onSubmit={event => { event.preventDefault(); void search(); }}><input aria-label={tr('搜索 PDF')} value={query} maxLength={500} onChange={event => changeQuery(event.target.value)} /><Button type="submit" disabled={!query.trim() || searching}>{tr('搜索')}</Button>{searching && <Button onClick={() => { searchId.current++; setSearching(false); }}>{tr('取消搜索')}</Button>}<span role="status">{searched > 0 && tr('已搜索 {p0}/{p1} 页，{p2} 页匹配', { p0: searched, p1: pdf.numPages, p2: results.length })}</span></form>

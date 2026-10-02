@@ -1,4 +1,4 @@
-import { Check, KeyRound, Plus, Search, Trash2 } from 'lucide-react';
+import { Check, Eye, EyeOff, KeyRound, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { type ModelApi, type ModelCatalog, type ModelProvider, type ProviderModel, thinkingSchema } from '../../shared/contracts.ts';
 import { localizeAppError, tr } from '../../shared/localization.ts';
@@ -6,15 +6,24 @@ import {
   MODEL_APIS, builtinProvider, catalogModel, catalogProvider, customModel, customProvider,
   modelFromCatalog, providerModels, validateProvider,
 } from '../../shared/model-configuration.ts';
-import { allowedThinkingLevels } from '../../shared/thinking.ts';
+import { allowedThinkingLevels, type ThinkingLevel } from '../../shared/thinking.ts';
 import { thinkingLabels } from './lib/labels.ts';
 import { useLocale } from './hooks/use-locale.ts';
 import { Button } from './components/primitives/button.tsx';
 import { ConfirmDialog } from './components/primitives/dialog.tsx';
 import { FieldRow } from './components/primitives/field-row.tsx';
+import { IconButton } from './components/primitives/icon-button.tsx';
+import { Menu } from './components/primitives/menu.tsx';
 import { Tabs } from './components/primitives/tabs.tsx';
 import { API_LABELS, ModelConnection } from './ModelConnection.tsx';
 import { SettingsSection } from './SettingsSection.tsx';
+
+/** Compact capability figures for the model row: `1M`, `384K`, `204.8K`; the tooltip keeps it exact. */
+function compactTokens(value: number): string {
+  if (value >= 1000000) return (value / 1000000).toFixed(value % 1000000 ? 1 : 0) + 'M';
+  if (value >= 1000) return (value / 1000).toFixed(value % 1000 ? 1 : 0) + 'K';
+  return String(value);
+}
 
 interface ProviderDraft {
   mode: ModelProvider['kind'];
@@ -30,10 +39,11 @@ const PROVIDER_DRAFT: ProviderDraft = { mode: 'builtin', name: '', namespace: ''
  * Two levels: a connection plus one credential per provider, then any number of models under it.
  * The left pane selects a provider, the right pane edits its connection and its models.
  */
-export function ModelSettings({ providers, models, defaultId, selected, keys, catalog, catalogError, error, onSelect, onAddProvider, onChange, onRetry, onKey, onAddModel, onModelChange, onModelDelete, onDefault, onDeleteProvider }: {
+export function ModelSettings({ providers, models, defaultId, defaultThinking, selected, keys, catalog, catalogError, error, onSelect, onAddProvider, onChange, onRetry, onKey, onAddModel, onModelChange, onModelDelete, onDefault, onDefaultThinking, onDeleteProvider }: {
   providers: ModelProvider[];
   models: ProviderModel[];
   defaultId: string;
+  defaultThinking: ThinkingLevel;
   selected: string;
   keys: Record<string, string>;
   catalog: ModelCatalog | null;
@@ -48,6 +58,7 @@ export function ModelSettings({ providers, models, defaultId, selected, keys, ca
   onModelChange(id: string, patch: Partial<ProviderModel>): void;
   onModelDelete(id: string): void;
   onDefault(id: string): void;
+  onDefaultThinking(level: ThinkingLevel): void;
   onDeleteProvider(id: string): void;
 }) {
   useLocale();
@@ -60,8 +71,11 @@ export function ModelSettings({ providers, models, defaultId, selected, keys, ca
   const [addingModel, setAddingModel] = useState<'builtin' | 'custom' | ''>('');
   const [catalogPicks, setCatalogPicks] = useState<string[]>([]);
   const [customId, setCustomId] = useState('');
+  const [showKey, setShowKey] = useState(false);
   const collection = useRef<HTMLElement>(null);
   const editor = useRef<HTMLDivElement>(null);
+  /** The model new sessions start from; the select shows it even before the settings are saved. */
+  const defaultModel = models.find(model => model.id === defaultId) ?? models[0];
   useEffect(() => {
     if (!error) return;
     setQuery('');
@@ -115,10 +129,9 @@ export function ModelSettings({ providers, models, defaultId, selected, keys, ca
   return <div className="model-settings">
     <aside ref={collection} className="model-collection" aria-label={tr('供应商与模型')}>
       <div className="model-collection-compact"><label htmlFor="settings-model-selection">{tr('提供商')}</label>
-        <select id="settings-model-selection" value={selected} disabled={!providers.length} onChange={event => onSelect(event.target.value)}>
-          {!providers.length && <option value="">{tr('还没有提供商')}</option>}
-          {providers.map(item => <option key={item.id} value={item.id}>{item.name || tr('新提供商')}</option>)}
-        </select>
+        <Menu id="settings-model-selection" label={tr('提供商')} value={selected} matchTriggerWidth className="settings-select" disabled={!providers.length}
+          options={providers.length ? providers.map(item => ({ value: item.id, label: item.name || tr('新提供商') })) : [{ value: '', label: tr('还没有提供商') }]}
+          onChange={onSelect} />
       </div>
       <div className="model-collection-heading"><h2>{tr('提供商')}</h2><span className="model-count">{providers.length}</span></div>
       <div className="settings-search model-search"><Search size={14} aria-hidden="true" /><input aria-label={tr('搜索名称、供应商或模型 ID')} placeholder={tr('搜索名称、供应商或模型 ID')} value={query} onChange={event => setQuery(event.target.value)} /></div>
@@ -155,46 +168,80 @@ export function ModelSettings({ providers, models, defaultId, selected, keys, ca
             placeholder={draft.mode === 'builtin' ? draft.namespace : tr('例如：本地推理服务')} value={draft.name}
             onChange={event => setDraft(previous => previous && { ...previous, name: event.target.value })} />
         </FieldRow>
-        {draft.mode === 'builtin' ? <FieldRow label={tr('供应商')} htmlFor="provider-draft-namespace" description={tr("Pi 内置目录的供应商标识，不是域名或网址")}>
-          <select id="provider-draft-namespace" aria-label={tr('供应商')} value={draft.namespace} disabled={!catalog?.length}
-            onChange={event => setDraft(previous => previous && { ...previous, namespace: event.target.value })}>
-            {!catalog?.length && <option value="">{tr('内置模型目录尚未加载')}</option>}
-            {catalog?.map(({ id }) => <option key={id} value={id}>{id}</option>)}
-          </select>
+        {draft.mode === 'builtin' ? <FieldRow label={tr('供应商')} description={tr("Pi 内置目录的供应商标识，不是域名或网址")}>
+          <Menu id="provider-draft-namespace" label={tr('供应商')} value={draft.namespace} matchTriggerWidth className="settings-select" disabled={!catalog?.length}
+            options={catalog?.length ? catalog.map(({ id }) => ({ value: id, label: id })) : [{ value: '', label: tr('内置模型目录尚未加载') }]}
+            onChange={value => setDraft(previous => previous && { ...previous, namespace: value })} />
         </FieldRow> : <>
           <FieldRow label="Base URL" htmlFor="provider-draft-url" description={tr("必填，包含服务要求的路径，例如 /v1")}>
             <input id="provider-draft-url" aria-label="Base URL" type="url" required autoComplete="off" spellCheck={false} placeholder="https://api.example.com/v1"
               value={draft.baseUrl} onChange={event => setDraft(previous => previous && { ...previous, baseUrl: event.target.value })} />
           </FieldRow>
-          <FieldRow label={tr('API 协议')} htmlFor="provider-draft-api" description={tr("按接口文档选择协议，与供应商品牌无关")}>
-            <select id="provider-draft-api" aria-label={tr('API 协议')} value={draft.api} onChange={event => setDraft(previous => previous && { ...previous, api: event.target.value as ModelApi })}>
-              {MODEL_APIS.map(api => <option key={api} value={api}>{API_LABELS[api]}</option>)}
-            </select>
+          <FieldRow label={tr('API 协议')} description={tr("按接口文档选择协议，与供应商品牌无关")}>
+            <Menu id="provider-draft-api" label={tr('API 协议')} value={draft.api} matchTriggerWidth className="settings-select"
+              options={MODEL_APIS.map(api => ({ value: api, label: API_LABELS[api] }))}
+              onChange={value => setDraft(previous => previous && { ...previous, api: value as ModelApi })} />
           </FieldRow>
         </>}
         <div className="row"><Button size="sm" variant="primary" onClick={commitDraft}>{tr('创建提供商')}</Button><Button size="sm" onClick={() => setDraft(null)}>{tr('取消')}</Button></div>
         {draftError && <p id="provider-draft-error" className="form-feedback" data-error="true" role="alert">{localizeAppError(draftError)}</p>}
         <p className="hint">{tr('创建后填写 API Key，并在「模型」中添加该提供商可用的模型。')}</p>
       </SettingsSection> : !provider ? <div className="empty-card"><h3>{tr('还没有提供商')}</h3><p>{tr('先添加一个提供商，再为其添加模型。')}</p></div> : <>
+        {!!models.length && <SettingsSection title={tr('新会话默认')}
+          description={tr('只影响新建的会话；已经存在的会话保留自己的模型、思考程度与审批策略。')}>
+          <div className="field-stack">
+            <FieldRow label={tr('默认模型')} htmlFor="settings-default-model" description={tr('新建任务与快速聊天都从这里开始。')}>
+              {/* Native <select> opens the operating system's own popup; every list-of-choices control here
+                  uses the app's popover instead, the same one the composer's pickers use. */}
+              <Menu id="settings-default-model" label={tr('默认模型')} value={defaultModel?.id ?? ''} matchTriggerWidth className="settings-select"
+                options={models.map(model => ({
+                  value: model.id,
+                  label: (providers.find(provider => provider.id === model.provider)?.name ?? '') + ' · ' + model.name,
+                }))}
+                onChange={onDefault} />
+            </FieldRow>
+            <FieldRow label={tr('默认思考程度')} htmlFor="settings-default-thinking"
+              description={tr('当前默认模型支持：{p0}。超出范围的档位在新建会话时会自动回落到最接近的一档。', { p0: allowedThinkingLevels(defaultModel).map(level => thinkingLabels[level]).join('、') })}>
+              <Menu id="settings-default-thinking" label={tr('默认思考程度')} value={defaultThinking} matchTriggerWidth className="settings-select"
+                options={thinkingSchema.options.map(level => ({ value: level, label: thinkingLabels[level] }))}
+                onChange={level => onDefaultThinking(level as ThinkingLevel)} />
+            </FieldRow>
+          </div>
+        </SettingsSection>}
         <SettingsSection title={tr('连接与凭据')}>
           <FieldRow label={tr('显示名称')} htmlFor={'provider-' + provider.id + '-name'}>
             <input id={'provider-' + provider.id + '-name'} aria-label={tr('显示名称')} aria-invalid={!!error && !provider.name.trim() || undefined} aria-describedby={error ? 'model-config-error' : undefined} required value={provider.name} onChange={event => onChange({ name: event.target.value })} />
           </FieldRow>
           <ModelConnection key={provider.id} provider={provider} catalog={catalog} catalogError={catalogError} onRetry={onRetry} onChange={onChange}
             credentials={<FieldRow label="API Key" htmlFor={'provider-' + provider.id + '-key'} description={tr('密钥使用系统加密保存；更新后从下一次运行生效。')}>
-              <div className="model-key-control"><input id={'provider-' + provider.id + '-key'} type="password" autoComplete="off" value={keys[provider.id] ?? ''}
-                onChange={event => onKey(provider.id, event.target.value)} placeholder={provider.hasKey ? tr('已加密保存；留空保持不变') : tr('输入 API Key')} />
+              <div className="model-key-control">
+                {/* The reveal control lives inside the field: a pasted key has to be checkable. */}
+                <div className="model-key-input">
+                  <input id={'provider-' + provider.id + '-key'} type={showKey ? 'text' : 'password'} autoComplete="off" value={keys[provider.id] ?? ''}
+                    onChange={event => onKey(provider.id, event.target.value)} placeholder={provider.hasKey ? tr('已加密保存；留空保持不变') : tr('输入 API Key')} />
+                  <IconButton label={tr(showKey ? '隐藏密钥' : '显示密钥')} size="sm" onClick={() => setShowKey(!showKey)}>
+                    {showKey ? <EyeOff size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
+                  </IconButton>
+                </div>
                 <span className="model-key-status"><KeyRound size={12} aria-hidden="true" />{keys[provider.id] ? tr('密钥待保存') : provider.hasKey ? tr('已保存密钥') : tr('尚未设置密钥')}</span>
               </div>
             </FieldRow>} />
         </SettingsSection>
-        <SettingsSection title={tr('模型')} description={tr('该提供商下的模型共享上面的连接与密钥。')}>
+        <SettingsSection title={tr('模型')} description={tr('该提供商下的模型共享上面的连接与密钥。')}
+          action={addingModel ? undefined : <Button size="sm" onClick={() => setAddingModel(provider.kind)}><Plus size={14} aria-hidden="true" />{tr('添加模型')}</Button>}>
+          {/* The card's block padding: the list and its actions sit inside it like the connection rows do. */}
+          <div className="model-models">
           {!modelsOf(provider.id).length && <p className="hint model-empty">{tr('还没有模型')}</p>}
           <ul className="model-list">
             {modelsOf(provider.id).map(model => {
               const entry = catalogModel(provider, model, catalog);
               const open = editingModel === model.id;
-              const available = provider.kind === 'builtin' ? entry?.thinkingLevels ?? [] : thinkingSchema.options;
+              /*
+               * The catalogue seeds a built-in model's levels but no longer fences them off: the user
+               * decides what the endpoint accepts, so every level stays selectable here.
+               */
+              const available = thinkingSchema.options;
+              const catalogLevels = provider.kind === 'builtin' ? entry?.thinkingLevels ?? [] : [];
               const levels = model.thinkingLevels ?? available;
               return <li key={model.id} className="model-row" data-open={open || undefined}>
                 <div className="model-row-heading">
@@ -202,7 +249,7 @@ export function ModelSettings({ providers, models, defaultId, selected, keys, ca
                     <span className="model-row-name">{model.name || tr('新模型')}</span>
                     <small className="model-row-id">{model.model}</small>
                   </button>
-                  <span className="model-row-capabilities" aria-hidden="true">{model.contextWindow.toLocaleString()} · {model.maxTokens.toLocaleString()}{model.reasoning ? ' · ' + tr('支持思考') : ''}</span>
+                  <span className="model-row-capabilities" aria-hidden="true" title={model.contextWindow.toLocaleString() + ' · ' + model.maxTokens.toLocaleString()}>{compactTokens(model.contextWindow)} · {compactTokens(model.maxTokens)}{model.reasoning ? ' · ' + tr('支持思考') : ''}</span>
                   <Button size="sm" disabled={defaultId === model.id} onClick={() => onDefault(model.id)}>{defaultId === model.id ? tr('当前默认') : tr('设为默认')}</Button>
                   <Button size="sm" variant="ghost" className="model-remove" aria-label={tr('删除模型 {p0}', { p0: model.name })} onClick={() => setDeletingModel(model)}><Trash2 size={14} aria-hidden="true" /></Button>
                 </div>
@@ -229,7 +276,9 @@ export function ModelSettings({ providers, models, defaultId, selected, keys, ca
                   {!!available.length && <fieldset className="thinking-levels" aria-describedby={'model-' + model.id + '-thinking-help'}>
                     <legend>{tr('允许的思考程度')}</legend>
                     <p id={'model-' + model.id + '-thinking-help'} className="hint">{provider.kind === 'builtin'
-                      ? tr('从内置模型支持的程度中选择；任务中的思考菜单只显示勾选项。')
+                      ? catalogLevels.length
+                        ? tr('内置目录把 {p0} 列为此模型支持的程度；可自行增减，任务中的思考菜单只显示勾选项。', { p0: catalogLevels.map(level => thinkingLabels[level]).join('、') })
+                        : tr('该模型不在内置目录中；仅勾选接口实际支持的程度，任务中的思考菜单只显示勾选项。')
                       : tr('仅勾选接口实际支持的程度；任务中的思考菜单只显示勾选项。')}</p>
                     <div className="thinking-level-options">
                       {available.map(level => <label key={level} className="thinking-level-option">
@@ -270,7 +319,8 @@ export function ModelSettings({ providers, models, defaultId, selected, keys, ca
               <input id="model-new-id" aria-label={tr('模型 ID')} required spellCheck={false} placeholder={tr("填写服务方提供的模型 ID")} value={customId} onChange={event => setCustomId(event.target.value)} />
             </FieldRow>
             <div className="row"><Button size="sm" variant="primary" disabled={!customId.trim()} onClick={addCustomModel}>{tr('添加模型')}</Button><Button size="sm" onClick={() => { setCustomId(''); setAddingModel(''); }}>{tr('取消')}</Button></div>
-          </div> : <Button className="model-add-model" size="sm" onClick={() => setAddingModel(provider.kind)}><Plus size={14} aria-hidden="true" />{tr('添加模型')}</Button>}
+          </div> : null}
+          </div>
         </SettingsSection>
         <SettingsSection title={tr('提供商偏好')}>
           <FieldRow label={tr('删除该提供商')} description={tr('保存后移除该提供商的模型与本机保存的 API Key')}>

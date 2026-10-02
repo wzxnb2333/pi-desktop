@@ -89,6 +89,7 @@ export default defineConfig({
     'memory-settings.spec.ts',
     'subtasks.nonvisual.spec.ts',
     'harness-tools.nonvisual.spec.ts',
+    'desktop-tools.nonvisual.spec.ts',
     'harness-terminal.nonvisual.spec.ts',
     'harness-operations.nonvisual.spec.ts',
     'subtask-recovery.spec.ts',

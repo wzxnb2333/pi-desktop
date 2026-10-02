@@ -175,7 +175,7 @@ test('workbench editor preserves stale buffers, confirms unsaved close and stage
   await page.getByRole('menuitem', { name: '任务摘要', exact: true }).click();
   await writeFile(join(fixture.project, 'README.md'), '# Outside\n');
   await taskAction(page, '查看变更');
-  await page.getByRole('tab', { name: '文件', exact: true }).click();
+  await page.getByRole('tab', { name: /^README\.md/ }).click();
   await expect(editor).toHaveValue('# Edited\n');
   await page.getByRole('button', { name: '保存 *', exact: true }).click();
   await expect(page.locator('.files-workbench').getByRole('alert')).toContainText(/修改|版本/);
@@ -213,7 +213,8 @@ test('workbench calendar editing keeps timezone and notification preferences acr
   await page.getByRole('button', { name: '新建自动化', exact: true }).click();
   await page.getByLabel('名称', { exact: true }).fill('每月检查');
   await page.getByLabel('任务描述', { exact: true }).fill('检查本地项目');
-  await page.getByLabel('计划类型').selectOption('monthly');
+  await page.getByLabel('计划类型').click();
+  await page.locator('.menu-item[data-value="monthly"]').click();
   await page.getByLabel('时间', { exact: true }).fill('02:30');
   await page.getByLabel(/^时区/).fill('America/New_York');
   await page.getByLabel('日期', { exact: true }).fill('31');
@@ -222,8 +223,10 @@ test('workbench calendar editing keeps timezone and notification preferences acr
   const job = (await fixture.snapshot()).data.automations[0];
   expect(job.schedule).toMatchObject({ kind: 'monthly', time: '02:30', timezone: 'America/New_York', monthday: 31 });
   await page.getByRole('button', { name: '编辑', exact: true }).click();
-  await page.getByLabel('计划类型').selectOption('weekly');
-  await page.getByLabel('星期', { exact: true }).selectOption('5');
+  await page.getByLabel('计划类型').click();
+  await page.locator('.menu-item[data-value="weekly"]').click();
+  await page.getByLabel('星期', { exact: true }).click();
+  await page.locator('.menu-item[data-value="5"]').click();
   await page.getByRole('button', { name: '保存自动化', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('已保存 每月检查');
   const settings = (await fixture.snapshot()).data.settings;
@@ -330,7 +333,10 @@ test('workbench browser keeps cookies, native tabs and downloads separate from d
     await expect(page.locator('.browser-tabs [role=tab]')).toHaveCount(3);
     const visibleViews = () => fixture.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.filter(view => view.getVisible()).length);
     await expect.poll(visibleViews).toBe(1);
-    await page.locator('.thread-row').filter({ hasText: '验收任务' }).getByLabel('任务更多操作', { exact: true }).click();
+    const taskMenu = page.locator('.thread-row').filter({ hasText: '验收任务' }).getByLabel('任务更多操作', { exact: true });
+    // Activating the trigger from the keyboard avoids the row tooltip that covers it on hover.
+    await taskMenu.focus();
+    await page.keyboard.press('Enter');
     await expect.poll(visibleViews).toBe(0);
     await page.keyboard.press('Escape');
     await expect(page.locator('.thread-row').filter({ hasText: '验收任务' }).getByLabel('任务更多操作', { exact: true })).toBeFocused();

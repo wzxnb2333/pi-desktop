@@ -17,7 +17,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => { server?.closeAllConnections(); if (server) await new Promise<void>(resolve => server.close(() => resolve())); await development?.server.close(); });
 test.beforeEach(async () => { requests = 0; fixture = await acceptanceApp(development.url); });
 test.afterEach(async () => { if (fixture) { const errors = [...fixture.errors]; await fixture.close(); await expect(access(fixture.storage)).rejects.toMatchObject({ code: 'ENOENT' }); expect(errors).toEqual([]); } });
-async function open(path: string) { const snapshot = await fixture.snapshot(); await fixture.invoke({ op: 'ui.update', ui: { ...snapshot.data.ui, reviewOpen: true } }); await fixture.invoke({ op: 'ui.threadPatch', threadId: 't', patch: { reviewTab: 'files', selectedPath: path, openFiles: [path] } }); await expect(fixture.page.getByRole('region', { name: '产物预览', exact: true })).toBeVisible(); }
+async function open(path: string) { const snapshot = await fixture.snapshot(); await fixture.invoke({ op: 'ui.update', ui: { ...snapshot.data.ui, reviewOpen: true } }); await fixture.invoke({ op: 'ui.threadPatch', threadId: 't', patch: { reviewTab: 'file', activePanelTab: 'file:' + path, selectedPath: path, openFiles: [path] } }); await expect(fixture.page.getByRole('region', { name: '产物预览', exact: true })).toBeVisible(); }
 async function inspect(code: string) { return fixture.app.evaluate(({ webContents }, source) => webContents.getAllWebContents().find(item => item.getURL().startsWith('pi-artifact:'))?.executeJavaScript(source), code); }
 async function pdfFile() {
   const encoded = await fixture.app.evaluate(async ({ BrowserWindow }) => {
@@ -61,7 +61,8 @@ test('real local PDF supports paging, zoom, offline text search, page annotation
   expect(await canvas.evaluate((node: HTMLCanvasElement) => { const bytes = node.getContext('2d')!.getImageData(0, 0, node.width, node.height).data; let dark = 0; for (let i = 0; i < bytes.length; i += 4) if (bytes[i] < 150 && bytes[i + 3] > 0) dark++; return dark; })).toBeGreaterThan(100);
   await fixture.page.getByLabel('搜索 PDF').fill('Needle Beta'); await fixture.page.locator('.pdf-preview').getByRole('button', { name: '搜索', exact: true }).click();
   await fixture.page.getByRole('button', { name: /第 2 页 · Needle Beta/ }).click(); await expect(fixture.page.getByLabel('PDF 页码')).toHaveValue('2');
-  await fixture.page.getByLabel('PDF 缩放').selectOption('0.5'); await expect(fixture.page.getByRole('button', { name: '标注此页', exact: true })).toBeEnabled();
+  await fixture.page.getByLabel('PDF 缩放').click();
+  await fixture.page.locator('.menu-item[data-value="0.5"]').click(); await expect(fixture.page.getByRole('button', { name: '标注此页', exact: true })).toBeEnabled();
   await fixture.page.getByRole('button', { name: '标注此页', exact: true }).click(); const panel = fixture.page.getByRole('dialog', { name: '产物标注', exact: true });
   await panel.getByLabel('标注说明').fill('第二页需要修改'); await panel.getByRole('button', { name: '保存标注', exact: true }).click(); await expect(panel.getByText('标注与当前文件版本一致')).toBeVisible();
   const saved = (await fixture.snapshot()).data.threads[0].artifactAnnotations![0]; expect(saved.page).toBe(2); expect(saved.kind).toBe('pdf');
@@ -69,7 +70,7 @@ test('real local PDF supports paging, zoom, offline text search, page annotation
     const snapshot = await fixture.snapshot(); await fixture.invoke({ op: 'ui.update', ui: { ...snapshot.data.ui, locale } }); await fixture.invoke({ op: 'settings.patch', patch: { theme } }); await fixture.app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size[0], size[1]), [width, height]);
     await expect.poll(() => fixture.page.locator('.dialog:has(.artifact-annotations)').evaluate(node => node.scrollWidth <= node.clientWidth + 1 && node.getBoundingClientRect().right <= innerWidth + 1)).toBe(true);
   }
-  await fixture.page.getByRole('dialog', { name: 'Artifact annotations', exact: true }).getByRole('button', { name: 'Close', exact: true }).click(); await expect(fixture.page.getByLabel('PDF page number')).toHaveValue('2'); await expect(fixture.page.getByLabel('PDF zoom')).toHaveValue('0.5');
+  await fixture.page.getByRole('dialog', { name: 'Artifact annotations', exact: true }).getByRole('button', { name: 'Close', exact: true }).click(); await expect(fixture.page.getByLabel('PDF page number')).toHaveValue('2'); await expect(fixture.page.getByLabel('PDF zoom')).toContainText('50%');
   await fixture.restart(); expect((await fixture.snapshot()).data.threads[0].artifactAnnotations![0]).toEqual(saved);
 });
 

@@ -5,6 +5,7 @@ import { getLocale, localizeAppError, tr } from '../../../../shared/localization
 import { findModel } from '../../../../shared/model-configuration.ts';
 import { useApp } from '../../state/app.tsx';
 import { useLocale } from '../../hooks/use-locale.ts';
+import { Menu } from '../primitives/menu.tsx';
 import { Button } from '../primitives/button.tsx';
 import { IconButton } from '../primitives/icon-button.tsx';
 import { Message } from '../timeline/message.tsx';
@@ -57,10 +58,15 @@ function SidechatPanelContent() {
       <IconButton size="sm" label={tr('关闭侧聊')} onClick={() => setReviewOpen(false)}><X size={15} /></IconButton>
     </header>
     <p className="sidechat-description">{tr('只读问答，主任务继续运行。关闭面板保留草稿，退出应用后清除临时侧聊。')}</p>
-    {chats.length > 0 && <select aria-label={tr('选择侧聊')} disabled={pending} value={thread?.id ?? ''} onChange={event => { patchThread({ sidechatId: event.target.value }); follow.current = true; sendRequest.current = undefined; setError(''); setFeedback(false); }}>
-      {!thread && <option value="">{tr('选择侧聊')}</option>}
-      {chats.map(chat => <option key={chat.id} value={chat.id}>{new Date(chat.sidechat!.capturedAt).toLocaleTimeString(getLocale())} · {chat.items.find(item => item.role === 'user')?.text.slice(0, 30) || tr('新建侧聊')}</option>)}
-    </select>}
+    {chats.length > 0 && <Menu label={tr('选择侧聊')} value={thread?.id ?? ''} disabled={pending} matchTriggerWidth className="sidechat-choice"
+      options={[
+        ...(!thread ? [{ value: '', label: tr('选择侧聊') }] : []),
+        ...chats.map(chat => ({
+          value: chat.id,
+          label: new Date(chat.sidechat!.capturedAt).toLocaleTimeString(getLocale()) + ' · ' + (chat.items.find(item => item.role === 'user')?.text.slice(0, 30) || tr('新建侧聊')),
+        })),
+      ]}
+      onChange={value => { patchThread({ sidechatId: value }); follow.current = true; sendRequest.current = undefined; setError(''); setFeedback(false); }} />}
     {!thread ? <div className="panel-empty"><p>{tr('从当前进度创建侧聊，或在消息操作中选择起点。')}</p><Button disabled={pending || !parent} onClick={() => void create()}>{tr('创建只读侧聊')}</Button></div> : <>
       <div className="sidechat-source"><span>{tr('上下文截取于：')}{new Date(thread.sidechat!.capturedAt).toLocaleString(getLocale())}</span>
         <Button size="xs" disabled={pending} onClick={() => void perform(async () => {

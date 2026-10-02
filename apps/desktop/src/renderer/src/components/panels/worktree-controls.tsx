@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { Menu } from '../primitives/menu.tsx';
 import type { GitInspection } from '../../../../shared/contracts.ts';
 import { localizeAppError, localizeLabel, tr } from '../../../../shared/localization.ts';
 import { useLocale } from '../../hooks/use-locale.ts';
@@ -56,8 +57,14 @@ export function WorktreeControls({ inspection }: { inspection?: GitInspection })
   return <section className="worktree-lifecycle" aria-label={tr('Worktree 生命周期')}>
     <p className="hint">{tr('迁移保留聊天和草稿，源文件保留原位。目标有冲突时停止，Git 暂存区保持原状。')}</p>
     <p><strong>{thread.worktreeBranch ? 'Worktree' : tr('本地')}</strong> · {thread.cwd}</p>
-    <label className="git-field">{tr('Worktree 起始分支或提交')}<input value={startPoint} onChange={event => updateControls(fileScopeId, { startPoint: event.target.value })} list="worktree-start-points" /></label>
-    <datalist id="worktree-start-points"><option value="HEAD" />{inspection?.branches.map(branch => <option value={branch} key={branch} />)}{inspection?.commits.map(commit => <option value={commit.id} key={commit.id}>{commit.subject}</option>)}</datalist>
+    <label className="git-field">{tr('Worktree 起始分支或提交')}<span className="git-input-with-menu"><input value={startPoint} onChange={event => updateControls(fileScopeId, { startPoint: event.target.value })} /><Menu label={tr('起点建议')} placeholder={tr('选择')} kind="action" size="sm" value=""
+      options={[
+        { value: 'HEAD', label: 'HEAD' },
+        ...(inspection?.branches ?? []).map(branch => ({ value: branch, label: branch })),
+        ...(inspection?.commits ?? []).map(commit => ({ value: commit.id, label: commit.subject })),
+      ]}
+      onChange={value => updateControls(fileScopeId, { startPoint: value })} /></span></label>
+    
     <div className="workbench-actions"><button disabled={busy || !startPoint.trim()} onClick={() => void start('create')}>{tr('按起点新建 Worktree 任务')}</button><button disabled={busy || issues.length > 0} onClick={() => void start('migrate')}>{thread.worktreeBranch ? tr('迁移此聊天到本地') : tr('迁移此聊天到 Worktree')}</button></div>
     {issues.map(issue => <div key={issue.id} role="alert">
       <p>{localizeLabel(issue.message)}</p><code>{issue.id}</code>

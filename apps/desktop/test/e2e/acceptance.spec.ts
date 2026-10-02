@@ -112,7 +112,8 @@ test('runtime preferences apply during streaming and native sleep prevention rel
   await fixture.page.getByRole('button', { name: '通用', exact: true }).click();
   await fixture.page.locator('#settings-prevent-sleep').check();
   await fixture.page.locator('#settings-notifications').uncheck();
-  await fixture.page.locator('#settings-follow-up').selectOption('steer');
+  await fixture.page.locator('#settings-follow-up').click();
+  await fixture.page.getByRole('menuitemradio', { name: '引导当前任务', exact: true }).click();
   await fixture.page.getByRole('button', { name: '保存设置' }).click();
   await expect(fixture.page.locator('.settings-footer [role=status]')).toHaveText('设置已保存');
   await expect.poll(blockers).toEqual([true]);
@@ -179,7 +180,7 @@ test('MCP settings test stdio transport, encrypt secrets and preserve controls a
   await page.getByLabel(/^加密环境变量/).fill('{"ACCEPTANCE_TOKEN":"local-test-secret"}');
   await page.getByRole('checkbox', { name: '启用 只在信任项目中连接', exact: true }).check();
   await page.getByRole('button', { name: '保存并测试' }).click();
-  await expect(page.getByRole('status')).toContainText('连接成功');
+  await expect(page.getByRole('status').filter({ hasText: '连接成功' })).toBeVisible();
   expect(await readFile(join(fixture.storage, 'secrets.json'), 'utf8')).not.toContain('local-test-secret');
   await send('列出可用工具');
   expect(fixture.calls.at(-1)?.tools?.some((tool) => tool.function.name.startsWith('mcp_'))).toBe(true);
@@ -413,7 +414,8 @@ test('extension confirmation, selection and input resolve through real approval 
   const card = fixture.page.getByLabel('待审批操作');
   await expect(card).toContainText('验收确认');
   await card.getByRole('button', { name: '允许这一次' }).click();
-  await card.getByLabel('选择回复').selectOption('二');
+  await card.getByLabel('选择回复').click();
+  await fixture.page.locator('.menu-item[data-value="二"]').click();
   await card.getByRole('button', { name: '允许这一次' }).click();
   await card.getByLabel('回复内容').fill('中文输入');
   await card.getByRole('button', { name: '允许这一次' }).click();
@@ -560,7 +562,7 @@ test('multiple directories isolate same-name file drafts, repositories, primary 
   expect(directory.trusted).toBe(false);
   await fixture.page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
   await fixture.invoke({ op: 'ui.update', ui: { ...(await fixture.snapshot()).data.ui, reviewOpen: true } });
-  await fixture.invoke({ op: 'ui.threadPatch', threadId: 't', patch: { reviewTab: 'files', selectedPath: 'README.md', openFiles: ['README.md'] } });
+  await fixture.invoke({ op: 'ui.threadPatch', threadId: 't', patch: { reviewTab: 'file', activePanelTab: 'file:README.md', selectedPath: 'README.md', openFiles: ['README.md'] } });
   const editor = fixture.page.getByLabel('文件内容 README.md');
   await expect(editor).toHaveValue('# Acceptance\n');
   await editor.fill('FIRST_DRAFT');

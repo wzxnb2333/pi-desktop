@@ -11,7 +11,8 @@ import { FileSearchResults } from './file-search-results.tsx';
 export function FileNavigator({ selectedPath, onOpen, onRefresh }: {
   selectedPath: string;
   onOpen(path: string, line?: number): void;
-  onRefresh(): void;
+  /** The tree refreshes its own listings; panels may additionally react (e.g. reload buffers). */
+  onRefresh?(): void;
 }) {
   useLocale();
   const { activeId, directoryId, invoke, threadUi, patchThread, data } = useApp();
@@ -138,7 +139,7 @@ export function FileNavigator({ selectedPath, onOpen, onRefresh }: {
   return <div className="file-navigator">
     <div className="file-search"><input aria-label={tr("搜索项目文件")} value={query} maxLength={500} onChange={event => setQuery(event.target.value)} onCompositionStart={() => setComposing(true)} onCompositionEnd={() => setComposing(false)} placeholder={tr("搜索项目文件")} /><label><input type="checkbox" checked={searchContent} onChange={event => setSearchContent(event.target.checked)} />{tr("内容")}</label></div>
     <nav className="file-toolbar" aria-label={tr("文件目录")}><button aria-current={!root ? 'location' : undefined} onClick={() => patchThread({ fileDirectory: '' })}>{tr("项目")}</button>{root.split('/').filter(Boolean).map((part, index, parts) => <button key={index} aria-current={index === parts.length - 1 ? 'location' : undefined} onClick={() => patchThread({ fileDirectory: parts.slice(0, index + 1).join('/') })}>{part}</button>)}<button aria-label={tr("刷新文件列表")} onClick={() => {
-      generation.current++; cache.current = new Map(); setListings(cache.current); setAttempt(value => value + 1); onRefresh();
+      generation.current++; cache.current = new Map(); setListings(cache.current); setAttempt(value => value + 1); onRefresh?.();
     }}>{tr("刷新")}</button></nav>
     <div className="file-tree">
       {searching ? <FileSearchResults directoryId={directoryId} threadId={activeId} query={query} content={searchContent} composing={composing} revision={attempt} onRetry={() => setAttempt(value => value + 1)} onOpen={onOpen} /> : <>

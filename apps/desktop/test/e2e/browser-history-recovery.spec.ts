@@ -41,7 +41,8 @@ test('history search hides stale rows, retries failures and ignores late respons
 test('cleanup scope cannot reuse old counts, clears only once and cancellation is retryable', async () => {
   await expect(page.getByText('3 条历史 · 1 个网站 · 缓存 1.0 MB', { exact: true })).toBeVisible();
   await page.evaluate(() => { window.historyHarness.hold = ['browser.data', 'browser.clear', 'browser.clearCancel']; });
-  await page.getByLabel('清理时间范围').selectOption('all');
+  await page.getByLabel('清理时间范围').click();
+  await page.locator('.menu-item[data-value="all"]').click();
   await expect(page.getByText('3 条历史 · 1 个网站 · 缓存 1.0 MB', { exact: true })).toHaveCount(0);
   const clear = page.getByRole('button', { name: '清除选定数据', exact: true }); await expect(clear).toBeDisabled();
   await page.evaluate(() => window.historyHarness.release('browser.data', 'SCOPE_FAILED'));

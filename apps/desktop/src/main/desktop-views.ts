@@ -2,7 +2,7 @@ import { stat } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
 import { type Thread, type UiState, type UiThread, uiThreadSchema } from '../shared/contracts.ts';
 import { desktopViewTargetSchema, type DesktopViewTarget } from '../shared/harness-tools.ts';
-import { panelTabs, selectPanelTab } from '../shared/panel-tabs.ts';
+import { fileSelectionPatch, fileTabId, panelTabs, selectPanelTab } from '../shared/panel-tabs.ts';
 import { directoryThreadUi, directoryUiPatch } from '../shared/project-directories.ts';
 import { artifactKind } from './artifact-files.ts';
 import { safeProjectPath } from './policy.ts';
@@ -95,19 +95,24 @@ export async function openDesktopView(runtime: ViewRuntime, raw: DesktopViewTarg
     threadPatch = { ...selectPanelTab(tab), sidechatId: sidechatId!, panelTabs: tabs.some(item => item.id === tab.id) ? tabs : [...tabs, tab] };
     framePatch = { reviewOpen: true };
   }
+  else if (target.kind === 'file' || target.kind === 'artifact') {
+    const executionId = current.thread.directoryId ?? current.thread.projectId;
+    const view = directoryThreadUi(ui, directory!.id, executionId);
+    const tabs = panelTabs(ui), tab = { id: fileTabId(path!), kind: 'file' as const };
+    threadPatch = {
+      ...directoryUiPatch(ui, fileSelectionPatch(view, path!, target.kind === 'file' && target.line !== undefined
+        ? { fileLocation: { id: crypto.randomUUID(), path: path!, line: target.line, ...(target.column === undefined ? {} : { column: target.column }) } }
+        : { fileLocation: undefined }), directory!.id, executionId),
+      directoryId: directory!.id,
+      panelTabs: tabs.some(item => item.id === tab.id) ? tabs : [...tabs, tab],
+    };
+    framePatch = { reviewOpen: true };
+  }
   else {
-    const kind = target.kind === 'file' || target.kind === 'artifact' ? 'files' : target.kind;
+    const kind = target.kind;
     const tabs = panelTabs(ui), tab = tabs.find(tab => tab.kind === kind) ?? { id: 'tool:' + kind, kind };
     threadPatch = { ...selectPanelTab(tab), panelTabs: tabs.some(item => item.id === tab.id) ? tabs : [...tabs, tab] };
     if (directory) threadPatch.directoryId = directory.id;
-    if (target.kind === 'file' || target.kind === 'artifact') {
-      const executionId = current.thread.directoryId ?? current.thread.projectId;
-      const view = directoryThreadUi(ui, directory!.id, executionId);
-      Object.assign(threadPatch, directoryUiPatch(ui, {
-        selectedPath: path!, openFiles: [...new Set([...(view.openFiles ?? []), path!])],
-        ...(target.kind === 'file' ? { fileLocation: target.line === undefined ? undefined : { id: crypto.randomUUID(), path: path!, line: target.line, column: target.column } } : {}),
-      }, directory!.id, executionId));
-    }
     framePatch = { reviewOpen: true };
   }
   uiThreadSchema.parse({ ...ui, ...threadPatch });

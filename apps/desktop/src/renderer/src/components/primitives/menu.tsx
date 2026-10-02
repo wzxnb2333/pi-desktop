@@ -33,6 +33,18 @@ export interface MenuProps {
   disabled?: boolean;
   size?: ButtonSize;
   className?: string;
+  /** DOM id of the trigger, so a page can address the control the way it addressed the select it replaced. */
+  id?: string;
+  /**
+   * Native hint on the trigger. Pass `null` to suppress it entirely: the browser renders that hint itself,
+   * outside the app's own tooltip styling.
+   */
+  title?: string | null;
+  /**
+   * The trigger's whole content is a glyph (a "…" or "+" menu). It centres that glyph in the control
+   * and drops the dropdown chevron: `flex: 1` on the label box would otherwise left-align the SVG.
+   */
+  iconOnly?: boolean;
   kind?: 'choice' | 'action';
   display?: ReactNode;
   heading?: ReactNode;
@@ -80,6 +92,9 @@ export function Menu({
   disabled,
   size,
   className,
+  id,
+  title,
+  iconOnly,
   kind = 'choice',
   display: displayOverride,
   heading,
@@ -227,12 +242,12 @@ export function Menu({
   return (
     <div className="menu" ref={containerRef}>
       <button
-        id={triggerId}
+        id={id ?? triggerId}
         ref={triggerRef}
         type="button"
-        className={['menu-trigger', size ? `btn-${size}` : '', className ?? ''].filter(Boolean).join(' ')}
+        className={['menu-trigger', size ? `btn-${size}` : '', iconOnly ? 'menu-trigger-icon-only' : '', className ?? ''].filter(Boolean).join(' ')}
         aria-label={label}
-        title={typeof current?.label === 'string' ? current.label : label}
+        title={title === null ? undefined : title ?? (iconOnly && typeof current?.label === 'string' ? current.label : undefined)}
         aria-haspopup={content ? 'dialog' : 'menu'}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
@@ -251,7 +266,7 @@ export function Menu({
         }}
       >
         <span className="menu-trigger-label">{display}</span>
-        <ReferenceIcon name="down" size={14} />
+        {!iconOnly && <ReferenceIcon name="down" size={14} />}
       </button>
       {open &&
         createPortal(
@@ -282,6 +297,7 @@ export function Menu({
                 role={kind === 'action' ? 'menuitem' : 'menuitemradio'}
                 tabIndex={-1}
                 className="menu-item"
+                data-value={option.value}
                 aria-checked={kind === 'action' ? undefined : option.value === value}
                 aria-disabled={option.disabled || undefined}
                 onClick={() => {

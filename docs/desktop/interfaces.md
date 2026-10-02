@@ -138,3 +138,12 @@ ui: sidebarWidth 240..520 默认 275 | reviewWidth 280..760 默认 390 | termina
 `src/shared/contracts.ts` 的 39 个 op 加 `ui.update`/`ui.threadUpdate` 是渲染层唯一出口；
 `src/shared/worker-protocol.ts` 的 8 个事件是时间线唯一事实源。任何需要新 op/字段/事件的参考端界面，
 按 `docs/desktop/capability-matrix.md` 判 OMIT，不要伪造数据或加空壳功能。
+
+模型侧边界（2026-10 扩展，取代此前「不读取其他会话内容」的表述）：
+
+- 模型可以读工作区任意会话的用户/助手正文（`read_sessions`），搜索同一字段面；不返回思考、工具参数、
+  差异、草稿、凭据或其他会话的运行状态，结果有上限并按侧栏可见性过滤（排除审查会话、子任务、临时侧聊、已删除）。
+- 跨会话写入只有「发消息」一种（`send_to_session`）：`ask` 策略弹审批，`auto`/`full` 直接发送，`deny` 与计划模式拒绝。
+- 模型永远不能改写自己的权限面：`policy`、`planMode`、工具策略、沙箱设置、审批结果、`provider.key`、
+  `mcp.secret`、插件安装与 `terminal.input` 都不在工具 schema 与目录里（`src/shared/desktop-tools.ts`
+  的 `forbiddenDesktopFields`/`forbiddenDesktopOps` 由 `test/desktop-tool-surface.test.ts` 看守）。

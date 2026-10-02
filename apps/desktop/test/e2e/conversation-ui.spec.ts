@@ -70,12 +70,15 @@ for (const [width, height] of [[1440, 940], [1280, 800], [1000, 700]]) for (cons
   });
 }
 
-test('context ring distinguishes unknown usage from zero and clamps only its drawing', async () => {
+test('the context ring appears only for known usage and clamps only its drawing', async () => {
   const ring = page.locator('.context-usage-ring');
+  // A conversation the provider has not measured yet shows no ring at all: an empty circle would only
+  // ever say "unknown".
   await page.evaluate(() => window.conversationUi.patch('t', { usage: undefined }));
-  await expect(ring).toHaveAttribute('aria-label', '上下文 未知'); await ring.hover(); await expect(page.getByRole('tooltip')).toContainText('供应商未返回');
+  await expect(ring).toHaveCount(0);
   for (const percent of [0, 135]) {
     await page.evaluate(contextPercent => window.conversationUi.patch('t', { usage: { input: 0, output: 0, total: 0, contextPercent, contextTokens: null, contextWindow: 1000 } }), percent);
+    await expect(ring).toHaveCount(1);
     await expect(ring).toHaveAttribute('aria-label', '上下文 ' + percent.toFixed(1) + '%');
     await expect(ring.locator('.context-usage-value')).toHaveAttribute('stroke-dasharray', Math.min(100, percent) + ' 100');
   }

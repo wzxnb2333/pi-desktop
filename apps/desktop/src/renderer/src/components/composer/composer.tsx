@@ -193,10 +193,12 @@ export function Composer({ home = false }: { home?: boolean }) {
     finally { pendingAttachments.current.set(id, (pendingAttachments.current.get(id) ?? 0) - files.length); importingRef.current--; setImporting(importingRef.current); }
   };
 
-  const policyOptions: MenuOption[] = permissionModes.map(value => ({
-    value,
-    label: <span title={policyDescriptions[value]}><Shield size={14} /> {policyLabels[value]}</span>,
-  }));
+  // The shield sits in an inline span, so without an explicit row it lands on the text baseline and
+  // its gap is a literal space; `composer-policy-label` gives the trigger and every menu row the same
+  // icon centring and spacing.
+  const policyLabel = (value: Thread['policy']) =>
+    <span className="composer-policy-label" title={policyDescriptions[value]}><Shield size={14} aria-hidden="true" />{policyLabels[value]}</span>;
+  const policyOptions: MenuOption[] = permissionModes.map(value => ({ value, label: policyLabel(value) }));
   const policyMenu = <Menu
     label={tr("执行策略")}
     className={'composer-menu-policy policy-' + thread.policy}
@@ -204,7 +206,7 @@ export function Composer({ home = false }: { home?: boolean }) {
     side="top"
     disabled={running || !!thread.review || !!thread.sidechat?.temporary}
     value={thread.policy}
-    display={<span title={policyDescriptions[thread.policy]}><Shield size={14} /> {policyLabels[thread.policy]}</span>}
+    display={policyLabel(thread.policy)}
     options={policyOptions}
     onChange={(policy) => updateThread({ policy: policy as Thread['policy'] })}
   />;
@@ -295,7 +297,7 @@ export function Composer({ home = false }: { home?: boolean }) {
           }}
         />
         <div className="composer-actions">
-          <Menu label={tr('添加上下文与操作')} className="composer-add-menu" kind="action" size={CONTROL} side="top" value=""
+          <Menu label={tr('添加上下文与操作')} className="composer-add-menu" iconOnly kind="action" size={CONTROL} side="top" value=""
             disabled={withdrawing || importing > 0} display={<ReferenceIcon name="plus" size={20} />}
             options={[
               { value: 'attachments', label: <><Paperclip size={16} />{tr('添加附件')}</> },

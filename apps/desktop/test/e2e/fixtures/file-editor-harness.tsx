@@ -43,7 +43,7 @@ let data = dataSchema.parse({
   settings: { theme: params.get('theme') || 'light', modelId: 'fake',
     modelProviders: [{ id: 'fake-provider', name: '本地测试', kind: 'builtin', namespace: 'faux', baseUrl: '', api: 'openai-completions', hasKey: false }],
     models: [{ id: 'fake', provider: 'fake-provider', name: '本地测试', model: 'fake', reasoning: false, contextWindow: 128000, maxTokens: 8192 }] },
-  ui: { locale: params.get('locale') || 'zh-CN', activeThreadId: 't1', sidebarWidth: 240, reviewOpen: true, reviewWidth: 520, summaryOpen: false, threads: { t1: { reviewTab: 'files', selectedPath: 'first.txt', openFiles: ['first.txt', 'second.txt'] }, t2: { reviewTab: 'files', selectedPath: 'second.txt', openFiles: ['second.txt'] } } },
+  ui: { locale: params.get('locale') || 'zh-CN', activeThreadId: 't1', sidebarWidth: 240, reviewOpen: true, reviewWidth: 520, summaryOpen: false, threads: { t1: { reviewTab: 'file', activePanelTab: 'file:first.txt', selectedPath: 'first.txt', openFiles: ['first.txt', 'second.txt'], panelTabs: [{ id: 'tool:files', kind: 'files' }] }, t2: { reviewTab: 'file', activePanelTab: 'file:second.txt', selectedPath: 'second.txt', openFiles: ['second.txt'], panelTabs: [{ id: 'tool:files', kind: 'files' }] } } },
 });
 if (params.has('directories')) for (const id of ['t1', 't2']) data.ui.threads[id].directoryViews = { extra: { selectedPath: 'first.txt', openFiles: ['first.txt'] } };
 const listeners = new Set<(event: DesktopEvent) => void>();

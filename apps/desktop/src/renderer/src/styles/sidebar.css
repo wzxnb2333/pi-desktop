@@ -279,11 +279,14 @@
 .satang-sidebar .section-label > span:first-child { flex: 1; }
 .satang-sidebar .project-filter { position: relative; display: grid; place-items: center; flex: none; width: 24px; height: 24px; }
 .satang-sidebar .project-filter svg { pointer-events: none; }
-.satang-sidebar .project-filter select {
+/* The filter is a popover behind the funnel glyph now: the trigger fills the 24px box without its own chrome. */
+.satang-sidebar .project-filter .menu { display: contents; }
+.satang-sidebar .project-filter .menu-trigger {
   position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0;
-  border: 0; border-radius: 6px; appearance: none; color: transparent; background: transparent;
+  display: grid; place-items: center; border: 0; border-radius: 6px;
+  background: transparent; color: inherit; box-shadow: none;
 }
-.satang-sidebar .project-filter option { color: var(--text); background: var(--bg); }
+.satang-sidebar .project-filter .menu-trigger-label { display: grid; place-items: center; }
 .satang-sidebar .project-filter[data-filtered] { color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
 .satang-sidebar .project-list { flex: none; overflow: visible; padding: 4px 8px 0; }
 .satang-sidebar .project-group { padding-bottom: 1px; }
@@ -300,21 +303,50 @@
 .satang-sidebar .thread-row { position: relative; padding: 0 5px 0 32px; }
 .satang-sidebar .thread-row { margin-top: 1px; }
 .satang-sidebar .thread-row:last-child { margin-bottom: 8px; }
-.satang-sidebar .thread-main { padding-right: 70px; }
+.satang-sidebar .thread-main { padding-right: 96px; }
 .satang-sidebar .thread-indicator { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 7px; height: 7px; border-radius: 50%; background: #3485e4; opacity: 1; pointer-events: none; }
 .satang-sidebar .thread-indicator.error { background: var(--danger); }
-.satang-sidebar .thread-row > .tooltip-anchor { position: absolute; right: 46px; }
-.satang-sidebar .thread-row [data-thread-menu] { position: absolute; right: 20px; opacity: 0; }
-.satang-sidebar .thread-row:hover [data-thread-menu],
-.satang-sidebar .thread-row:focus-within [data-thread-menu] { opacity: 1; }
+/*
+ * Hover reveals pin and archive, flush against the row's right edge so the pair reads as the row's own
+ * controls rather than floating in the middle. The "…" trigger shares that edge invisibly (it stays in
+ * the DOM for right-click); when it takes focus it replaces the pair instead of overlapping it.
+ */
+.satang-sidebar .thread-row > .tooltip-anchor { position: absolute; right: 34px; }
+.satang-sidebar .thread-row > .tooltip-anchor:has(+ [data-thread-menu]) { right: 8px; }
+.satang-sidebar .thread-row [data-thread-menu] { position: absolute; right: 8px; opacity: 0; pointer-events: none; }
+.satang-sidebar .thread-row [data-thread-menu]:focus-within { opacity: 1; pointer-events: auto; }
+.satang-sidebar .thread-row:has([data-thread-menu]:focus-within) > .tooltip-anchor { opacity: 0; }
+.satang-sidebar .thread-row:hover > .thread-indicator,
+.satang-sidebar .thread-row:focus-within > .thread-indicator { opacity: 0; }
 .satang-sidebar [data-thread-menu] button { width: 24px; height: 24px; min-height: 0; padding: 0; border: 0; border-radius: 10px; background: transparent; }
 .satang-sidebar [data-thread-menu] button > svg { display: none; }
+/* A pinned row keeps its pin button marked, so the state reads without hovering. */
+.satang-sidebar .thread-row .icon-button.active,
+.satang-sidebar .shortcut-row .icon-button.active { color: var(--accent); }
 .satang-sidebar .thread-row.selected, .satang-sidebar .recent-thread.selected,
 .satang-sidebar button.nav-row.active { background: var(--sidebar-current); box-shadow: none; }
-.satang-sidebar .sidebar-recents { margin-bottom: 16px; }
-.satang-sidebar .recents-heading { border: 0; background: transparent; justify-content: flex-start; font-weight: 500; }
+.satang-sidebar .sidebar-pinned { margin-top: 8px; }
+.satang-sidebar .sidebar-recents { margin-top: 16px; }
+.satang-sidebar .section-label.recents-heading, .satang-sidebar .section-label.pinned-heading { border: 0; background: transparent; justify-content: flex-start; font-weight: 500; }
 .satang-sidebar .recent-list { display: flex; flex-direction: column; gap: 1px; padding: 0 8px; }
-.satang-sidebar .recent-thread { position: relative; display: flex; justify-content: space-between; text-align: left; padding: 4.5px 24px 4.5px 8px; border: 0; background: transparent; }
+/*
+ * Shortcut rows mirror the project rows: the title is a full-width button, and the hover actions own
+ * the right edge in the same three slots (pin 56px, archive 30px, menu 4px) over the status dot.
+ */
+.satang-sidebar .shortcut-row { position: relative; }
+.satang-sidebar .shortcut-row > .tooltip-anchor { position: absolute; top: 50%; transform: translateY(-50%); right: 34px; opacity: 0; }
+.satang-sidebar .shortcut-row > .tooltip-anchor:has(+ [data-thread-menu]) { right: 8px; }
+.satang-sidebar .shortcut-row > [data-thread-menu] { position: absolute; top: 50%; transform: translateY(-50%); right: 8px; opacity: 0; pointer-events: none; }
+.satang-sidebar .shortcut-row:hover > .tooltip-anchor,
+.satang-sidebar .shortcut-row:focus-within > .tooltip-anchor { opacity: 1; }
+.satang-sidebar .shortcut-row > [data-thread-menu]:focus-within { opacity: 1; pointer-events: auto; }
+.satang-sidebar .shortcut-row:has([data-thread-menu]:focus-within) > .tooltip-anchor { opacity: 0; }
+.satang-sidebar .shortcut-row:hover > .recent-thread > .thread-indicator,
+.satang-sidebar .shortcut-row:focus-within > .recent-thread > .thread-indicator { opacity: 0; }
+.satang-sidebar .recent-thread { position: relative; display: flex; justify-content: space-between; text-align: left; padding: 4.5px 96px 4.5px 8px; border: 0; background: transparent; }
+/* The row owns the full width, so its hover highlight spans the actions instead of stopping at the text. */
+.satang-sidebar .shortcut-row > .recent-thread { width: 100%; }
+.satang-sidebar .recent-thread > .thread-indicator { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
 .satang-sidebar .sidebar-footer {
   flex-shrink: 0; flex-direction: row; align-items: center; gap: 8px;
   height: 46px; padding: 0 8px; border-top: 1px solid var(--border);
@@ -332,6 +364,8 @@
 .dialog .statusbar { padding: 8px 0; background: none; font-size: 12px; flex-wrap: wrap; }
 @media (hover: none) {
   .satang-sidebar .thread-row [data-thread-menu] { opacity: 1; }
+  /* Nothing hovers on a touch device, so the always-visible actions keep the right edge. */
+  .satang-sidebar .thread-row > .thread-indicator { opacity: 0; }
   .satang-sidebar .thread-main { padding-right: 70px; }
 }
 :root[data-theme="dark"] .satang-sidebar { --text: #fff; --sidebar-current: rgb(255 255 255 / .08); }

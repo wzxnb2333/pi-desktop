@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { tr } from '../../../../shared/localization.ts';
 import { findModel, findModelProvider, providerModels } from '../../../../shared/model-configuration.ts';
 import { allowedThinkingLevels, resolveThinkingLevel } from '../../../../shared/thinking.ts';
@@ -54,7 +54,7 @@ export function ModelCapabilities() {
       openModels(value);
     }}
     content={listing === 'capabilities' && model ? <div className="composer-capability-panel">
-      <div className="composer-capability-heading"><Zap size={16} /><strong>{thinkingLabels[thinking]}</strong></div>
+      <div className="composer-capability-heading"><strong>{thinkingLabels[thinking]}</strong></div>
       <button type="button" className="composer-model-link" aria-label={tr('模型')} onClick={openProviders}>{model.name}<ChevronRight size={13} /></button>
       <div className="composer-effort-control">
       <input data-popover-autofocus type="range" className="composer-effort-slider" aria-label={tr('思考级别')} aria-valuetext={thinkingLabels[thinking]}

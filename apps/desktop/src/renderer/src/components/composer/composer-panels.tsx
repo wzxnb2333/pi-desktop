@@ -51,7 +51,7 @@ export function PromptTemplates({ close }: { close(): void }) {
   </ComposerPanel>;
 }
 export function ReferenceDetail({ reference, close }: { reference: ContextReference; close(): void }) {
-  useLocale(); const { thread, invoke, updateContextReferences, selectDirectory, patchThread, setReviewOpen, focusTimeline } = useApp();
+  useLocale(); const { thread, invoke, updateContextReferences, selectDirectory, patchThread, openFileTab, setReviewOpen, focusTimeline } = useApp();
   const [result, setResult] = useState<z.infer<typeof contextDetailSchema>>(), [error, setError] = useState(''), [busy, setBusy] = useState(false);
   const [start, setStart] = useState(reference.range?.start ?? 1), [end, setEnd] = useState(reference.range?.end ?? 1);
   const bound = useRef(referenceKey(reference));
@@ -66,7 +66,7 @@ export function ReferenceDetail({ reference, close }: { reference: ContextRefere
     {error && <p role="alert">{error}</p>}{result?.stale && <p role="alert">{tr('引用版本已变化，请查看详情并刷新引用')}</p>}
     <div className="composer-panel-actions"><Button size="sm" disabled={busy} onClick={() => void load(result?.reference ?? reference, true)}>{tr('刷新引用')}</Button>
       {(reference.kind === 'file' || reference.kind === 'quote') && <Button size="sm" onClick={() => { close(); if (reference.kind === 'quote') focusTimeline({ kind: 'message', id: reference.id });
-        else { const current = result?.reference ?? reference; if (current.directoryId) selectDirectory(current.directoryId); patchThread({ directoryId: current.directoryId, reviewTab: 'files', selectedPath: current.id, fileLocation: { id: crypto.randomUUID(), path: current.id, line: current.range?.start ?? 1 } }); setReviewOpen(true); } }}>{tr('打开来源')}</Button>}</div>
+        else { const current = result?.reference ?? reference; if (current.directoryId) selectDirectory(current.directoryId); openFileTab(current.id, { line: current.range?.start ?? 1 }, current.directoryId); setReviewOpen(true); } }}>{tr('打开来源')}</Button>}</div>
     {reference.kind === 'file' && <div className="composer-line-range"><label>{tr('起始行')}<input type="number" min={1} value={start} onChange={event => setStart(Number(event.target.value))} /></label><label>{tr('结束行')}<input type="number" min={start} value={end} onChange={event => setEnd(Number(event.target.value))} /></label><Button size="sm" disabled={busy || start < 1 || end < start} onClick={() => void load({ ...reference, range: { start, end } }, true)}>{tr('应用行范围')}</Button></div>}
     <h3>{tr('实际加入上下文的内容')}</h3><pre className="composer-context-preview">{result?.content ?? (busy ? tr('加载中…') : '')}</pre>
   </ComposerPanel>;

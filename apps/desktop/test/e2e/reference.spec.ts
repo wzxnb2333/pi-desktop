@@ -186,6 +186,8 @@ for (const [width, reviewWidth] of [[1000, 407], [1280, 520], [1440, 847]]) test
     expect(toolbar.x + toolbar.width).toBeLessThanOrEqual(pane.x);
     for (const selector of ['.composer-actions', '.toolbar', '.toolbar-actions'])
       expect(await page.locator(selector).evaluate(node => node.scrollWidth - node.clientWidth), selector).toBeLessThanOrEqual(1);
+    // The toolbar no longer repeats the task status; the sidebar dot and the summary panel carry it.
+    await expect(page.locator('.toolbar-actions .status')).toHaveCount(0);
     await page.getByRole('button', { name: '项目动作', exact: true }).click();
     await expect(page.getByRole('menuitem', { name: '配置环境与动作', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
@@ -338,7 +340,7 @@ for (const sample of shellContract.samples) {
       await expect(page.locator('.sidebar-quick-chat')).toHaveCSS('opacity', '1');
       const recents = (await page.locator('.sidebar-recents').boundingBox())!;
       const projects = (await page.locator('.sidebar-project-chats').boundingBox())!;
-      expect(projects.y - recents.y - recents.height).toBe(16);
+      expect(recents.y - projects.y - projects.height).toBe(16);
       for (const [selector, key, properties] of [
         ['.titlebar', 'titlebar', ['x', 'y', 'w', 'h']],
         ['[aria-label="切换侧栏"]', 'toggle', ['x', 'y', 'w', 'h']],
@@ -357,12 +359,12 @@ for (const sample of shellContract.samples) {
         const box = await page.locator(selector).first().boundingBox();
         expect(box, selector).not.toBeNull();
         const actual = { x: box!.x, y: box!.y, w: box!.width, h: box!.height };
-        // User-requested order adds the recents collection before projects. The compact quick action
-        // shares the full-width creation row; there is no second navigation row or search button.
-        const addedNavigation = ['section', 'project', 'thread'].includes(key) ? recents.height + 16 : 0;
+        // The pinned reference has the project collection directly after the primary navigation, which
+        // is again the shipped order: recents moved below it. The compact quick action still shares the
+        // full-width creation row, so only its measured width differs.
         const creationWidth = key === 'newTask' ? 32 : 0;
         for (const property of properties)
-          expect(Math.abs(actual[property] - sample.measurements[key].rect[property] - (property === 'y' ? addedNavigation : 0) - (property === 'w' ? creationWidth : 0)), selector + ' ' + property).toBeLessThanOrEqual(.5);
+          expect(Math.abs(actual[property] - sample.measurements[key].rect[property] - (property === 'w' ? creationWidth : 0)), selector + ' ' + property).toBeLessThanOrEqual(.5);
       }
       await expect(page.locator('.project-name').first()).toHaveCSS('font-size', sample.measurements.projectText.css.fontSize);
       await expect(page.locator('.project-name').first()).toHaveCSS('line-height', sample.measurements.projectText.css.lineHeight);
@@ -474,3 +476,33 @@ for (const mode of ['light', 'dark', 'system-light', 'system-dark']) for (const 
     await expect(page.locator('.workspace-tabs')).toBeVisible();
   } finally { await page.close(); }
 });
+
+test('glyph-only menu triggers centre their icon inside the control', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  try {
+    await page.goto(url + '?pinned=1&theme=light');
+    await expect(page.locator('.toolbar')).toBeVisible();
+    await expect(page.locator('.menu-trigger-icon-only').first()).toBeVisible();
+    // A glyph-only trigger's label box no longer stretches: the icon owns the control's middle.
+    const offsets = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('.menu-trigger-icon-only')).flatMap(trigger => {
+      const icon = trigger.querySelector<SVGElement>('.menu-trigger-label > svg');
+      if (!icon || getComputedStyle(icon).display === 'none') return [];
+      const box = trigger.getBoundingClientRect();
+      const glyph = icon.getBoundingClientRect();
+      return [{
+        label: trigger.getAttribute('aria-label') ?? '',
+        dx: +(glyph.x + glyph.width / 2 - (box.x + box.width / 2)).toFixed(2),
+        dy: +(glyph.y + glyph.height / 2 - (box.y + box.height / 2)).toFixed(2),
+      }];
+    }));
+    // The toolbar's "…" and the composer's "+" are the two glyph triggers on this screen.
+    expect(offsets.length).toBeGreaterThanOrEqual(2);
+    for (const offset of offsets) {
+      expect(Math.abs(offset.dx), offset.label + ' dx').toBeLessThanOrEqual(0.5);
+      expect(Math.abs(offset.dy), offset.label + ' dy').toBeLessThanOrEqual(0.5);
+    }
+    // The dropdown chevron is redundant on a glyph-only trigger and would push the glyph off centre.
+    await expect(page.locator('.menu-trigger-icon-only > svg')).toHaveCount(0);
+  } finally { await page.close(); }
+});
+

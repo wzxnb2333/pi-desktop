@@ -56,18 +56,17 @@ export function Timeline() {
           waiting={index === turns.length - 1 && waiting.length > 0}
         />
       ))}
-      {thread?.error && (
+      {/* A failed run already shows its reason as a red notice; only an interrupted chat keeps a recovery card. */}
+      {thread?.status === 'interrupted' && (
         <div className="thread-error">
-          <strong>{thread.status === 'interrupted' ? tr("上次运行已中断") : tr("任务遇到问题")}</strong>
-          <p>{localizeAppError(thread.error)}</p>
+          <strong>{tr("上次运行已中断")}</strong>
+          {thread.error && <p>{localizeAppError(thread.error)}</p>}
           <div className="row">
-            {thread.status === 'interrupted' && (
-              <button
-                className="primary"
-                onClick={() => void invoke({ op: 'thread.resume', id: thread.id }).catch(() => {})}
-              >
-                {tr("恢复会话")} </button>
-            )}
+            <button
+              className="primary"
+              onClick={() => void invoke({ op: 'thread.resume', id: thread.id }).catch(() => {})}
+            >
+              {tr("恢复会话")} </button>
             <button
               onClick={() => {
                 const last = thread.items.filter((item) => item.role === 'user').at(-1);
@@ -82,10 +81,10 @@ export function Timeline() {
       {waiting.map((item) => (
         <ApprovalCard key={item.id} approval={item} />
       ))}
-      {thread && running && (
+      {thread && running && thread.status === 'waiting' && (
         <div className="working">
           <span className="status-dot" />
-          {thread.status === 'waiting' ? tr("等待你的确认") : tr("Pi 正在工作…")}
+          {tr("等待你的确认")}
         </div>
       )}
       {!pinned && (

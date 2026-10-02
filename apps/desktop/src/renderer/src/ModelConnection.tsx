@@ -5,6 +5,7 @@ import { type ModelApi, type ModelCatalog, type ModelProvider } from '../../shar
 import { MODEL_APIS, catalogProvider } from '../../shared/model-configuration.ts';
 import { Button } from './components/primitives/button.tsx';
 import { FieldRow } from './components/primitives/field-row.tsx';
+import { Menu } from './components/primitives/menu.tsx';
 
 export const API_LABELS: Record<ModelApi, string> = {
   get 'openai-completions'() { return tr("OpenAI 兼容（Chat Completions）"); },
@@ -32,17 +33,13 @@ export function ModelConnection({ provider, catalog, catalogError, credentials, 
     <div className="model-connection">
       {provider.kind === 'builtin' ? (
         <div className="field-stack">
-          <FieldRow label={tr("供应商")} htmlFor={prefix + '-namespace'} description={tr("Pi 内置目录的供应商标识，不是域名或网址")}>
-            <select
-              id={prefix + '-namespace'}
-              aria-label={tr("供应商")}
-              value={provider.namespace}
-              disabled={!catalog?.length}
-              onChange={(event) => onChange(provider.name === provider.namespace ? { namespace: event.target.value, name: event.target.value } : { namespace: event.target.value })}
-            >
-              {!known && <option value={provider.namespace}>{provider.namespace || tr("请选择供应商")}{tr("（未收录）")}</option>}
-              {catalog?.map(({ id }) => <option key={id} value={id}>{id}</option>)}
-            </select>
+          <FieldRow label={tr("供应商")} description={tr("Pi 内置目录的供应商标识，不是域名或网址")}>
+            <Menu label={tr("供应商")} value={provider.namespace} matchTriggerWidth className="settings-select" disabled={!catalog?.length}
+              options={[
+                ...(!known ? [{ value: provider.namespace, label: (provider.namespace || tr("请选择供应商")) + tr("（未收录）") }] : []),
+                ...(catalog?.map(({ id }) => ({ value: id, label: id })) ?? []),
+              ]}
+              onChange={value => onChange(provider.name === provider.namespace ? { namespace: value, name: value } : { namespace: value })} />
           </FieldRow>
           <details className="connection-advanced">
             <summary>{tr("端点覆盖")}</summary>
@@ -63,11 +60,10 @@ export function ModelConnection({ provider, catalog, catalogError, credentials, 
         </div>
       ) : (
         <div className="field-stack">
-          <FieldRow label={tr("API 协议")} htmlFor={prefix + '-api'} description={tr("按接口文档选择协议，与供应商品牌无关")}>
-            <select id={prefix + '-api'} aria-label={tr("API 协议")} value={provider.api}
-              onChange={(event) => onChange({ api: event.target.value as ModelApi })}>
-              {MODEL_APIS.map((api) => <option key={api} value={api}>{API_LABELS[api]}</option>)}
-            </select>
+          <FieldRow label={tr("API 协议")} description={tr("按接口文档选择协议，与供应商品牌无关")}>
+            <Menu label={tr("API 协议")} value={provider.api} matchTriggerWidth className="settings-select"
+              options={MODEL_APIS.map(api => ({ value: api, label: API_LABELS[api] }))}
+              onChange={value => onChange({ api: value as ModelApi })} />
           </FieldRow>
           <FieldRow label="Base URL" htmlFor={prefix + '-url'} description={tr("必填，包含服务要求的路径，例如 /v1；localhost 可不填 API Key")}>
             <input id={prefix + '-url'} aria-label="Base URL" type="url" required autoComplete="off" spellCheck={false}

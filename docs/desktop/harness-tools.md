@@ -45,15 +45,51 @@
 | H-37 | replace_draft_text | 按 get_draft_state 返回的 revision 替换当前主聊天草稿正文，保留附件和上下文；允许传空文本清空草稿，不发送消息 | 已实现：revision 并发保护、正文长度上限、附件/上下文保留及真实 Electron 流程 |
 | H-38 | clear_queued_messages | 按 list_queued_messages 返回的 opaque revision 尝试把当前主聊天等待中的消息撤回到草稿；队列已开始处理时拒绝，避免重复注入 | 已实现：revision 并发保护、Worker 队列一致性校验、成功路径复用 UI 撤回逻辑；真实 Electron 流程验证了处理开始后的保守拒绝 |
 | H-39 | list_draft_history / restore_draft_history | 查看当前主聊天可恢复草稿版本的受限元数据，并按 snapshotId + get_draft_state revision 恢复正文、附件和上下文；重试幂等，不发送消息 | 已实现：历史元数据脱敏、revision 并发保护、重复恢复幂等、真实 Electron 流程 |
+| H-40 | read_sessions / sessions.list | 列出工作区会话：项目、状态、置顶/归档/未读、更新时间、消息数，可按项目、关键词、置顶、归档、时间过滤，最多 50 条 | 已实现：与侧栏同一可见性规则（排除审查会话、子任务、临时侧聊、已删除）；单元覆盖过滤、上限与项目名 |
+| H-41 | read_sessions / sessions.read | 读取指定会话的用户/助手正文，支持角色过滤、offset/limit 分页与单条字符上限，返回 total 与 truncated | 已实现：只投影正文，不含思考、工具参数、差异、草稿与凭据；单元覆盖分页、角色过滤与截断 |
+| H-42 | read_sessions / sessions.search | 在工作区会话里做字面量搜索，返回命中会话、项目名、字段、命中位置与有界片段，最多 200 条 | 已实现：只搜用户/助手正文（与 H-41 同一字段面）；单元覆盖跨项目、projects 过滤与截断标记 |
+| H-43 | manage_sessions | create/select/rename/pin/archive/markRead/stop/resume/fork/delete 十个动作，逐一复用用户点击时的同一条 op；delete 沿用原生确认框 | 已实现：会话归属与空闲校验、计划模式拒绝、窗口缺失时 select 会打开任务窗口；协议层由 desktop-tool-surface 单元看守 |
+| H-44 | send_to_session / sessions.send | 给任意会话发送消息（运行中按 steer/followUp 排队，空闲会话起一轮）；这是唯一的跨会话写操作 | 已实现：`ask` 策略下先弹审批卡片（`auto`/`full` 直接发送、`deny` 与计划模式拒绝），正文上限 100000 字符 |
+| H-45 | manage_projects | list/add/trust/directoryAdd/directoryRemove/directoryUpdate；add 与 directoryAdd 可带 path，缺省时仍走原生目录选择器 | 已实现：与 `project.*` op 同一校验路径（`addProjectPath` / `addProjectDirectory` 抽取自原实现），信任与目录变更沿用既有原生确认 |
+| H-46 | manage_ui | collapseProject/summary/openPanel/closePanel/selectFile/selectDirectory，只写视图状态 | 已实现：复用 `ui.update` 与 `ui.threadPatch`（面板切换走 `panelSelectionPatch`、选文件走 `fileSelectionPatch`），不触碰草稿、消息或权限 |
+| H-47 | get_harness section=desktop | 返回当前会话可用的桌面动作目录（工具、动作、读写、是否受 ask 审批），供模型发现能力而不必把说明塞进工具描述 | 已实现：目录来自 `shared/desktop-tools.ts`，与实际注册的族一致 |
+| H-48 | manage_messages / messages.copy | 把当前会话里某条消息的正文写入剪贴板（用户消息取输入文本） | 已实现：消息归属校验；schema 无 threadId，只能作用于调用方自己的会话 |
+| H-49 | manage_messages / messages.revise | 编辑用户消息或重新生成，生成修订会话并切换过去；requestId 幂等、空闲校验沿用 `thread.revise` | 已实现：复用 op 内既有的指纹比对与清理回滚，拿到新会话后打开其窗口 |
+| H-50 | manage_messages / messages.setModel | 切换当前会话模型，模型必须存在于设置里 | 已实现：`findModel` 校验后走 `thread.update`；不触碰权限与凭据 |
+| H-51 | manage_messages / messages.setThinking | 切换当前会话思考程度，必须是该模型允许的档位 | 已实现：`allowedThinkingLevels` 校验后走 `thread.update`，拒绝时报出允许档位 |
+| H-52 | manage_messages / messages.createSidechat | 为当前会话创建临时侧聊（可指定起点消息）并打开其窗口 | 已实现：复用 `sidechat.create`（临时策略为 deny），锚点缺失时拒绝 |
+| H-53 | manage_review | start/cancel/inspect/read/finding/locate：发起或取消审查、读取运行与发现、读被审查快照、忽略或批注发现、定位到发现 | 已实现：复用 `review.*` op；start/cancel 受 ask 审批（消耗模型额度），finding/locate 只写审查记录 |
+| H-54 | manage_git | 只读 status/inspect/diff/range/commitInfo/recoveries/processProblems/hunkVersion；写入 run(stage/branch/fetch/pull/push/merge/rebase/…)、commit、apply、revert、hunkRevert、hunkRestore、conflict、retryStop | 已实现：全部写动作在 ask 策略下弹审批（full/auto 直接执行），hunkRevert 需先用 hunkVersion 取版本 |
+| H-55 | manage_worktrees | create/migrate/manage(archive/restore/usage/cleanup)/recycle/recovery/creationRecovery | 已实现：`worktree.*` op 原样转发（requestId 幂等），archive/cleanup/recycle/retry 需审批，usage/refresh 免审批 |
+| H-56 | manage_terminal | open/rename/close，输出仍用既有 read_terminal | 已实现：**不含 terminal.input**（输入永远由用户或沙箱命令工具发起）；close 需审批，因为可能中断正在运行的命令 |
+| H-57 | manage_settings | settings.read（可改键 + 禁用键清单）、settings.models（供应商目录）、settings.inputCatalog、settings.apply（白名单修改） | 已实现：白名单只含外观与行为偏好；`deniedSettingsKeys` 里 14 个键（policy、modelProviders、mcpServers、pluginSources、memory、subtasksEnabled 等）逐键报错并附理由，单元测试逐键断言 |
+| H-58 | manage_files | list/read/write/open/reveal/search/searchCancel | 已实现：复用 `file.*` op，写入必须带 read 返回的版本（CAS），路径仍受项目目录约束；write 受 ask 审批 |
+| H-59 | manage_comments | list/add/remove/locate | 已实现：复用 `comment.*` op，批注锚点用 read 的文件版本，过期即拒绝 |
+| H-60 | git.cancel / terminal.resize | 按 requestId 取消进行中的 Git 操作；调整终端视图尺寸 | 已实现：分别挂在 `manage_git` 与 `manage_terminal`；git.cancel 受审批，resize 只改视图 |
+| H-61 | manage_browser_data | history/downloads/download(cancel·reveal)/find/annotation(read·remove·attach) | 已实现：`browser.find` 缺省只作用于本会话窗口的活动标签页；站点策略（`browser.site`）与数据清理（`browser.clear`）不在工具里 |
+| H-62 | manage_pr | pr.status、pr.start(view/create) | 已实现：create 需要标题且对外可见，受 ask 审批；不代替用户推进分支或提供凭据 |
+| H-63 | manage_resources | inspect/refresh/open；rescan 受审批 | 已实现：读发现结果与诊断，重新扫描本地代码要审批；启用与导入资源不可用 |
+| H-64 | manage_mcp | list/test/testCancel/retry/resource（按索引读资源） | 已实现：test/retry 会启动进程，受审批；list 只返回用户已能看到的服务器 id、状态与工具名；`mcp.secret*`、`mcp.oauth*` 永不可达 |
+| H-65 | sessions.quickChat / sessions.bindProject / ui.openExternal | 新建无项目快速聊天；把当前会话绑定到项目；用系统浏览器打开 http(s) 链接 | 已实现：绑定只作用于调用方自己的会话；openExternal 限 http(s) 且受 ask 审批 |
+| H-66 | manage_windows | windows.open/minimize/maximize/close/retryShortcut/revealWorktreePath | 已实现：窗口控制作用于调用方所在窗口，close 受审批；不注册新快捷键，只重试既有全局快捷键的注册 |
+| H-67 | manage_preview | previews.open/close/refresh、artifacts.open/close/status/stop/capture/annotation | 已实现：`previews.open` 只接受本地 http(s) 地址；工件预览会启动本地服务但可 stop；**`artifact.network`（站点放行）与 `artifact.bounds`/`preview.bounds`（几何）不在工具里** |
 
 get_harness 的 availableTools 来自当前 Agent 的实际工具表，包括已启用的计划、Goal、自动化、浏览器及外部工具；查询不会自行启用能力。
 
 ## 调用约定
 
-get_harness 参数 section 可选 all、session、workspace、operations、view，默认 all。权限信息始终返回，其余按 section 投影。上下文使用主进程已有测量记录，没有测量值时保持缺失，不当作零占用。view 只返回当前聊天的活动窗口状态和最多 20 个标签，不会把 UI 状态当成用户指令。
+get_harness 参数 section 可选 all、session、workspace、operations、view、desktop，默认 all。权限信息始终返回，其余按 section 投影。上下文使用主进程已有测量记录，没有测量值时保持缺失，不当作零占用。view 只返回当前聊天的活动窗口状态和最多 20 个标签，不会把 UI 状态当成用户指令。desktop 只返回当前会话真正注册的族与动作目录。
+
+**2026-10 桌面面扩展（H-40 起）**：模型可以按「用户用鼠标能做的事」调用桌面动作，唯一例外是权限面。
+- 跨会话读取默认覆盖整个工作区的可见会话（用户已确认）；仍不接受原始 op、不接受权限参数，且不返回草稿、凭据、工具密钥或其他会话的运行状态。
+- 跨会话写入只有发消息一种（H-44）；`ask` 策略逐次弹审批，`auto`/`full` 免审批，`deny` 与计划模式拒绝。
+- 只读动作（list/read/search/projects.list）在任何主聊天与子代理里都可用；写动作只在主聊天注册（子任务、审查、临时侧聊不注册）。
+- 权限面永远不可达：`policy`、`planMode`、工具策略、沙箱设置、审批结果、`provider.key`、`mcp.secret`、插件安装与 `terminal.input` 既不在工具 schema 里，也不在动作目录里（守卫见 `test/desktop-tool-surface.test.ts`）。
+
+**验证入口**：`test/desktop-tool-surface.test.ts`（目录与 worker 协议一致、权限面探针、设置白名单逐键断言）、`test/session-context.test.ts`（跨会话投影）、`test/e2e/desktop-tools.nonvisual.spec.ts`（真实 Worker：跨会话读取不泄露另一会话草稿、`ask` 策略下跨会话发消息先弹审批、设置拒绝权限键、视图动作可见变化）、`test/e2e/harness-tools.nonvisual.spec.ts`（H-01…H-39 回归）。
 
 - 只查询调用者，不接受任意 threadId、原始 op 或权限修改参数。
-- 不读取设置对象、供应商地址、凭据、未发送草稿、排队消息正文或其他会话内容。
+- 不读取设置对象、供应商地址、凭据、未发送草稿或排队消息正文；跨会话内容只在 H-40…H-42 的只读投影里出现（用户/助手正文，不含思考、工具参数与差异）。
 - 目录使用本轮捕获的执行目录；子代理仅看到自己的目录，不能枚举兄弟目录。
 - 权限保留捕获值和当前值，报告更严格的权限；主代理答复不能提权。
 - 操作仅返回当前会话最近 30 项的标识、种类、状态、阶段和时间，不返回输出或结果。

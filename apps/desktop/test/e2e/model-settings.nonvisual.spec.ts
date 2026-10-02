@@ -24,7 +24,8 @@ test('exclusive connection modes persist across Electron restarts and reach only
   await expect(fixture.page.getByLabel('供应商', { exact: true })).toHaveCount(0);
   // A built-in provider keeps a Pi catalog namespace instead of an endpoint, and its models come from that catalog.
   await fixture.page.getByRole('button', { name: '添加提供商' }).click();
-  await fixture.page.getByLabel('供应商', { exact: true }).selectOption('opencode-go');
+  await fixture.page.getByLabel('供应商', { exact: true }).click();
+  await fixture.page.getByRole('menuitemradio', { name: 'opencode-go', exact: true }).click();
   await fixture.page.getByRole('button', { name: '创建提供商' }).click();
   await fixture.page.getByRole('button', { name: '添加模型' }).click();
   await fixture.page.locator('.model-catalog-options input[value="deepseek-v4.1-flash"]').check();
@@ -38,7 +39,7 @@ test('exclusive connection modes persist across Electron restarts and reach only
   await fixture.restart();
   await fixture.page.keyboard.press('Control+,');
   await fixture.page.getByRole('tab', { name: 'opencode-go' }).click();
-  await expect(fixture.page.getByLabel('供应商', { exact: true })).toHaveValue('opencode-go');
+  await expect(fixture.page.getByLabel('供应商', { exact: true })).toContainText('opencode-go');
   // A built-in connection keeps its optional endpoint override collapsed, so the field is hidden.
   await expect(fixture.page.getByLabel('Base URL', { exact: true })).toBeHidden();
   await expect(fixture.page.locator('.model-row-id')).toHaveText('deepseek-v4.1-flash');
@@ -154,4 +155,88 @@ test('model switch is announced once at the first following conversation', async
   await expect.poll(() => fixture.calls.length).toBe(2);
   await expect.poll(async () => (await fixture.snapshot()).data.threads[0].status).toBe('idle');
   expect((await fixture.snapshot()).data.threads[0].items.filter(item => item.noticeKind === 'model-switch')).toHaveLength(1);
+});
+
+test('new sessions inherit the fixed defaults while existing sessions keep their own', async () => {
+  const seeded = (await fixture.snapshot()).data.threads.find(thread => thread.id === 't')!;
+  expect({ modelId: seeded.modelId, thinking: seeded.thinking, policy: seeded.policy }).toEqual({ modelId: 'local', thinking: 'off', policy: 'auto' });
+
+  // Fix model, reasoning level and approval policy for future sessions in the settings page. The seeded
+  // model starts without explicit levels, so give it the one the default uses first.
+  const initial = structuredClone((await fixture.snapshot()).data.settings);
+  initial.models[0].reasoning = true;
+  initial.models[0].thinkingLevels = ['off', 'low', 'high', 'max'];
+  await fixture.invoke({ op: 'settings.save', settings: initial });
+  await fixture.page.keyboard.press('Control+,');
+  await fixture.page.getByRole('button', { name: '模型', exact: true }).click();
+  await expect(fixture.page.getByRole('heading', { name: '新会话默认' })).toBeVisible();
+  await expect(fixture.page.getByLabel('默认模型', { exact: true })).toContainText('验收模型');
+  // The control is the app's own popover, not the operating system's select popup.
+  await fixture.page.getByLabel('默认思考程度', { exact: true }).click();
+  await fixture.page.getByRole('menuitemradio', { name: '最高', exact: true }).click();
+  await expect(fixture.page.getByLabel('默认思考程度', { exact: true })).toContainText('最高');
+  await fixture.page.getByRole('button', { name: '审批与信任', exact: true }).click();
+  await fixture.page.getByLabel('默认审批', { exact: true }).click();
+  await fixture.page.getByRole('menuitemradio', { name: '请求批准', exact: true }).click();
+  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
+
+  // A new task starts from those defaults.
+  const created = await fixture.invoke({ op: 'thread.create', projectId: 'p', worktree: false }) as { id: string; modelId: string; thinking: string; policy: string };
+  expect({ modelId: created.modelId, thinking: created.thinking, policy: created.policy }).toEqual({ modelId: 'local', thinking: 'max', policy: 'ask' });
+  // A quick chat without a project starts from them too.
+  const chat = await fixture.invoke({ op: 'chat.create', requestId: crypto.randomUUID() }) as { thinking: string; policy: string };
+  expect({ thinking: chat.thinking, policy: chat.policy }).toEqual({ thinking: 'max', policy: 'ask' });
+  // The session that existed before the change keeps its own values.
+  const later = (await fixture.snapshot()).data.threads.find(thread => thread.id === 't')!;
+  expect({ modelId: later.modelId, thinking: later.thinking, policy: later.policy }).toEqual({ modelId: 'local', thinking: 'off', policy: 'auto' });
+  await fixture.restart();
+  const reloaded = (await fixture.snapshot()).data.threads.find(thread => thread.id === 't')!;
+  expect({ thinking: reloaded.thinking, policy: reloaded.policy }).toEqual({ thinking: 'off', policy: 'auto' });
+  const defaults = (await fixture.snapshot()).data.settings;
+  expect({ modelId: defaults.modelId, thinking: defaults.thinking, policy: defaults.policy }).toEqual({ modelId: 'local', thinking: 'max', policy: 'ask' });
+});
+
+test('a built-in catalogue model keeps the reasoning levels the user adds', async () => {
+  await fixture.page.keyboard.press('Control+,');
+  await fixture.page.getByRole('button', { name: '添加提供商' }).click();
+  await fixture.page.getByLabel('供应商', { exact: true }).click();
+  await fixture.page.getByRole('menuitemradio', { name: 'opencode-go', exact: true }).click();
+  await fixture.page.getByRole('button', { name: '创建提供商' }).click();
+  await fixture.page.getByRole('button', { name: '添加模型' }).click();
+  await fixture.page.locator('.model-catalog-options input[value="deepseek-v4.1-flash"]').check();
+  await fixture.page.getByRole('button', { name: '添加所选模型' }).click();
+  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
+
+  // The catalogue's list is information, not a fence: the page says so, and the save must agree.
+  const catalog = await fixture.invoke({ op: 'models.catalog' }) as { id: string; models: { id: string; thinkingLevels: string[] }[] }[];
+  const entry = catalog.find(item => item.id === 'opencode-go')!.models.find(item => item.id === 'deepseek-v4.1-flash')!;
+  const all = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+  const extra = all.filter(level => !entry.thinkingLevels.includes(level));
+  expect(extra.length, 'this catalogue entry should not list every level').toBeGreaterThan(0);
+
+  await fixture.page.getByRole('tab', { name: 'opencode-go' }).click();
+  // The model panel may still be open from the save above, so only open it when the levels are hidden.
+  const openModel = async () => {
+    if (!(await fixture.page.locator('.thinking-levels').first().isVisible().catch(() => false)))
+      await fixture.page.locator('.model-row-toggle').first().click();
+  };
+  await openModel();
+  for (const level of extra) await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).check();
+  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
+
+  const saved = (await fixture.snapshot()).data.settings.models.find(model => model.model === 'deepseek-v4.1-flash')!;
+  for (const level of extra) expect(saved.thinkingLevels).toContain(level);
+  // Narrowing is the user's call too: leaving exactly one level must stick instead of snapping back.
+  const only = entry.thinkingLevels[0];
+  await openModel();
+  for (const level of all.filter(level => level !== only))
+    await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).uncheck();
+  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
+  await fixture.restart();
+  const reloaded = (await fixture.snapshot()).data.settings.models.find(model => model.model === 'deepseek-v4.1-flash')!;
+  expect(reloaded.thinkingLevels).toEqual([only]);
 });

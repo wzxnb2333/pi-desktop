@@ -32,8 +32,9 @@ test('page annotations preserve real screenshots, add context to the draft and d
   await menu('标注当前网页'); let panel = fixture.page.getByRole('dialog', { name: '网页标注', exact: true });
   await expect(panel.getByAltText('网页标注截图')).toBeVisible();
   expect(await panel.getByAltText('网页标注截图').evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(100);
-  const buttonOption = await panel.getByLabel('页面元素').locator('option').evaluateAll(nodes => nodes.find(node => node.textContent === 'button · 保存')?.getAttribute('value'));
-  expect(buttonOption).toBeTruthy(); await panel.getByLabel('页面元素').selectOption(buttonOption!);
+  await panel.getByLabel('页面元素').click();
+  // The element list is a popover now, so the row is picked by its label rather than by an <option> value.
+  await fixture.page.getByRole('menuitemradio', { name: 'button · 保存', exact: true }).click();
   await panel.getByLabel('标注说明').fill('请修改此按钮 <script>window.UNSAFE=true</script>'); await panel.getByRole('button', { name: '保存标注', exact: true }).click();
   await expect(panel.getByText('标注与当前页面一致', { exact: true })).toBeVisible();
   const saved = (await fixture.snapshot()).data.threads[0].browserAnnotations![0];

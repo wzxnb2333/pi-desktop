@@ -80,17 +80,19 @@ test('summary approval opens the actual control and completed edits refresh real
   await expect.poll(async () => (await fixture.snapshot()).data.threads.find(thread => thread.id === 't')?.status).toBe('idle');
   await expect(waiting).toHaveCount(0);
   const summary = fixture.page.getByRole('region', { name: '任务摘要', exact: true });
-  await expect(summary.getByRole('region', { name: '项目文件变更', exact: true })).toContainText('README.md');
+  // The summary does not repeat the changed files; its branch row is the entry point to changes.
+  await expect(summary.getByRole('region', { name: '项目文件变更', exact: true })).toHaveCount(0);
   expect(await readFile(join(fixture.project, 'README.md'), 'utf8')).toBe('# Summary approved\n');
-  await summary.getByRole('region', { name: '项目文件变更', exact: true }).getByRole('button', { name: /README.md/ }).click();
+  await summary.getByRole('button', { name: /查看项目变更/ }).click();
   await expect(fixture.page.getByRole('tab', { name: /^变更/ })).toHaveAttribute('aria-selected', 'true');
+  await fixture.page.locator('.git-file-row > button:first-child').filter({ hasText: 'README.md' }).click();
   await expect(fixture.page.getByRole('region', { name: 'Git 工作台', exact: true })).toContainText('+# Summary approved');
   await expandSummary();
   await expect(summary.getByRole('region', { name: '任务产物', exact: true })).toContainText('README.md');
   await summary.getByRole('region', { name: '任务产物', exact: true }).getByRole('button', { name: /README.md/ }).click();
   const editor = fixture.page.getByRole('textbox', { name: '文件内容 README.md', exact: true });
   await expect(editor).toHaveValue('# Summary approved\n');
-  await expect(fixture.page.getByRole('tablist', { name: '打开的文件', exact: true }).getByRole('tab')).toHaveCount(1);
+  await expect(fixture.page.getByRole('tab', { name: 'README.md', exact: true })).toBeVisible();
   await editor.fill('# Summary approved\n未保存缓冲');
   await expandSummary();
   await summary.getByRole('region', { name: '任务产物', exact: true }).getByRole('button', { name: /README.md/ }).click();
@@ -103,8 +105,8 @@ test('summary approval opens the actual control and completed edits refresh real
   await expandSummary();
   await summary.getByRole('region', { name: '任务产物', exact: true }).getByRole('button', { name: new RegExp(special.replace('.', '\\.')) }).click();
   await expect(fixture.page.getByRole('textbox', { name: '文件内容 ' + special, exact: true })).toHaveValue('真实产物内容');
-  await expect(fixture.page.getByRole('tablist', { name: '打开的文件', exact: true }).getByRole('tab')).toHaveCount(2);
-  await fixture.page.getByRole('tablist', { name: '打开的文件', exact: true }).getByRole('tab', { name: 'README.md *', exact: true }).click();
+  await expect(fixture.page.getByRole('tab', { name: special, exact: true })).toBeVisible();
+  await fixture.page.getByRole('tab', { name: 'README.md *', exact: true }).click();
   await expect(editor).toHaveValue('# Summary approved\n未保存缓冲');
   await editor.fill('# Summary approved\n');
   await expect(fixture.page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();

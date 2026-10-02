@@ -47,7 +47,7 @@ test('file:// development build loads local PDF assets and inline input suggesti
   expect(fixture.page.url().startsWith('file:')).toBe(true);
   const encoded = await fixture.app.evaluate(async ({ BrowserWindow }) => { const window = new BrowserWindow({ show: false, webPreferences: { sandbox: true, nodeIntegration: false } }); try { await window.loadURL('data:text/html,<h1>Offline PDF proof</h1>'); return (await window.webContents.printToPDF({})).toString('base64'); } finally { window.destroy(); } });
   await writeFile(join(fixture.project, 'offline.pdf'), Buffer.from(encoded, 'base64'));
-  const ui = (await fixture.snapshot()).data.ui; await fixture.invoke({ op: 'ui.update', ui: { ...ui, reviewOpen: true } }); await fixture.invoke({ op: 'ui.threadPatch', threadId: 't', patch: { reviewTab: 'files', selectedPath: 'offline.pdf', openFiles: ['offline.pdf'] } });
+  const ui = (await fixture.snapshot()).data.ui; await fixture.invoke({ op: 'ui.update', ui: { ...ui, reviewOpen: true } }); await fixture.invoke({ op: 'ui.threadPatch', threadId: 't', patch: { reviewTab: 'file', activePanelTab: 'file:offline.pdf', selectedPath: 'offline.pdf', openFiles: ['offline.pdf'] } });
   await expect(fixture.page.getByRole('button', { name: '标注此页', exact: true })).toBeEnabled();
   expect(await fixture.page.getByLabel('PDF 当前页面').evaluate((node: HTMLCanvasElement) => node.width)).toBeGreaterThan(100);
   await expect(fixture.page.locator('.voice-controls')).toHaveCount(0);

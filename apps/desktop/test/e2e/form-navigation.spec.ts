@@ -48,7 +48,8 @@ for (const locale of ['zh-CN', 'en-US'] as const) for (const theme of ['light', 
       await expect(page.locator('input[type=password]')).toHaveValue('fixture-unsaved');
       await page.getByRole('button', { name: t('通用'), exact: true }).click();
       const other = locale === 'zh-CN' ? 'en-US' : 'zh-CN';
-      await page.locator('#settings-locale').selectOption(other);
+      await page.locator('#settings-locale').click();
+    await page.getByRole('menuitemradio', { name: other === 'en-US' ? 'English' : '简体中文', exact: true }).click();
       await page.getByRole('button', { name: translate(other, '模型'), exact: true }).click();
       await expect(page.locator('input[type=password]')).toHaveValue('fixture-unsaved');
       await page.getByRole('button', { name: translate(other, '返回工作台'), exact: true }).click();
@@ -139,7 +140,8 @@ test('settings search, category navigation and language switching preserve every
     await page.locator('#settings-notifications').focus();
     await page.keyboard.press('Space');
     await expect(page.locator('#settings-notifications')).not.toBeChecked();
-    await page.locator('#settings-locale').selectOption('en-US');
+    await page.locator('#settings-locale').click();
+    await page.getByRole('menuitemradio', { name: 'English', exact: true }).click();
     await expect(page.locator('.settings-page h1')).toHaveText('General');
     await search.fill('Theme');
     await expect(page.locator('.settings-sidebar [data-category]')).toHaveCount(1);
@@ -296,18 +298,20 @@ test('cancelling a project navigation preserves both the active task and the aut
     await page.goto(url + '?view=automations');
     await page.getByRole('button', { name: '新建自动化', exact: true }).click();
     await page.locator('#automation-name').fill('保留项目');
-    await expect(page.locator('#automation-project')).toHaveValue('p');
+    await expect(page.locator('#automation-project')).toContainText('表单测试');
     await page.getByRole('button', { name: '另一个项目', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     expect(await page.evaluate(() => window.formNavigationTest.ui().activeThreadId)).toBe('t');
     await page.getByRole('dialog').press('Escape');
-    await expect(page.locator('#automation-project')).toHaveValue('p');
+    await expect(page.locator('#automation-project')).toContainText('表单测试');
     await expect(page.locator('#automation-name')).toHaveValue('保留项目');
     await page.getByRole('button', { name: '另一个项目', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: '放弃修改', exact: true }).click();
     await expect(page.locator('.automations-page')).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => window.formNavigationTest.ui().activeThreadId)).toBe('');
-    await expect(page.locator('.project-row.current .project-name')).toHaveText('另一个项目');
+    // A project without conversations lands on a prepared chat, so the composer is the first step.
+    await expect.poll(() => page.evaluate(() => window.formNavigationTest.ui().activeThreadId)).not.toBe('');
+    await expect(page.locator('.composer-input')).toBeVisible();
+    await expect(page.locator('.project-row.current .project-name')).toContainText('另一个项目');
   } finally { await page.close(); }
 });
 

@@ -71,6 +71,7 @@ for (const content of ['重新加载时继续输入', '原始内容\n']) test('c
     await page.evaluate(() => window.fileEditorTest.releaseWrite());
     await expect(page.locator('.files-workbench').getByRole('alert')).toContainText('文件已在外部修改');
     expect(await page.evaluate(() => window.fileEditorTest.files['first.txt'].content)).toBe('外部修改');
+    await page.getByRole('tab', { name: /^first\.txt/ }).hover();
     await page.getByRole('button', { name: '关闭文件 first.txt', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();
@@ -83,6 +84,7 @@ for (const target of ['directory', 'task']) test('discard confirmation cannot fo
   try {
     await page.goto(url + '?directories=1');
     await page.getByLabel('文件内容 first.txt', { exact: true }).fill('原上下文的草稿');
+    await page.getByRole('tab', { name: /^first\.txt/ }).hover();
     await page.getByRole('button', { name: '关闭文件 first.txt', exact: true }).click();
     await expect(page.getByRole('dialog')).toContainText('文件编辑测试 / first.txt');
     await page.evaluate(target => window.fileEditorTest.selectContext(target === 'task' ? 't2' : 't1', target === 'directory' ? 'extra' : 'p'), target);
@@ -168,7 +170,7 @@ test('pending saves reconcile after leaving and reopening the editor', async () 
     await page.getByRole('button', { name: '保存 *', exact: true }).click();
     await editor.fill('保存中的新编辑\n');
     await taskAction(page, '查看变更');
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await page.getByRole('tab', { name: /^first\.txt/ }).click();
     await expect(editor).toHaveValue('保存中的新编辑\n');
     await page.evaluate(() => window.fileEditorTest.releaseWrite());
     await expect.poll(() => page.evaluate(() => window.fileEditorTest.files['first.txt'].version)).toBe('v2');
@@ -199,10 +201,10 @@ test('different files save independently and hidden editors release the applicat
     await expect(page.locator('.files-workbench')).toHaveCount(0);
     await page.evaluate(() => window.fileEditorTest.releaseWrite());
     await expect.poll(() => page.evaluate(() => window.fileEditorTest.dirty)).toBe(false);
-    await page.getByRole('tab', { name: '文件', exact: true }).click();
+    await page.getByRole('tab', { name: /^second\.txt/ }).click();
     await expect(second).toHaveValue('第二份修改');
     await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
-    await page.getByRole('tab', { name: 'first.txt', exact: true }).click();
+    await page.getByRole('tab', { name: /^first\.txt/ }).click();
     await expect(page.getByLabel('文件内容 first.txt', { exact: true })).toHaveValue('第一份修改');
   } finally { await page.close(); }
 });
@@ -249,6 +251,7 @@ for (const locale of ['zh-CN', 'en-US'] as const) {
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
         if (process.env.PI_DESKTOP_CAPTURE === '1') await page.screenshot({ path: join(evidence, 'file-saving-' + locale + '-' + theme + '-' + width + '.png') });
       }
+      await page.getByRole('tab', { name: /^first\.txt/ }).hover();
       await page.getByRole('button', { name: translate(locale, '关闭文件 ') + 'first.txt', exact: true }).click();
       await expect(page.getByRole('dialog')).toHaveCount(0);
       await expect(editor).toHaveValue('检查保存状态');
@@ -256,6 +259,7 @@ for (const locale of ['zh-CN', 'en-US'] as const) {
       await page.evaluate(() => window.fileEditorTest.releaseWrite());
       await expect(page.locator('.files-workbench').getByRole('alert')).toHaveCount(0);
       await expect(page.locator('.file-toolbar [role=status]')).toHaveText(translate(locale, '已保存到磁盘'));
+      await page.getByRole('tab', { name: /^first\.txt/ }).hover();
       await page.getByRole('button', { name: translate(locale, '关闭文件 ') + 'first.txt', exact: true }).click();
       await expect(page.getByRole('tab', { name: 'first.txt', exact: true })).toHaveCount(0);
     } finally { await page.close(); }

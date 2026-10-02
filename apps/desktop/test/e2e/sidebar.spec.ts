@@ -78,9 +78,16 @@ const bridge = {
       data = {
         ...data,
         threads: data.threads.map((item) =>
-          item.id === request.id ? { ...item, archived: request.archived ?? item.archived } : item,
+          item.id === request.id
+            ? { ...item, archived: request.archived ?? item.archived, pinned: request.pinned ?? item.pinned }
+            : item,
         ),
       };
+      echo();
+      return undefined;
+    }
+    if (request.op === 'thread.purge') {
+      data = { ...data, threads: data.threads.filter((item) => item.id !== request.id) };
       echo();
       return undefined;
     }
@@ -224,17 +231,45 @@ test('selected and active rows use the captured fill without a synthetic outline
 
 test('row actions wait for the row, and stay reachable from the keyboard', async () => {
   activePage = await openSidebar();
-  const action = rows().nth(1).locator('.icon-button');
+  const action = rows().nth(1).getByLabel('归档此任务');
   expect(await action.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
   await rows().nth(1).hover();
   expect(await action.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  // Hover reveals pin and archive only: the context menu stays right-click's job, so its trigger is
+  // inert and invisible while the row or its own actions are hovered or focused.
+  const menu = rows().nth(1).locator('[data-thread-menu]');
+  expect(await menu.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+  expect(await menu.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+  await rows().nth(1).getByLabel('置顶此任务').focus();
+  expect(await menu.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+  await menu.locator('button').focus();
+  expect(await menu.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  expect(await menu.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('auto');
 
   // Focus reveals it too, and it never leaves the accessibility tree or the tab order.
-  const other = rows().nth(2).locator('.icon-button');
+  const other = rows().nth(2).getByLabel('归档此任务');
   await other.focus();
   expect(await other.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   expect(await other.evaluate((el) => getComputedStyle(el).visibility)).toBe('visible');
   expect(await other.evaluate((el) => getComputedStyle(el).display)).not.toBe('none');
+});
+
+test('pinning a shortcut row collects it under 置顶 and takes it out of 最近任务', async () => {
+  activePage = await openSidebar();
+  await expect(activePage.locator('.sidebar-pinned')).toHaveCount(0);
+  const recent = activePage.locator('.shortcut-row').filter({ has: activePage.getByLabel('最近任务：第二条任务') });
+  await recent.hover();
+  await recent.getByLabel('置顶此任务').click();
+  const pinned = activePage.locator('.sidebar-pinned');
+  await expect(pinned.locator('.recent-thread')).toHaveCount(1);
+  await expect(pinned.locator('.recent-thread')).toHaveAttribute('title', '第二条任务');
+  // A pinned task is a shortcut, not a duplicate: recents drop it, the project list keeps it.
+  await expect(activePage.locator('.sidebar-recents .recent-thread')).toHaveCount(3);
+  expect((await titles().allTextContents()).map((text) => text.trim())).toContain('第二条任务');
+  await pinned.locator('.shortcut-row').hover();
+  await pinned.getByLabel('取消置顶').click();
+  await expect(activePage.locator('.sidebar-pinned')).toHaveCount(0);
+  await expect(activePage.locator('.sidebar-recents .recent-thread')).toHaveCount(4);
 });
 
 test('tasks sort newest-first under their own project', async () => {
@@ -262,17 +297,32 @@ test('unread and running tasks share one right-aligned indicator without duplica
       await expect(indicator).toHaveCSS('background-color', 'rgb(52, 133, 228)');
       const before = await indicator.boundingBox(), bounds = await row.boundingBox();
       expect(bounds!.x + bounds!.width - before!.x - before!.width).toBeCloseTo(8, 0);
-      await row.hover(); expect(await indicator.boundingBox()).toEqual(before);
+      // Hovering may scroll the harness scroller, so compare the dot's offset from the row, not page x.
+      await row.hover();
+      const moved = await indicator.boundingBox(), rowNow = (await row.boundingBox())!;
+      expect(rowNow.x + rowNow.width - moved!.x - moved!.width).toBeCloseTo(8, 0);
+      // Both row kinds hand the right edge to their actions, so the dot fades instead of crowding them.
+      await expect(indicator).toHaveCSS('opacity', '0');
+      if (selector === '.thread-row') {
+        // The hidden context-menu trigger shares the archive's slot, one step in from the row's edge.
+        const menu = await row.locator('[data-thread-menu]').boundingBox();
+        expect(bounds!.x + bounds!.width - menu!.x - menu!.width).toBeCloseTo(8, 0);
+        const archive = await row.getByLabel('归档此任务').boundingBox();
+        expect(bounds!.x + bounds!.width - archive!.x - archive!.width).toBeCloseTo(8, 0);
+        const pin = await row.getByLabel('置顶此任务').boundingBox();
+        expect(bounds!.x + bounds!.width - pin!.x - pin!.width).toBeCloseTo(34, 0);
+      }
     }
   }
   await expect(activePage.locator('.recent-thread').first().getByRole('img')).toHaveAttribute('aria-label', /未读/);
 });
 
-test('recents precede project chats and duplicate creation and search entries stay hidden', async () => {
+test('project chats precede recents and duplicate creation and search entries stay hidden', async () => {
   activePage = await openSidebar();
-  const recents = await activePage.locator('.sidebar-recents').boundingBox();
   const projects = await activePage.getByRole('region', { name: '项目聊天', exact: true }).boundingBox();
-  expect(projects!.y).toBeGreaterThan(recents!.y + recents!.height);
+  const recents = await activePage.locator('.sidebar-recents').boundingBox();
+  // The project collection leads; recents stay below it as the shortcut back to recent work.
+  expect(recents!.y).toBeGreaterThan(projects!.y + projects!.height);
   await expect(activePage.locator('.primary-nav .nav-row')).toHaveCount(3);
   await expect(activePage.locator('.sidebar-search-toggle, .sidebar-search, .sidebar-chat-kind')).toHaveCount(0);
   await expect(activePage.getByRole('button', { name: '新建聊天', exact: true })).toHaveCount(1);
@@ -330,8 +380,10 @@ test('no sidebar label lands on a name another surface resolves', async () => {
   // `getByLabel` is a substring match, so these must not appear inside any sidebar control's label.
   for (const name of ['归档任务', '恢复任务', '添加模型', '新建任务', '发送消息'])
     expect(await activePage.getByLabel(name).count()).toBe(0);
-  // The row action instead carries one shared, specific label for every listed task.
-  expect(await activePage.getByLabel('归档此任务').count()).toBe(4);
+  // The row action instead carries one shared, specific label for every listed task: the project rows
+  // and both shortcut lists render the same component.
+  expect(await activePage.getByLabel('归档此任务').count())
+    .toBe(await activePage.locator('.thread-row, .shortcut-row').count());
   expect(await activePage.getByLabel('新建 示例项目 的任务').count()).toBe(1);
 });
 
@@ -351,14 +403,18 @@ test('recent tasks share live selection and project filtering while the footer s
   await activePage.getByLabel('折叠 示例项目').click();
   await activePage.getByRole('button', { name: '最近任务：第一条任务', exact: true }).click();
   await expect(activePage.locator('.recent-thread.selected')).toHaveAttribute('title', '第一条任务');
-  await activePage.getByLabel('项目筛选').selectOption('beta');
+  await activePage.getByLabel('项目筛选').click();
+  await activePage.locator('.menu-item[data-value="beta"]').click();
   await expect(activePage.locator('.recent-thread')).toHaveCount(1);
   await expect(activePage.locator('.project-row')).toHaveCount(1);
   await activePage.setViewportSize({ width: 1000, height: 360 });
   await activePage.getByLabel('本地工作区操作').click();
-  await activePage.getByRole('menuitem', { name: /回收站/ }).click();
+  await activePage.getByRole('menuitem', { name: /已归档任务/ }).click();
   await expect(activePage.locator('.sidebar-recents')).toHaveCount(0);
-  await expect(activePage.locator('.sidebar-project-chats > .section-label')).toContainText('回收站');
+  await expect(activePage.locator('.sidebar-project-chats > .section-label')).toContainText('已归档');
+  await activePage.getByLabel('本地工作区操作').click();
+  await activePage.getByRole('menuitem', { name: '查看活跃任务', exact: true }).click();
+  await expect(activePage.locator('.sidebar-project-chats > .section-label')).toContainText('项目聊天');
   await activePage.getByLabel('本地运行信息', { exact: true }).click();
   await expect(activePage.getByRole('dialog')).toContainText('Pi 0.86.1');
   await activePage.keyboard.press('Escape');

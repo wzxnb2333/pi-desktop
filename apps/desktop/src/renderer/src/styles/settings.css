@@ -118,6 +118,11 @@
 .settings-page .field-row-hint { font-size: 12px; line-height: 16px; margin-top: 0; }
 .settings-page .field-row-control { width: auto; flex: 0 1 auto; max-width: 48%; min-width: 0; }
 .settings-page .field-row-control > select { width: auto; max-width: 100%; height: 28px; min-height: 28px; padding: 0 24px 0 10px; border-radius: 10px; background-color: transparent; font-size: 13px; }
+/* A popover choice control keeps the geometry of the select it replaces. */
+.settings-page .field-row-control .menu-trigger.settings-select { width: auto; max-width: 100%; height: 28px; min-height: 28px; padding: 0 6px 0 10px; border-radius: 10px; background-color: transparent; font-size: 13px; }
+/* Free-form font name plus a popover list of common families, in one control column. */
+.font-family-field { display: flex; align-items: center; gap: 6px; }
+.font-family-field input { width: 200px; }
 .settings-page .field-row-control > input:where(:not([type=checkbox]):not([type=radio])) { width: 250px; max-width: 100%; min-height: 28px; height: 32px; padding: 4px 10px; font-size: 13px; border-radius: 10px; }
 .settings-page .field-row-control > input[type=number] { width: 80px; }
 .settings-page .field-row-control > input[type=checkbox] { appearance: none; width: 32px; height: 20px; border: 0; border-radius: 10px; padding: 2px; background: var(--muted); cursor: pointer; flex: none; }
@@ -130,7 +135,7 @@
 .model-settings { display: grid; grid-template-columns: 216px minmax(0, 1fr); align-items: start; gap: 28px; }
 .model-collection { min-width: 0; position: sticky; top: 12px; }
 .model-collection-compact { display: none; }
-.model-collection-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 4px 12px; }
+.model-collection-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
 .model-collection-heading h2 { font-size: 13px; font-weight: 500; margin: 0; }
 .model-count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .model-search { height: 32px; padding-inline: 10px; border-radius: 10px; }
@@ -148,6 +153,11 @@
 .model-editor .settings-section { margin-bottom: 24px; }
 .model-key-control { display: flex; flex-direction: column; gap: 6px; width: 250px; max-width: 100%; }
 .settings-page .model-key-control input { min-width: 0; width: 100%; height: 32px; padding: 4px 10px; border-radius: 10px; font-size: 13px; }
+/* The reveal control sits inside the field; the input keeps room for it instead of growing the column. */
+.model-key-input { position: relative; }
+.model-key-input > input { padding-inline-end: 34px; }
+.model-key-input > .tooltip-anchor { position: absolute; inset-inline-end: 3px; top: 50%; transform: translateY(-50%); }
+.model-key-input .icon-button { width: 26px; height: 26px; border-radius: 8px; }
 .model-key-status { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; line-height: 16px; }
 .model-privacy-note { margin-top: 0; font-size: 12px; line-height: 18px; }
 .model-search-empty { color: var(--muted); font-size: 12px; padding: 8px 4px; }
@@ -157,14 +167,19 @@
 .model-row { border-top: 1px solid var(--border); padding-block: 10px; }
 .model-row:first-child { border-top: 0; }
 .model-row-heading { display: flex; align-items: center; gap: 10px; min-height: 32px; }
-.model-row-toggle { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+/*
+ * `button` centres its content, so a column-flex button centres its children horizontally. The model
+ * name and id are a left-aligned pair: `align-items: stretch` keeps them at the row's left edge
+ * (matching the section heading and the field labels) and lets long ids ellipsize.
+ * `margin-inline: -6px` cancels the horizontal padding so that edge is the card's content edge.
+ */
+.model-row-toggle { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin-inline: -6px; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .model-row-toggle:hover { background: var(--hover); }
 .model-row-toggle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .model-row-name { font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-row-id { color: var(--muted); font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
-.model-row-capabilities { flex: none; max-width: 38%; color: var(--muted); font-size: 11px; line-height: 16px; text-align: right; }
+.model-row-capabilities { flex: none; max-width: 38%; color: var(--muted); font-size: 11px; line-height: 16px; text-align: right; font-variant-numeric: tabular-nums; }
 .model-row-editor { margin-top: 4px; padding-inline: 6px; }
-.model-add-model { margin-top: 12px; }
 .model-add-panel { margin-top: 12px; padding-block: 12px; border-top: 1px solid var(--border); }
 .model-add-panel .row { display: flex; gap: 8px; margin-top: 12px; }
 .model-catalog-options { list-style: none; margin: 8px 0 0; padding: 0; max-height: 260px; overflow-y: auto; }
@@ -173,6 +188,8 @@
 .model-catalog-option > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; line-height: 18px; }
 .model-catalog-option small { color: var(--muted); font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
 .model-connection { padding-block: 16px; }
+/* Same block padding as the connection card, so the model list is not glued to the card's border. */
+.model-models { padding-block: 16px; }
 .connection-modes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -206,7 +223,14 @@
 .connection-mode > span { min-width: 0; }
 .connection-mode strong { display: block; font-weight: var(--font-weight-medium); }
 .connection-mode-help { margin: 10px 0 8px; font-size: 12px; line-height: 18px; }
-.settings-page .model-connection .field-row-control { max-width: 52%; }
+/*
+ * The connection card's rows — display name, provider, endpoint and key — share one control width.
+ * A `select` that sizes itself would sit short of the inputs around it, and the column needs a
+ * definite width for `width: 100%` to resolve against anything. `:has()` scopes this to the card that
+ * actually holds the connection, so other settings categories keep their auto-width controls.
+ */
+.settings-page .field-stack:has(.model-connection) .field-row-control { width: 250px; max-width: 100%; }
+.settings-page .field-stack:has(.model-connection) .field-row-control > select { width: 100%; }
 .model-metadata { overflow-wrap: anywhere; }
 .connection-notice { padding-block: var(--padding-row-y); }
 .connection-notice p { margin: 0 0 var(--padding-row-y); }

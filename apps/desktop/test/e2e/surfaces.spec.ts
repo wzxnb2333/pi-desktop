@@ -52,8 +52,44 @@ for (const mode of ['light', 'dark', 'system-light', 'system-dark']) for (const 
   } finally { await page.close(); }
 });
 
-test('tooltip follows keyboard, delay, click, escape and window blur states', async () => {
-  const page = await browser.newPage();
+test('the error toast is centered at the top and leaves on its own', async () => {
+  const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+  try {
+    const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+    await openScene(page, 'banner');
+    const banner = page.locator('.error-banner');
+    await expect(banner).toHaveText('预览已取消');
+    // Measure after the entry animation, or the slide-in offset would land in the geometry.
+    await expect.poll(() => banner.evaluate(node => node.getAnimations().some(animation => animation.playState === 'running'))).toBe(false);
+    const bannerBox = (await banner.boundingBox())!;
+    // A toast, not a layout row: centered over the pane, floating above its content, and it carries
+    // no close button at all.
+    const paneBox = (await page.locator('.main').boundingBox())!;
+    expect(Math.abs(bannerBox.x + bannerBox.width / 2 - (paneBox.x + paneBox.width / 2))).toBeLessThanOrEqual(1);
+    expect(bannerBox.y - paneBox.y).toBeCloseTo(10, 0);
+    await expect(banner.getByRole('button')).toHaveCount(0);
+    await page.clock.install();
+    await page.getByRole('button', { name: '再次触发', exact: true }).click();
+    await expect(banner).toHaveCount(1);
+    // Pointing at it holds it open, and leaving lets the seven-second timer finish.
+    await banner.hover();
+    await page.clock.runFor(20000);
+    await expect(banner).toHaveCount(1);
+    await page.mouse.move(0, 0);
+    await page.clock.runFor(6999);
+    await expect(banner).toHaveCount(1);
+    await page.clock.runFor(1);
+    await expect(banner).toHaveCount(0);
+    // Keyboard users still get Escape.
+    await page.getByRole('button', { name: '再次触发', exact: true }).click();
+    await expect(banner).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(banner).toHaveCount(0);
+    expect(errors).toEqual([]);
+  } finally { await page.close(); }
+});
+
+test('tooltip follows keyboard, delay, click, escape and window blur states', async () => {  const page = await browser.newPage();
   try {
     await openScene(page, 'tooltip');
     const target = page.getByRole('button', { name: '提示', exact: true });

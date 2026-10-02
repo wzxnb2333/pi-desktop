@@ -308,7 +308,7 @@ test('empty browser has one tab row and keeps utility controls in the menu', asy
   expect(content!.y).toBe(address!.y + 40);
   await expect(page.locator('.tool-launcher button')).toHaveCount(4);
   await page.locator('.tool-launcher').getByRole('button', { name: '文件', exact: true }).click();
-  await expect(page.locator('.files-workbench')).toBeVisible();
+  await expect(page.locator('.files-navigator')).toBeVisible();
 });
 
 test('each tab closes on hover or middle click without changing an unrelated selection', async () => {
@@ -363,7 +363,7 @@ test('tool tabs share the browser strip, preserve native pages and terminals and
   await fixture.restart();
   await expect(fixture.page.locator('.workspace-tabs [role=tab]')).toHaveText(['第一页', '文件', '审查', '侧聊']);
   await expect(fixture.page.getByRole('tab', { name: '文件', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(fixture.page.locator('.files-workbench')).toBeVisible();
+  await expect(fixture.page.locator('.files-navigator')).toBeVisible();
 });
 
 test('launcher and mixed tab controls fit both themes and languages at supported sizes', async () => {

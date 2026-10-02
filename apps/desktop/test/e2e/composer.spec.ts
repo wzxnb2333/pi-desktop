@@ -143,6 +143,13 @@ test('permission modes expose exactly three choices and preserve the draft while
   await input().fill('权限切换保留草稿');
   await trigger('执行策略').click();
   await expect(list().getByRole('menuitemradio')).toHaveText(['请求批准', '替我批准', '完全访问']);
+  // The shield is a flex sibling of the label, so its optical centre matches the row it sits in
+  // instead of riding the text baseline.
+  for (const row of await list().getByRole('menuitemradio').all()) {
+    const label = (await row.locator('.composer-policy-label').boundingBox())!, icon = (await row.locator('.composer-policy-label svg').boundingBox())!;
+    expect(Math.abs(icon.y + icon.height / 2 - (label.y + label.height / 2))).toBeLessThanOrEqual(0.5);
+    expect(icon.x - label.x).toBeCloseTo(0, 0);
+  }
   await item('完全访问').click();
   await expect(lastUpdate()).toHaveText('policy:full');
   await expect(input()).toHaveValue('权限切换保留草稿');
@@ -313,8 +320,11 @@ test('one model and effort control supports the native slider and a focused mode
   await trigger('模型与能力').click(); const slider = activePage.getByRole('slider', { name: '思考级别', exact: true });
   await expect(slider).toBeFocused(); await slider.press('ArrowRight');
   await expect(lastUpdate()).toHaveText('thinking:high'); await expect(trigger('模型与能力')).toHaveText('快速模型高');
+  // The heading carries no glyph: it is the current level's own label, centred.
+  await expect(activePage.locator('.composer-capability-heading svg')).toHaveCount(0);
   await activePage.getByRole('button', { name: '模型', exact: true }).click();
-  await expect(item('快速模型')).toBeFocused(); await activePage.keyboard.press('ArrowDown'); await activePage.keyboard.press('Enter');
+  // Two levels: the first list picks the provider, the second one the model under it.
+  await activePage.keyboard.press('Enter'); await expect(item('快速模型')).toBeFocused(); await activePage.keyboard.press('ArrowDown'); await activePage.keyboard.press('Enter');
   await expect(lastUpdate()).toHaveText('modelId:deep'); await expect(trigger('模型与能力')).toBeFocused();
   await expect(trigger('模型与能力')).toContainText('深度模型'); await expect(list()).toHaveCount(0);
   await trigger('模型与能力').click(); await activePage.keyboard.press('Escape');

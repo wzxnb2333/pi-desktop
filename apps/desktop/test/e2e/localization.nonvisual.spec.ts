@@ -17,7 +17,8 @@ test('language switches immediately, preserves drafts and persists through a rea
   const ui = (await fixture.snapshot()).data.ui;
   await fixture.invoke({ op: 'ui.update', ui: { ...ui, view: 'settings' } });
   await fixture.page.locator('[data-category="general"]').click();
-  await fixture.page.locator('#settings-locale').selectOption('en-US');
+  await fixture.page.locator('#settings-locale').click();
+  await fixture.page.getByRole('menuitemradio', { name: 'English', exact: true }).click();
   await expect(fixture.page.locator('html')).toHaveAttribute('lang', 'en-US');
   await expect(fixture.page.locator('[data-category="general"]')).toHaveText('General');
   await expect(fixture.page.getByRole('button', { name: 'Save settings', exact: true })).toBeVisible();

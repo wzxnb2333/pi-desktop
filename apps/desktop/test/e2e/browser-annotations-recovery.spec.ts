@@ -20,7 +20,7 @@ test.beforeEach(async () => { errors = []; page = await browser.newPage({ viewpo
 test.afterEach(async () => { await page?.close(); expect(errors).toEqual([]); });
 
 test('annotation capture and save failures keep editable selections and deduplicate same-tick saves', async () => {
-  await page.getByLabel('页面元素', { exact: true }).selectOption('0'); await page.getByLabel('标注说明', { exact: true }).fill('Keep this comment');
+  await page.getByLabel('页面元素', { exact: true }).click(); await page.locator('.menu-item[data-value="0"]').click(); await page.getByLabel('标注说明', { exact: true }).fill('Keep this comment');
   await page.evaluate(() => { window.annotationsHarness.hold = ['browser.annotationSave']; });
   const save = page.getByRole('button', { name: '保存标注', exact: true });
   await save.evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
@@ -29,13 +29,13 @@ test('annotation capture and save failures keep editable selections and deduplic
   await page.keyboard.press('Escape'); await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('button', { name: '选择区域', exact: true })).toBeDisabled();
   await page.evaluate(() => window.annotationsHarness.release('browser.annotationSave', 'SAVE_FAILED'));
-  await expect(page.getByRole('alert')).toHaveText('SAVE_FAILED'); await expect(page.getByLabel('标注说明', { exact: true })).toHaveValue('Keep this comment'); await expect(page.getByLabel('页面元素', { exact: true })).toHaveValue('0');
+  await expect(page.getByRole('alert')).toHaveText('SAVE_FAILED'); await expect(page.getByLabel('标注说明', { exact: true })).toHaveValue('Keep this comment'); await expect(page.getByLabel('页面元素', { exact: true })).not.toContainText('请选择元素');
   await save.click(); await page.evaluate(() => window.annotationsHarness.release('browser.annotationSave'));
   await expect(page.getByText('标注已保存', { exact: true })).toBeVisible(); await expect(page.locator('.annotation-list li')).toHaveCount(2);
 });
 
 test('recapture asks about unsaved work and failed replacement preserves the original screenshot and comment', async () => {
-  await page.getByLabel('页面元素', { exact: true }).selectOption('0'); await page.getByLabel('标注说明', { exact: true }).fill('Original capture');
+  await page.getByLabel('页面元素', { exact: true }).click(); await page.locator('.menu-item[data-value="0"]').click(); await page.getByLabel('标注说明', { exact: true }).fill('Original capture');
   await page.getByRole('button', { name: '截取当前页面', exact: true }).click();
   let confirm = page.getByRole('dialog', { name: '放弃未保存的标注？', exact: true }); await confirm.getByRole('button', { name: '取消', exact: true }).click();
   expect(await page.evaluate(() => window.annotationsHarness.calls.filter(item => item.op === 'browser.annotationCapture').length)).toBe(1);
@@ -43,7 +43,7 @@ test('recapture asks about unsaved work and failed replacement preserves the ori
   await page.getByRole('button', { name: '截取当前页面', exact: true }).click(); confirm = page.getByRole('dialog', { name: '放弃未保存的标注？', exact: true }); await confirm.getByRole('button', { name: '放弃', exact: true }).click();
   await page.evaluate(() => window.annotationsHarness.release('browser.annotationCapture', 'CAPTURE_FAILED'));
   await expect(page.getByRole('alert')).toHaveText('CAPTURE_FAILED'); await expect(page.getByLabel('标注说明', { exact: true })).toHaveValue('Original capture');
-  await expect(page.getByLabel('页面元素', { exact: true })).toHaveValue('0'); await page.getByRole('button', { name: '保存标注', exact: true }).click(); await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('页面元素', { exact: true })).not.toContainText('请选择元素'); await page.getByRole('button', { name: '保存标注', exact: true }).click(); await expect(page.getByText('标注已保存', { exact: true })).toBeVisible();
 });
 
 test('a saved annotation remains visible when page revalidation fails and draft insertion cannot duplicate text', async () => {

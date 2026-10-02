@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BrowserClearOptions, BrowserDataRange, BrowserHistoryPage } from '../../../../shared/browser-history.ts';
 import { localizeAppError, localizeLabel, tr } from '../../../../shared/localization.ts';
+import { Menu } from '../primitives/menu.tsx';
 import { useLocale } from '../../hooks/use-locale.ts';
 import { useApp } from '../../state/app.tsx';
 import { Button } from '../primitives/button.tsx';
@@ -48,9 +49,9 @@ export function BrowserHistoryPanel({ threadId, tabId, clear, onClose }: { threa
     {history?.error && <p role="alert">{localizeAppError(history.error)}</p>}
     {error && <p role="alert">{localizeAppError(error)}</p>}
     {clearing && <section className="browser-data-settings">
-      <label>{tr('清理时间范围')}<select value={options.range} disabled={pending} onChange={event => setOptions(current => ({ ...current, range: event.target.value as BrowserDataRange }))}>
-        <option value="hour">{tr('最近一小时')}</option><option value="day">{tr('最近一天')}</option><option value="week">{tr('最近一周')}</option><option value="all">{tr('全部时间')}</option>
-      </select></label>
+      <label>{tr('清理时间范围')}<Menu label={tr('清理时间范围')} value={options.range} disabled={pending} matchTriggerWidth
+        options={[{ value: 'hour', label: tr('最近一小时') }, { value: 'day', label: tr('最近一天') }, { value: 'week', label: tr('最近一周') }, { value: 'all', label: tr('全部时间') }]}
+        onChange={range => setOptions(current => ({ ...current, range: range as BrowserDataRange }))} /></label>
       <label><input type="checkbox" checked={options.history} disabled={pending} onChange={event => setOptions(current => ({ ...current, history: event.target.checked }))} />{tr('浏览历史记录')}</label>
       <label><input type="checkbox" checked={options.siteData} disabled={pending} onChange={event => setOptions(current => ({ ...current, siteData: event.target.checked }))} />{tr('网站 Cookie 和存储')}</label>
       <label><input type="checkbox" checked={options.cache} disabled={pending} onChange={event => setOptions(current => ({ ...current, cache: event.target.checked }))} />{tr('全部浏览器缓存')}</label>

@@ -62,7 +62,7 @@ for (const kind of ['action', 'confirm', 'input', 'select']) test('approval ' + 
     await page.goto(url + '?pinned=1&approval=' + kind + '&holdReply=1');
     const card = page.getByRole('region', { name: '待审批操作' });
     if (kind === 'input') await card.getByLabel('回复内容').fill('使用中文回复');
-    if (kind === 'select') await card.getByLabel('选择回复').selectOption('使用工作区配置');
+    if (kind === 'select') { await card.getByLabel('选择回复').click(); await card.page().locator('.menu-item[data-value="使用工作区配置"]').click(); }
     if (kind === 'input') await card.getByLabel('回复内容').press('Enter');
     else await card.getByRole('button', { name: '允许这一次' }).click();
     await expect(card).toHaveAttribute('aria-busy', 'true');
@@ -75,7 +75,7 @@ for (const kind of ['action', 'confirm', 'input', 'select']) test('approval ' + 
     await expect(card).toHaveAttribute('aria-busy', 'false');
     await expect(page.getByText('审批服务暂不可用', { exact: true })).toBeVisible();
     if (kind === 'input') await expect(card.getByLabel('回复内容')).toHaveValue('使用中文回复');
-    if (kind === 'select') await expect(card.getByLabel('选择回复')).toHaveValue('使用工作区配置');
+    if (kind === 'select') await expect(card.getByLabel('选择回复')).toContainText('使用工作区配置');
     await card.getByRole('button', { name: '拒绝' }).focus();
     await page.keyboard.press('Enter');
     expect(await page.evaluate(() => window.referenceStates.replies.at(-1))).toEqual({ op: 'approval.reply', id: 'reference-approval', approved: false });

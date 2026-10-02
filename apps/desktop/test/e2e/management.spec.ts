@@ -127,7 +127,8 @@ test('automation form validates fields, serializes submits and retains the draft
   await page.getByRole('button', { name: '创建自动化' }).click();
   await expect(page.locator('#automation-interval')).toBeFocused();
   await expect(page.getByRole('alert')).toContainText('整数分钟');
-  await page.locator('#automation-mode').selectOption('daily');
+  await page.locator('#automation-mode').click();
+  await page.locator('.menu-item[data-value="daily"]').click();
   await page.locator('#automation-timezone').fill('Invalid/Zone');
   await page.getByRole('button', { name: '创建自动化' }).click();
   await expect(page.locator('#automation-timezone')).toBeFocused();

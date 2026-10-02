@@ -20,9 +20,10 @@ test('native per-tool controls persist, ask under automatic task permissions and
   await fixture.app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false }); });
   await fixture.page.keyboard.press('Control+,'); await fixture.page.getByRole('button', { name: 'MCP', exact: true }).click();
   await fixture.page.locator('.mcp-tool-policies > summary').click(); await fixture.page.getByRole('button', { name: '读取工具列表' }).click();
-  await fixture.page.getByLabel('工具审批 echo', { exact: true }).selectOption('ask'); await fixture.page.getByLabel('工具超时（秒） echo', { exact: true }).fill('1');
+  await fixture.page.getByLabel('工具审批 echo', { exact: true }).click();
+  await fixture.page.getByRole('menuitemradio', { name: '每次询问', exact: true }).click(); await fixture.page.getByLabel('工具超时（秒） echo', { exact: true }).fill('1');
   await fixture.page.getByRole('button', { name: '通用', exact: true }).click(); await fixture.page.getByRole('button', { name: 'MCP', exact: true }).click();
-  await fixture.page.locator('.mcp-tool-policies > summary').click(); await expect(fixture.page.getByLabel('工具审批 echo', { exact: true })).toHaveValue('ask');
+  await fixture.page.locator('.mcp-tool-policies > summary').click(); await expect(fixture.page.getByLabel('工具审批 echo', { exact: true })).toContainText('每次询问');
   await fixture.page.getByRole('button', { name: '返回工作台', exact: true }).click();
   await fixture.page.getByRole('dialog', { name: '放弃未保存的修改？' }).getByRole('button', { name: '继续编辑' }).click();
   await fixture.page.getByRole('button', { name: '保存工具策略' }).click();

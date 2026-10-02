@@ -24,7 +24,7 @@ test.beforeEach(async () => {
   errors = []; page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(url);
-  await expect(page.getByRole('combobox', { name: '审查记录', exact: true })).toBeVisible();
+  await expect(page.getByLabel('审查记录', { exact: true })).toBeVisible();
 });
 test.afterEach(async () => { await page?.close(); expect(errors).toEqual([]); });
 
@@ -39,7 +39,8 @@ test('review comments stay with their own directory', async () => {
 test('captured versions ignore late results after switching the review or closing the capture', async () => {
   await page.evaluate(() => { window.reviewRecovery.hold = ['review.file']; });
   await page.getByRole('button', { name: '查看捕获版本', exact: true }).click();
-  await page.getByRole('combobox', { name: '审查记录', exact: true }).selectOption('r2');
+  await page.getByLabel('审查记录', { exact: true }).click();
+  await page.locator('.menu-item[data-value="r2"]').click();
   await page.evaluate(() => window.reviewRecovery.release('review.file'));
   await expect(page.locator('.review-captured')).toHaveCount(0);
   await page.getByRole('button', { name: '查看捕获版本', exact: true }).click();
@@ -58,11 +59,13 @@ test('feedback submissions deduplicate and retain newer drafts and retry state a
   await page.getByRole('button', { name: '保存反馈', exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
   expect(await page.evaluate(() => window.reviewRecovery.calls.filter(item => item.op === 'review.finding').length)).toBe(1);
   await input.fill('之后输入的新反馈');
-  await page.getByRole('combobox', { name: '审查记录', exact: true }).selectOption('r2');
+  await page.getByLabel('审查记录', { exact: true }).click();
+  await page.locator('.menu-item[data-value="r2"]').click();
   await expect(input).toHaveValue('');
   await page.evaluate(() => window.reviewRecovery.release('review.finding', 'FEEDBACK_FAILED'));
   await expect(page.locator('.review-findings').getByRole('alert')).toHaveCount(0);
-  await page.getByRole('combobox', { name: '审查记录', exact: true }).selectOption('r1');
+  await page.getByLabel('审查记录', { exact: true }).click();
+  await page.locator('.menu-item[data-value="r1"]').click();
   await expect(input).toHaveValue('之后输入的新反馈');
   await expect(page.locator('.review-finding').getByRole('alert')).toContainText('FEEDBACK_FAILED');
   await page.getByRole('button', { name: '保存反馈', exact: true }).click();
@@ -86,7 +89,8 @@ test('review setup and pending start survive hiding without duplicate requests',
   await page.getByRole('button', { name: '开始只读审查', exact: true }).click();
   await page.evaluate(() => window.reviewRecovery.release('review.start'));
   await expect(page.getByText('正在捕获审查范围…', { exact: true })).toBeVisible();
-  await page.getByRole('combobox', { name: '审查记录', exact: true }).selectOption('r1');
+  await page.getByLabel('审查记录', { exact: true }).click();
+  await page.locator('.menu-item[data-value="r1"]').click();
   await expect(page.getByRole('button', { name: '开始只读审查', exact: true })).toBeDisabled();
 });
 
@@ -140,7 +144,7 @@ test('late review locations cannot navigate away after task changes', async () =
   await page.evaluate(() => { window.reviewRecovery.hold = ['review.locate']; });
   await page.locator('.review-location').click();
   await page.evaluate(() => window.reviewRecovery.select('t2'));
-  await expect(page.getByRole('combobox', { name: '审查记录', exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('审查记录', { exact: true })).toHaveCount(0);
   await page.evaluate(() => window.reviewRecovery.release('review.locate'));
   await expect(page.locator('.review-findings')).toBeVisible();
   await page.evaluate(() => window.reviewRecovery.select('t1'));

@@ -92,8 +92,11 @@ test('legacy active child sessions route to their parent and are absent from cha
   await page.getByRole('combobox', { name: '搜索命令或最近任务', exact: true }).fill('Agent A'); await expect(page.getByRole('option', { name: /Agent A/ })).toHaveCount(0);
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: '自动化', exact: true }).click();
   await page.getByRole('button', { name: '新建自动化', exact: true }).click();
-  await page.getByLabel('执行位置', { exact: true }).selectOption('thread');
-  await expect(page.getByRole('combobox', { name: /^目标聊天/ }).locator('option')).toHaveText(['请选择聊天', 'Main agent · Observer project', 'Other parent · Observer project']);
+  await page.getByLabel('执行位置', { exact: true }).click();
+  await page.locator('.menu-item[data-value="thread"]').click();
+  await page.getByLabel(/^目标聊天/).click();
+  await expect(page.locator('.menu-item')).toHaveText(['请选择聊天', 'Main agent · Observer project', 'Other parent · Observer project']);
+  await page.keyboard.press('Escape');
 });
 
 test('parent questions remain read-only, localized and compact in the observer', async () => {

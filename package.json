@@ -13,7 +13,7 @@
 		"packages/coding-agent/examples/extensions/gondolin"
 	],
 	"scripts": {
-		"desktop:dev": "npm run dev --workspace=@pi-desktop/app",
+		"desktop:dev": "node scripts/desktop-dev.mjs",
 		"desktop:build": "npm run build --workspace=@pi-desktop/app",
 		"desktop:check": "npm run typecheck --workspace=@pi-desktop/app",
 		"desktop:test": "npm run test --workspace=@pi-desktop/app",

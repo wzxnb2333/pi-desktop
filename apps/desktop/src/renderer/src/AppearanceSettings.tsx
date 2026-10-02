@@ -3,6 +3,7 @@ import { appearanceFromSettings } from '../../shared/appearance.ts';
 import { localizeAppError, tr } from '../../shared/localization.ts';
 import { useLocale } from './hooks/use-locale.ts';
 import { FieldRow } from './components/primitives/field-row.tsx';
+import { Menu } from './components/primitives/menu.tsx';
 import { Button } from './components/primitives/button.tsx';
 import { SettingsSection } from './SettingsSection.tsx';
 
@@ -28,10 +29,10 @@ export function AppearanceSettings({ draft, onChange, invoke, onFeedback }: {
   };
   return <>
     <SettingsSection title={tr('主题与文字')}>
-      <FieldRow label={tr('主题')} htmlFor="settings-theme" description={tr('跟随系统时随 Windows 深浅色切换')}>
-        <select id="settings-theme" aria-label={tr('主题')} value={draft.theme} onChange={event => onChange({ theme: event.target.value as Settings['theme'] })}>
-          <option value="system">{tr('跟随系统')}</option><option value="light">{tr('浅色')}</option><option value="dark">{tr('深色')}</option>
-        </select>
+      <FieldRow label={tr('主题')} description={tr('跟随系统时随 Windows 深浅色切换')}>
+        <Menu id="settings-theme" label={tr('主题')} value={draft.theme} matchTriggerWidth className="settings-select"
+          options={[{ value: 'system', label: tr('跟随系统') }, { value: 'light', label: tr('浅色') }, { value: 'dark', label: tr('深色') }]}
+          onChange={value => onChange({ theme: value as Settings['theme'] })} />
       </FieldRow>
     </SettingsSection>
     <SettingsSection title={tr('字体与阅读')}>
@@ -39,8 +40,14 @@ export function AppearanceSettings({ draft, onChange, invoke, onFeedback }: {
       <input id="settings-font-size" type="number" min={12} max={20} value={draft.fontSize} onChange={event => onChange({ fontSize: Number(event.target.value) })} />
     </FieldRow>
     {(['uiFontFamily', 'codeFontFamily'] as const).map(key => <FieldRow key={key} label={tr(key === 'uiFontFamily' ? '界面字体' : '代码字体')} htmlFor={'settings-' + key} description={tr('输入本机已安装的字体名称；留空使用默认值。')}>
-      <input id={'settings-' + key} list={key + '-fonts'} value={draft[key]} placeholder={tr('系统字体')} maxLength={100} onChange={event => onChange({ [key]: event.target.value })} />
-      <datalist id={key + '-fonts'}>{(key === 'uiFontFamily' ? ['Segoe UI', 'Microsoft YaHei UI', 'Arial'] : ['Cascadia Code', 'Consolas', 'Courier New']).map(name => <option key={name} value={name} />)}</datalist>
+      <div className="font-family-field">
+        <input id={'settings-' + key} value={draft[key]} placeholder={tr('系统字体')} maxLength={100} onChange={event => onChange({ [key]: event.target.value })} />
+        {/* A datalist popup is drawn by the operating system, so the suggestions are a popover menu instead. */}
+        <Menu label={tr('常用字体')} placeholder={tr('常用字体')} kind="action" size="sm"
+          value=""
+          options={(key === 'uiFontFamily' ? ['Segoe UI', 'Microsoft YaHei UI', 'Arial'] : ['Cascadia Code', 'Consolas', 'Courier New']).map(name => ({ value: name, label: name }))}
+          onChange={name => onChange({ [key]: name })} />
+      </div>
     </FieldRow>)}
     <FieldRow label={tr('代码字号')} htmlFor="settings-code-font-size"><input id="settings-code-font-size" type="number" min={10} max={24} value={draft.codeFontSize} onChange={event => onChange({ codeFontSize: Number(event.target.value) })} /></FieldRow>
     </SettingsSection>

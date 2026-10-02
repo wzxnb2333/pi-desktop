@@ -24,7 +24,7 @@ export const appErrors = {
   '请先停止任务再移入回收站': 'Stop the task before moving it to the recycle bin',
   '请停止任务后修改运行配置': 'Stop the task before changing its run configuration',
   '此模型未允许该思考程度，请在模型设置中修改': 'This reasoning effort is not enabled. Change it in model settings.',
-  '只能永久删除回收站中的空闲任务': 'Only idle tasks in the recycle bin can be permanently deleted',
+  '请先停止任务再删除': 'Stop the task before deleting it',
   '请选择模型': 'Select a model',
   '请等待任务空闲再压缩上下文': 'Wait for the task to finish before compacting context',
   '请等待任务空闲再分叉': 'Wait for the task to finish before forking',

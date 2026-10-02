@@ -31,6 +31,11 @@ import { goalTools } from './goal-tools.ts';
 import { automationTool } from './automation-tool.ts';
 import { askParentTool, subtaskTool } from './subtask-tool.ts';
 import { addContextTool, addDraftAttachmentsTool, appendDraftTool, artifactListingTool, clearQueuedMessagesTool, contextCatalogTool, desktopFocusTool, desktopViewTool, draftStateTool, harnessTool, listDraftAttachmentsTool, listDraftContextTool, listDraftHistoryTool, manageQueuedMessageTool, messageOptionsTool, messageReadTool, operationTool, pendingApprovalsTool, preflightDraftTool, projectActionRunTool, projectActionsListTool, quoteMessageTool, queuedMessagesTool, removeContextTool, removeDraftAttachmentTool, replaceDraftTextTool, restoreDraftHistoryTool, sendDraftTool, terminalReadTool } from './harness-tool.ts';
+import { manageMessagesTool, manageProjectsTool, manageSessionsTool, manageUiTool, readSessionsTool, sendToSessionTool } from './desktop-session-tools.ts';
+import { manageCommentsTool, manageFilesTool, manageGitTool, managePreviewTool, manageReviewTool, manageTerminalTool, manageWindowsTool, manageWorktreesTool } from './workbench-tools.ts';
+import { manageSettingsTool } from './settings-tool.ts';
+import { browserDataTool, mcpTool, prTool, resourceTool } from './service-tools.ts';
+import type { DesktopToolFamily } from '../shared/desktop-tools.ts';
 import type { SubtaskQuestion } from '../shared/subtasks.ts';
 import { eventItem, historyItems, messageItem } from './timeline.ts';
 import type { ContextReference } from '../shared/input-context.ts';
@@ -224,10 +229,42 @@ export class DesktopAgent {
     if (automationToolNames.length) customTools.push(automationTool(this.desktopTool!));
     const subtaskToolNames = goalToolNames.length && config.settings.subtasksEnabled && !config.thread.subtaskId ? ['manage_subtasks'] : [];
     if (subtaskToolNames.length) customTools.push(subtaskTool(this.desktopTool!));
+    const desktopFamilies: DesktopToolFamily[] = [];
     const harnessToolNames = this.desktopTool ? ['get_harness', 'list_pending_approvals', 'list_artifacts', 'list_queued_messages'] : [];
+    /*
+     * Wave 1 of the desktop surface. Cross-session reads are available everywhere a desktop tool exists
+     * (history is useful to a child agent too); the mutating families stay on main chats, mirroring the
+     * draft tools. `desktopFamilies` feeds `get_harness section=desktop` so the model can discover what
+     * this session actually offers.
+     */
+    if (this.desktopTool) {
+      desktopFamilies.push('session');
+      harnessToolNames.push('read_sessions'); customTools.push(readSessionsTool(this.desktopTool));
+    }
+    if (this.desktopTool && !config.thread.subtaskId && !config.thread.review && !config.thread.sidechat?.temporary) {
+      harnessToolNames.push('manage_sessions'); customTools.push(manageSessionsTool(this.desktopTool));
+      harnessToolNames.push('send_to_session'); customTools.push(sendToSessionTool(this.desktopTool));
+      harnessToolNames.push('manage_projects'); customTools.push(manageProjectsTool(this.desktopTool));
+      harnessToolNames.push('manage_ui'); customTools.push(manageUiTool(this.desktopTool));
+      harnessToolNames.push('manage_messages'); customTools.push(manageMessagesTool(this.desktopTool));
+      harnessToolNames.push('manage_review'); customTools.push(manageReviewTool(this.desktopTool));
+      harnessToolNames.push('manage_git'); customTools.push(manageGitTool(this.desktopTool));
+      harnessToolNames.push('manage_worktrees'); customTools.push(manageWorktreesTool(this.desktopTool));
+      harnessToolNames.push('manage_terminal'); customTools.push(manageTerminalTool(this.desktopTool));
+      harnessToolNames.push('manage_settings'); customTools.push(manageSettingsTool(this.desktopTool));
+      harnessToolNames.push('manage_files'); customTools.push(manageFilesTool(this.desktopTool));
+      harnessToolNames.push('manage_comments'); customTools.push(manageCommentsTool(this.desktopTool));
+      harnessToolNames.push('manage_browser_data'); customTools.push(browserDataTool(this.desktopTool));
+      harnessToolNames.push('manage_pr'); customTools.push(prTool(this.desktopTool));
+      harnessToolNames.push('manage_resources'); customTools.push(resourceTool(this.desktopTool));
+      harnessToolNames.push('manage_mcp'); customTools.push(mcpTool(this.desktopTool));
+      harnessToolNames.push('manage_windows'); customTools.push(manageWindowsTool(this.desktopTool));
+      harnessToolNames.push('manage_preview'); customTools.push(managePreviewTool(this.desktopTool));
+      desktopFamilies.push('project', 'ui', 'message', 'review', 'git', 'worktree', 'terminal', 'file', 'browser', 'mcp', 'settings', 'window', 'artifact');
+    }
     if (harnessToolNames.length) {
       harnessToolNames.push('list_context_options', 'list_message_options', 'read_message_context');
-      customTools.push(harnessTool(this.desktopTool!, () => this.session.getActiveToolNames()), pendingApprovalsTool(this.desktopTool!), artifactListingTool(this.desktopTool!), queuedMessagesTool(this.desktopTool!), contextCatalogTool(this.desktopTool!), messageOptionsTool(this.desktopTool!), messageReadTool(this.desktopTool!));
+      customTools.push(harnessTool(this.desktopTool!, () => this.session.getActiveToolNames(), () => desktopFamilies), pendingApprovalsTool(this.desktopTool!), artifactListingTool(this.desktopTool!), queuedMessagesTool(this.desktopTool!), contextCatalogTool(this.desktopTool!), messageOptionsTool(this.desktopTool!), messageReadTool(this.desktopTool!));
     }
     harnessToolNames.push('list_project_actions');
     if (this.desktopTool && !config.thread.subtaskId && !config.thread.review && !config.thread.sidechat?.temporary) {

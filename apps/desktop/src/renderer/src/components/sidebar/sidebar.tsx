@@ -29,7 +29,7 @@ import { ConfirmDialog } from '../primitives/dialog.tsx';
 import { Menu } from '../primitives/menu.tsx';
 import { Tooltip } from '../primitives/tooltip.tsx';
 import { StatusBar } from '../shell/status-bar.tsx';
-import { ThreadActions } from './thread-actions.tsx';
+import { ThreadActions, ThreadRowActions } from './thread-actions.tsx';
 
 function ThreadIndicator({ thread }: { thread: Thread }) {
   const unread = (thread.readAt ?? 0) < (thread.items.at(-1)?.timestamp ?? thread.createdAt);
@@ -37,6 +37,20 @@ function ThreadIndicator({ thread }: { thread: Thread }) {
   if (!active && !unread) return null;
   const label = [active ? statusText[thread.status] : '', unread ? tr('未读') : ''].filter(Boolean).join(' · ');
   return <span className={'thread-indicator' + (active ? ' thread-dot ' + thread.status : '') + (unread ? ' unread-marker' : '')} role="img" aria-label={label} title={label} />;
+}
+
+/** One row of the pinned and recent shortcut lists, with the same hover actions as a project row. */
+function ShortcutRow({ thread, selected, label }: { thread: Thread; selected: boolean; label: string }) {
+  const { selectThread } = useApp();
+  return <div className={'shortcut-row' + (selected ? ' selected' : '')}
+    onContextMenu={event => { event.preventDefault(); event.currentTarget.querySelector<HTMLButtonElement>('[data-thread-menu] button')?.click(); }}
+    onKeyDown={event => { if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) { event.preventDefault(); event.currentTarget.querySelector<HTMLButtonElement>('[data-thread-menu] button')?.click(); } }}>
+    <Button className={'recent-thread' + (selected ? ' selected' : '')} aria-label={label + thread.title} title={thread.title} onClick={() => selectThread(thread)}>
+      <span className="truncate">{thread.title}</span><ThreadIndicator thread={thread} />
+    </Button>
+    <ThreadRowActions thread={thread} />
+    <ThreadActions thread={thread} />
+  </div>;
 }
 
 export function Sidebar({ width }: { width: number }) {
@@ -57,24 +71,23 @@ export function Sidebar({ width }: { width: number }) {
     ui, patchUi,
   } = useApp();
   const collapsed = ui.collapsedProjects ?? [];
-  const [showTrash, setShowTrash] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [recentsOpen, setRecentsOpen] = useState(true);
+  const [pinnedOpen, setPinnedOpen] = useState(true);
   const [projectFilter, setProjectFilter] = useState('');
   const groups = useMemo(
-    () =>
-      showTrash ? data.projects.map(project => ({ project, threads: data.threads.filter(thread => !thread.subtaskId && !thread.review && !thread.sidechat?.temporary && thread.projectId === project.id && thread.deletedAt) })) : groupThreadList({
-        projects: data.projects,
-        threads: data.threads,
-        showArchived,
-        search: '',
-      }),
-    [data.projects, data.threads, showArchived, showTrash],
+    () => groupThreadList({ projects: data.projects, threads: data.threads, showArchived, search: '' }),
+    [data.projects, data.threads, showArchived],
   );
 
+  const visibleThread = (thread: Thread) => !!thread.projectId && !thread.subtaskId && !thread.review && !thread.sidechat?.temporary && !thread.deletedAt;
+  // Pinned tasks are a cross-project collection at the top, and stay in their project's own list.
+  const pinnedThreads = !showArchived ? data.threads.filter(thread => thread.pinned && !thread.archived && visibleThread(thread))
+    .sort((a, b) => b.updatedAt - a.updatedAt) : [];
   const recentThreads = groups.filter(group => !projectFilter || group.project.id === projectFilter)
-    .flatMap(group => group.threads).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8);
-  const archivedCount = data.threads.filter((thread) => !!thread.projectId && !thread.subtaskId && !thread.review && !thread.sidechat?.temporary && thread.archived && !thread.deletedAt).length;
+    .flatMap(group => group.threads).filter(thread => !thread.pinned)
+    .sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8);
+  const archivedCount = data.threads.filter((thread) => thread.archived && visibleThread(thread)).length;
   const pendingReview = data.threads.filter((thread) => !thread.subtaskId && thread.automationId && !thread.reviewed).length;
   const toggleProject = (id: string) =>
     patchUi({ collapsedProjects: collapsed.includes(id) ? collapsed.filter(item => item !== id) : [...collapsed, id] });
@@ -127,22 +140,22 @@ export function Sidebar({ width }: { width: number }) {
           <Layers size={16} />
           {tr("Skills 与扩展")} </Button>
       </nav>
-      {!!recentThreads.length && !showArchived && !showTrash && <section className="sidebar-recents" aria-label={tr('最近任务')}>
-        <button className="section-label recents-heading" onClick={() => setRecentsOpen(!recentsOpen)} aria-expanded={recentsOpen}>
-          {tr("最近任务")} {recentsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+      {/* Pinned tasks collect above the project chats: they are the ones the user keeps in reach. */}
+      {!!pinnedThreads.length && <section className="sidebar-pinned" aria-label={tr('置顶')}>
+        <button className="section-label pinned-heading" onClick={() => setPinnedOpen(!pinnedOpen)} aria-expanded={pinnedOpen}>
+          {tr("置顶")} {pinnedOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </button>
-        {recentsOpen && <div className="recent-list">{recentThreads.map(thread => <Button key={thread.id}
-          className={'recent-thread' + (activeId === thread.id && view === 'thread' ? ' selected' : '')}
-          aria-label={tr("最近任务：") + thread.title} title={thread.title} onClick={() => selectThread(thread)}>
-          <span className="truncate">{thread.title}</span><ThreadIndicator thread={thread} />
-        </Button>)}</div>}
+        {pinnedOpen && <div className="recent-list">{pinnedThreads.map(thread =>
+          <ShortcutRow key={thread.id} thread={thread} selected={activeId === thread.id && view === 'thread'} label={tr("置顶会话：")} />)}</div>}
       </section>}
-      <section className="sidebar-project-chats" aria-label={showTrash ? tr('回收站') : showArchived ? tr('已归档') : tr('项目聊天')}>
+      <section className="sidebar-project-chats" aria-label={showArchived ? tr('已归档') : tr('项目聊天')}>
       <div className="section-label">
-        <span>{showTrash ? tr("回收站") : showArchived ? tr("已归档") : tr("项目聊天")}</span>
+        <span>{showArchived ? tr("已归档") : tr("项目聊天")}</span>
         <span className="project-filter" data-filtered={!!projectFilter || undefined}>
-          <Filter size={14} aria-hidden="true" />
-          <select aria-label={tr("项目筛选")} title={projectFilter ? data.projects.find(item => item.id === projectFilter)?.name : tr("全部项目")} value={projectFilter} onChange={event => setProjectFilter(event.target.value)}><option value="">{tr("全部项目")}</option>{data.projects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+          <Menu label={tr("项目筛选")} value={projectFilter} iconOnly display={<Filter size={14} aria-hidden="true" />}
+            title={null} align="end" size="sm" className="project-filter-menu"
+            options={[{ value: '', label: tr("全部项目") }, ...data.projects.map(item => ({ value: item.id, label: item.name }))]}
+            onChange={setProjectFilter} />
         </span>
         <IconButton label={tr("添加项目")} onClick={() => void addProject()}>
           <Plus size={14} />
@@ -187,22 +200,10 @@ export function Sidebar({ width }: { width: number }) {
                   >
                     <Button className="thread-main" title={thread.title} onClick={() => selectThread(thread)}>
                       <span className="truncate">{thread.title}</span>
-                      {thread.pinned && <span title={tr("已置顶")}>{tr("置顶")}</span>}
                       {thread.worktreeBranch && <GitBranch size={12} />}
                     </Button>
                     <ThreadIndicator thread={thread} />
-                    {/*
-                      `归档此任务` / `恢复此任务`, deliberately not `归档任务：{title}`: `getByLabel` matches
-                      substrings, so any label containing `归档任务` collides with the Review panel button
-                      the app-level spec resolves by that name. A static label also keeps task titles out
-                      of the accessible-name surface.
-                    */}
-                    <IconButton
-                      label={thread.archived ? tr("恢复此任务") : tr("归档此任务")}
-                      onClick={() => act({ op: 'thread.update', id: thread.id, archived: !thread.archived })}
-                    >
-                      {thread.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
-                    </IconButton>
+                    <ThreadRowActions thread={thread} />
                     <ThreadActions thread={thread} />
                   </div>
                 ))}
@@ -216,6 +217,14 @@ export function Sidebar({ width }: { width: number }) {
         )}
       </div>
       </section>
+      {/* Recents follow the project chats: the project collection is the workspace, recents are a shortcut back. */}
+      {!!recentThreads.length && !showArchived && <section className="sidebar-recents" aria-label={tr('最近任务')}>
+        <button className="section-label recents-heading" onClick={() => setRecentsOpen(!recentsOpen)} aria-expanded={recentsOpen}>
+          {tr("最近任务")} {recentsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        </button>
+        {recentsOpen && <div className="recent-list">{recentThreads.map(thread =>
+          <ShortcutRow key={thread.id} thread={thread} selected={activeId === thread.id && view === 'thread'} label={tr("最近任务：")} />)}</div>}
+      </section>}
       </div>
       <footer className="sidebar-footer">
         <Menu kind="action" label={tr("本地工作区操作")} className="sidebar-profile" value="" side="top"
@@ -223,13 +232,11 @@ export function Sidebar({ width }: { width: number }) {
           options={[
             { value: 'settings', label: tr("设置") }, { value: 'project', label: tr("添加项目") },
             { value: 'archive', label: showArchived ? tr("查看活跃任务") : tr("已归档任务 (") + archivedCount + ')' },
-            { value: 'trash', label: showTrash ? tr("退出回收站") : tr("回收站 (") + data.threads.filter(thread => !!thread.projectId && !thread.subtaskId && !thread.review && !thread.sidechat?.temporary && thread.deletedAt).length + ')' },
             { value: 'info', label: tr("本地运行信息") },
           ]} onChange={value => {
             if (value === 'settings') setView('settings');
             if (value === 'project') void addProject().catch(() => {});
-            if (value === 'archive') { setShowTrash(false); setShowArchived(!showArchived); }
-            if (value === 'trash') { setShowTrash(!showTrash); setShowArchived(false); }
+            if (value === 'archive') setShowArchived(!showArchived);
             if (value === 'info') setShowInfo(true);
           }} />
         <IconButton label={tr("本地运行信息")} onClick={() => setShowInfo(true)}><CircleHelp size={18} /></IconButton>

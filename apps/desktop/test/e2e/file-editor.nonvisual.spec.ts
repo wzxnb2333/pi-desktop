@@ -33,6 +33,7 @@ test('native file save keeps Windows newlines and BOM without leaving a false un
   await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
   await expect(page.locator('.file-toolbar [role=status]')).toHaveText('已保存到磁盘');
   await expect(page.getByRole('tab', { name: 'windows.txt', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'windows.txt', exact: true }).hover();
   await page.getByRole('button', { name: '关闭文件 windows.txt', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(editor).toHaveCount(0);
@@ -62,6 +63,7 @@ test('native external modification and failed reload preserve the draft until th
   await expect(page.locator('.files-workbench').getByRole('alert')).toContainText('ENOENT');
   await expect(editor).toHaveValue('保留的编辑草稿');
   await expect(page.locator('.file-toolbar [role=status]')).toHaveText('有未保存的修改');
+  await page.getByRole('tab', { name: /^conflict\.txt/ }).hover();
   await page.getByRole('button', { name: '关闭文件 conflict.txt', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();
@@ -71,6 +73,7 @@ test('native external modification and failed reload preserve the draft until th
   await expect(editor).toHaveValue('外部程序的新内容');
   await expect(page.locator('.files-workbench').getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
+  await page.getByRole('tab', { name: 'conflict.txt', exact: true }).hover();
   await page.getByRole('button', { name: '关闭文件 conflict.txt', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await fixture.restart();

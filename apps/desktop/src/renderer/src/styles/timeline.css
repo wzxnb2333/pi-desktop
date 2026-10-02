@@ -92,20 +92,6 @@
 .turn .message.user {
   margin-bottom: 16px;
 }
-.turn-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-.turn-head time {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 400;
-}
 .turn-live {
   display: flex;
   align-items: center;
@@ -472,9 +458,14 @@
   font-size: 12px;
   margin: 12px 0;
 }
-.notice.model-switch { width: 100%; margin: 16px 0; gap: 10px; color: var(--muted); background: transparent; box-shadow: none; }
-.notice.model-switch .notice-rule { flex: 1; height: 1px; min-width: 18px; background: var(--border); }
-.notice.model-switch .notice-text { flex: none; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+/*
+ * The switch notice is a divider row, not a card: `timeline.css` loads before the workspace sheet, so
+ * the flat treatment has to outrank `.timeline .notice` explicitly. Centring the row is what keeps the
+ * two rules on the label's optical middle instead of at the top of its line box.
+ */
+.timeline .notice.model-switch { width: 100%; margin: 16px 0; padding: 0; align-items: center; gap: 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--muted); }
+.timeline .notice.model-switch .notice-rule { flex: 1; height: 1px; min-width: 18px; background: var(--border); }
+.timeline .notice.model-switch .notice-text { flex: none; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--muted); }
 .working {
   color: var(--muted);
   font-size: 12px;
