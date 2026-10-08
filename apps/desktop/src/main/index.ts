@@ -54,8 +54,9 @@ const configureWindow = (target: BrowserWindow, main: boolean, showWhenReady = t
   target.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   target.webContents.on('will-navigate', event => event.preventDefault());
   target.webContents.on('will-prevent-unload', event => { if (controller?.confirmDiscardFiles(target)) event.preventDefault(); });
-  target.webContents.on('render-process-gone', (_event, details) => { void log(details.reason); if (!quitting && !target.isDestroyed()) target.reload(); });
+  target.webContents.on('render-process-gone', (_event, details) => { controller?.providerAuth.closeOwner(target.id); void log(details.reason); if (!quitting && !target.isDestroyed()) target.reload(); });
   target.on('close', event => {
+    controller?.providerAuth.closeOwner(target.id);
     if (quitting && !quitReady) { event.preventDefault(); return; }
     if (!quitting && main && controller?.store.data.settings.keepInTray && tray) { event.preventDefault(); controller.voice.closeOwner(target.webContents.id); target.hide(); return; }
     if (!quitting && main && controller && controller.windows.entries.size > 1) { event.preventDefault(); controller.voice.closeOwner(target.webContents.id); target.hide(); return; }

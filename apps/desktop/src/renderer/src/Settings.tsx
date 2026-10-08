@@ -1,6 +1,7 @@
 import { tr, localizeLabel, localizeAppError } from "../../shared/localization.ts";
 import { useLocale } from "./hooks/use-locale.ts";
-import { ArrowLeft, Boxes, Check, Database, Keyboard, Plug2, Search, Settings2, ShieldCheck, Sun } from 'lucide-react';
+import { useContentMotion } from './hooks/use-content-motion.ts';
+import { ArrowLeft, Boxes, Check, Database, Globe2, Keyboard, Plug2, Search, Settings2, ShieldCheck, Sun } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
   type DesktopData,
@@ -24,6 +25,7 @@ import { AppearanceSettings } from './AppearanceSettings.tsx';
 import { QuickShortcutSettings } from './QuickShortcutSettings.tsx';
 import { MemorySettings } from './MemorySettings.tsx';
 import { VoiceSettings } from './VoiceSettings.tsx';
+import { BrowserSettings } from './BrowserSettings.tsx';
 import { parseMcpSecrets, validateMcpConfiguration } from '../../shared/mcp-configuration.ts';
 import { DEFAULT_KEYBINDINGS, keyboardShortcut, shortcutConflicts, shortcutMatchesQuery } from '../../shared/shortcuts.ts';
 import { settingsChanges, sameSetting } from '../../shared/settings-updates.ts';
@@ -37,18 +39,18 @@ interface Feedback {
   error: boolean;
 }
 
-const CATEGORIES = { general: '通用', appearance: '外观', shortcuts: '键盘快捷键', models: '模型', permissions: '审批与信任', mcp: 'MCP', memories: '跨会话记忆', voice: '离线语音' } as const;
+const CATEGORIES = { general: '通用', appearance: '外观', shortcuts: '键盘快捷键', models: '模型', permissions: '审批与信任', mcp: 'MCP', browser: '浏览器连接', memories: '跨会话记忆', voice: '离线语音' } as const;
 export type SettingsCategory = keyof typeof CATEGORIES;
-const CATEGORY_ICONS = { general: Settings2, appearance: Sun, shortcuts: Keyboard, models: Boxes, permissions: ShieldCheck, mcp: Plug2, memories: Database, voice: Settings2 };
+const CATEGORY_ICONS = { general: Settings2, appearance: Sun, shortcuts: Keyboard, models: Boxes, permissions: ShieldCheck, mcp: Plug2, browser: Globe2, memories: Database, voice: Settings2 };
 const CATEGORY_DESCRIPTIONS = {
   general: '调整输入、通知和本机工作方式。', appearance: '为界面和代码选择合适的主题、字体与颜色。',
   shortcuts: '查找命令并设置符合习惯的按键。', models: '管理模型连接、凭据和能力，供任务选择。',
   permissions: '管理新任务的执行权限与项目授权。', mcp: '连接外部工具，按需管理授权与工具策略。',
-  memories: '决定哪些信息可以跨会话保留和使用。', voice: '管理本地语音模型、设备和声音。',
+  memories: '决定哪些信息可以跨会话保留和使用。', voice: '管理本地语音模型、设备和声音。', browser: '连接 Chrome 扩展并管理任务标签授权。',
 } as const;
 const CATEGORY_GROUPS = [
   { label: '个人', items: ['general', 'appearance', 'shortcuts', 'memories', 'voice'] },
-  { label: '集成', items: ['mcp'] },
+  { label: '集成', items: ['mcp', 'browser'] },
   { label: '编码', items: ['models', 'permissions'] },
 ] as const;
 const CATEGORY_KEYWORDS: Record<SettingsCategory, string[]> = {
@@ -56,7 +58,7 @@ const CATEGORY_KEYWORDS: Record<SettingsCategory, string[]> = {
   appearance: ['主题', '字号', '界面字体', '代码字体', '代码字号', '强调色', '背景色', '前景色', '导入主题', '导出主题'], shortcuts: ['快捷键'], models: ['提供商', '模型', 'API Key', 'Base URL', '供应商'],
   permissions: ['默认审批', '项目可信度'], mcp: ['服务器', '工具'],
   memories: ['跨会话记忆', '记忆范围', '自动生成记忆候选'],
-  voice: ['离线语音', '录音设备', '模型目录', '本地听写', '合成音色'],
+  voice: ['离线语音', '录音设备', '模型目录', '本地听写', '合成音色'], browser: ['Chrome', '浏览器连接', '配对码', '标签授权'],
 };
 
 export function SettingsNavigation({
@@ -147,6 +149,10 @@ export function Settings({
   const category = externalCategory ?? localCategory;
   const setCategory = onCategoryChange ?? setLocalCategory;
   const pageRef = useRef<HTMLElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLElement>(null);
+  useContentMotion(bodyRef, category);
+  useContentMotion(headingRef, category);
   useEffect(() => { pageRef.current?.scrollTo({ top: 0 }); }, [category]);
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -315,7 +321,7 @@ export function Settings({
   const dirty = !sameSetting(draft, baseline.current) || Object.values(keys).some(Boolean) || Object.values(secrets).some(value => !!value.trim());
   return (
     <section className="settings-page" ref={pageRef} data-settings-category={category}>
-      <header className="page-heading">
+      <header className="page-heading" ref={headingRef}>
         <h1>{localizeLabel(CATEGORIES[category])}</h1>
         <p className="settings-description">{tr(CATEGORY_DESCRIPTIONS[category])}</p>
       </header>
@@ -323,11 +329,12 @@ export function Settings({
         dirty={memoryDirty || dirty} />
       <div className="settings-layout">
         {externalCategory === undefined && <SettingsNavigation category={category} onChange={setCategory} />}
-        <div className="settings-body">
+        <div className="settings-body" ref={bodyRef}>
           <fieldset className="settings-fields" disabled={saving} aria-label={tr("设置内容")} aria-busy={saving}>
           <MemorySettings data={data} preferences={draft.memory} onChange={memory => patch({ memory })} invoke={invoke} active={category === 'memories'} onDirty={setMemoryDirty} onBusy={setMemoryBusy} />
           <VoiceSettings preferences={draft.voice} savedDirectory={data.settings.voice.modelDirectory} onChange={voice => patch({ voice })} invoke={invoke} active={category === 'voice'} />
-          {category === 'models' && <ModelSettings providers={draft.modelProviders} models={draft.models} defaultId={draft.modelId} defaultThinking={draft.thinking} selected={selected} keys={keys}
+          {category === 'models' && <ModelSettings providers={draft.modelProviders} models={draft.models} defaultId={draft.modelId} defaultThinking={draft.thinking} selected={selected} keys={keys} invoke={invoke} persist={persist}
+            savedProviderIds={baseline.current.modelProviders.map(provider => provider.id)}
             error={modelIssue?.id === selected ? modelIssue.text : undefined}
             catalog={catalog} catalogError={catalogError} onSelect={setSelected} onAddProvider={addProvider}
             onChange={patchProvider} onRetry={() => setCatalogAttempt(value => value + 1)}
@@ -422,6 +429,7 @@ export function Settings({
             policies={draft.mcpToolPolicies} onPoliciesChange={mcpToolPolicies => patch({ mcpToolPolicies })}
             onChange={mcpServers => patch({ mcpServers })} onSecret={(id, value) => { setSecrets(previous => ({ ...previous, [id]: value })); setFeedback(null); }}
             persist={persist} invoke={invoke} onFeedback={(text, error) => setFeedback({ text, error })} />}
+          {category === 'browser' && <BrowserSettings data={data} invoke={invoke} />}
           </fieldset>
           <p className="hint">
             {tr("偏好保存后立即生效；模型、Skills 和 MCP 改动从下一次运行生效，不中断当前任务。")}

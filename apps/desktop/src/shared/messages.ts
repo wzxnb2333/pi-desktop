@@ -14,7 +14,9 @@ import { chatMessages } from './chat-messages.ts';
 import { voiceMessages } from './voice-messages.ts';
 import { composerMessages } from './composer-messages.ts';
 import { settingsMessages } from './settings-messages.ts';
+import { toolMessages } from './tool-messages.ts';
 export const messages = {
+  ...toolMessages,
   ...settingsMessages,
   ...composerMessages,
   ...extraMessages,
@@ -898,6 +900,9 @@ export const messages = {
   "分支建议": "Branch suggestions",
   "起点建议": "Start point suggestions",
   "选择": "Pick",
+  "子代理模型": "Subagent model",
+  "子代理思考档位": "Subagent reasoning level",
+  "跟随主代理": "Follow the main agent",
   "删除模型 {p0}": "Delete model {p0}",
   "由内置目录提供，不可修改": "Provided by the built-in catalog and not editable",
   "当前模型不在内置目录中。请重新选择目录模型，或改用自定义提供商。": "This model is not in the built-in catalog. Pick a catalog model or use a custom provider.",
@@ -965,5 +970,8 @@ export const messages = {
   "[仅恢复最近终端输出，较早内容已超出缓冲]\r\n": "[Only recent terminal output was restored; earlier output is outside the buffer]\r\n",
   "界面语言": "Language",
   "立即生效，不会中断任务。": "Applies immediately without interrupting tasks.",
-  "简体中文": "简体中文"
+  "简体中文": "简体中文",
+  "缓存命中": "Cache hit",
+  "缓存读 {p0} · 缓存写 {p1} tokens": "Cache read {p0} · cache write {p1} tokens",
+  "输出速度": "Output speed",
 } as const;

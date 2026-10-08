@@ -7,6 +7,8 @@ interface SubtaskRuntime {
   prepare(record: Subtask, signal: AbortSignal, progress: (text: string) => void): Promise<Thread>;
   run(record: Subtask, child: Thread, signal: AbortSignal): Promise<string>;
   save(records: Subtask[]): Promise<void>; deliver(parentId: string, id: string): Promise<void>;
+  /** Validates the delegation's model and level, then applies them to the child thread when it exists. */
+  retarget?(record: Subtask, definition: SubtaskDefinition): void;
   notifyParent?(parentId: string, taskId: string, question: SubtaskQuestion): Promise<void>;
   changed(): void; error(reason: unknown): void;
 }
@@ -57,6 +59,25 @@ export class Subtasks {
       records.push(next); return structuredClone(next);
     });
     this.drain(); return record;
+  }
+  /**
+   * Retargets a child's model and reasoning level after the fact. A queued child picks the values up when it
+   * starts; one that is already running keeps the turn it captured and switches from its next turn on.
+   */
+  async update(parentId: string, id: string, patch: { modelId?: string | null; thinking?: SubtaskDefinition['thinking'] | null }): Promise<Subtask> {
+    this.parent(parentId);
+    return this.mutate(records => {
+      const current = records.find(item => item.id === id && item.parentThreadId === parentId);
+      if (!current) throw new Error('子任务不存在');
+      const definition = subtaskDefinitionSchema.parse({
+        ...current.definition,
+        modelId: patch.modelId === null ? undefined : patch.modelId ?? current.definition.modelId,
+        thinking: patch.thinking === null ? undefined : patch.thinking ?? current.definition.thinking,
+      });
+      this.runtime.retarget?.(current, definition);
+      current.definition = definition;
+      return structuredClone(current);
+    });
   }
   recover(): void {
     for (const record of this.runtime.records()) {

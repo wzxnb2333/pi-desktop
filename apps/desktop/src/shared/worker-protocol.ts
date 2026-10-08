@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { runtimeOAuthSnapshotSchema } from './provider-auth.ts';
 import { contextReferenceSchema } from './input-context.ts';
 import { queueChangeSchema } from './composer.ts';
 import { reviewSubmissionSchema } from './reviews.ts';
@@ -46,12 +47,14 @@ export const workerConfigSchema = z
     model: providerModelSchema,
     modelProvider: modelProviderSchema,
     apiKey: z.string().optional(),
+    oauth: runtimeOAuthSnapshotSchema.optional(),
     settings: settingsSchema,
     mcp: z.array(z.object({ config: mcpSchema, secrets: z.record(z.string(), z.string()) })),
     testMode: z.boolean().default(false),
   })
   .strict();
 export const workerCommandSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('model.auth.result'), id: z.uuid(), snapshot: runtimeOAuthSnapshotSchema.optional(), error: z.string().optional() }).strict(),
   z.object({ type: z.literal('subtask.question'), id: z.uuid(), taskId: z.uuid(), question: subtaskQuestionSchema }).strict(),
   z.object({ type: z.literal('desktop.progress'), id: z.uuid(), data: z.string().max(2 * 1024 * 1024) }).strict(),
   z.object({ type: z.literal('desktop.result'), id: z.uuid(), result: toolResultSchema.optional(), error: z.string().optional() }).strict(),
@@ -83,6 +86,8 @@ export const workerCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('dispose'), requestId: z.string() }).strict(),
 ]);
 export const workerEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('model.auth'), id: z.uuid() }).strict(),
+  z.object({ type: z.literal('model.auth.cancel'), id: z.uuid() }).strict(),
   z.object({ type: z.literal('desktop.call'), id: z.uuid(), request: desktopToolSchema }).strict(),
   z.object({ type: z.literal('desktop.cancel'), id: z.uuid() }).strict(),
   z.object({ type: z.literal('mcp.token'), id: z.uuid(), serverId: z.string(), rejectedToken: z.string().optional() }).strict(),

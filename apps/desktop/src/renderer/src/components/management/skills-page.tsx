@@ -1,5 +1,6 @@
 import { localizeAppError, tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
+import { useContentMotion } from '../../hooks/use-content-motion.ts';
 import { Layers, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { type ResourceInspection, type Settings, bootstrapSchema, resourceInspectionSchema, resourceSchema } from '../../../../shared/contracts.ts';
@@ -35,6 +36,8 @@ export function SkillsPage() {
   const mounted = useRef(false);
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState<'all' | 'skill' | 'extension'>('all');
+  const results = useRef<HTMLDivElement>(null);
+  useContentMotion(results, kind);
   const [detail, setDetail] = useState<Detail>();
   const detailRequest = useRef(0);
   const detailTrigger = useRef<HTMLElement | null>(null);
@@ -190,7 +193,7 @@ export function SkillsPage() {
         <ul>{inspection.diagnostics.map((item, index) => <li key={index}><strong>{item.kind === 'skill' ? 'Skill' : tr("扩展")} · {{ warning: tr("警告"), error: tr("错误"), collision: tr("名称冲突") }[item.type]}</strong><p>{item.message}</p>{item.path && <code>{item.path}</code>}</li>)}</ul>
       </details>}
     </section>
-    <div className="field-stack resource-list" aria-label={tr("已安装资源")}>
+    <div ref={results} className="field-stack resource-list" aria-label={tr("已安装资源")}>
       {visible.map(resource => <FieldRow key={resource.id} label={resource.name} description={<><span className="badge">{resource.kind === 'skill' ? 'SKILL' : 'EXTENSION'}</span><span className="resource-path">{resource.path}</span>{inspection?.descriptions[resource.id] && <span>{inspection.descriptions[resource.id]}</span>}</>}>
         <Button size="sm" aria-expanded={detail?.resource.id === resource.id} aria-controls={detail?.resource.id === resource.id ? 'resource-detail' : undefined} onClick={event => { detailTrigger.current = event.currentTarget; void readDetail(resource); }}>{tr("详情")}</Button>
         <Button size="sm" disabled={busy} onClick={() => void run(async () => { await window.desktop.invoke({ op: 'resource.open', id: resource.id, reveal: true }); return undefined; })}>{tr("打开文件位置")}</Button>

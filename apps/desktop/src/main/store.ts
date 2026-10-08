@@ -813,7 +813,7 @@ export class SecretVault {
     return this.enqueue(async () => {
       await this.recoverPending();
       const data = await this.read();
-      const obsolete = Object.keys(data).filter(id => /^(?:mcp:.+|mcp-oauth:[a-f0-9]{64})$/.test(id) && !this.isReferenced(id));
+      const obsolete = Object.keys(data).filter(id => /^(?:mcp:.+|(?:mcp|provider)-oauth:[a-f0-9]{64})$/.test(id) && !this.isReferenced(id));
       for (const id of obsolete) delete data[id];
       if (obsolete.length) await this.write(data);
       return obsolete.length;
@@ -854,7 +854,7 @@ export class SecretVault {
       throw new Error('凭据恢复记录无法读取，原文件已保留。', { cause: error });
     }
     if (!raw || typeof raw !== 'object' || !('version' in raw) || raw.version !== 1 || !('entries' in raw) || !raw.entries || typeof raw.entries !== 'object' || Array.isArray(raw.entries) ||
-      Object.entries(raw.entries).some(([id, value]) => !/^(?:(?:provider|mcp):.+|mcp-oauth:[a-f0-9]{64})$/.test(id) || typeof value !== 'string' || !value))
+      Object.entries(raw.entries).some(([id, value]) => !/^(?:(?:provider|mcp):.+|(?:mcp|provider)-oauth:[a-f0-9]{64})$/.test(id) || typeof value !== 'string' || !value))
       throw new Error('凭据恢复记录无法读取，原文件已保留。');
     const references = 'references' in raw ? raw.references : undefined;
     if (references !== undefined && (!references || typeof references !== 'object' || Array.isArray(references) ||
@@ -862,10 +862,15 @@ export class SecretVault {
       Object.entries(references).some(([id, value]) => !Object.hasOwn(raw.entries!, id) || (typeof value !== 'boolean' && (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value))))))
       throw new Error('凭据恢复记录无法读取，原文件已保留。');
     const data = await this.read();
+    const expectedReferences = references as Record<string, string | boolean> | undefined;
     let changed = false;
     for (const [id, value] of Object.entries(raw.entries) as [string, string][]) {
       const reference = this.isReferenced(id);
-      if (reference && (references === undefined || reference === (references as Record<string, string | boolean>)[id])) {
+      const previousReference = expectedReferences?.[id];
+      // Older provider-key journals stored only whether the provider id existed. Keep
+      // those recoverable while new journals compare the identity fingerprint strictly.
+      const referenceMatches = references === undefined || (previousReference === true && Boolean(reference)) || reference === previousReference;
+      if (reference && referenceMatches) {
         if (!data[id]) { data[id] = value; changed = true; }
       } else if (data[id] === value) { delete data[id]; changed = true; }
     }

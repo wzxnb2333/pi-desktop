@@ -1,6 +1,7 @@
 import { type WorkerEvent, workerCommandSchema, workerEventSchema } from '../shared/worker-protocol.ts';
 import { DesktopAgent } from './agent.ts';
 import type { ToolResult } from '../shared/tool-results.ts';
+import type { RuntimeOAuthSnapshot } from '../shared/provider-auth.ts';
 
 const parent = (
   process as NodeJS.Process & {
@@ -16,6 +17,7 @@ function emit(event: WorkerEvent): void {
   else process.send?.(valid);
 }
 const tokens = new Map<string, { resolve: (token: string) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
+const authCalls = new Map<string, { resolve: (snapshot: RuntimeOAuthSnapshot) => void; reject: (error: Error) => void }>();
 const desktopCalls = new Map<string, { resolve: (result: ToolResult) => void; reject: (error: Error) => void; onData?: (data: Uint8Array) => void }>();
 const agent = new DesktopAgent(emit, (config, rejectedToken) => new Promise<string>((resolve, reject) => {
   const id = crypto.randomUUID(); const timer = setTimeout(() => { tokens.delete(id); reject(new Error('OAuth 刷新失败，请检查连接或重新登录')); }, 60000);
@@ -27,6 +29,13 @@ const agent = new DesktopAgent(emit, (config, rejectedToken) => new Promise<stri
   const timer = setTimeout(cancel, request.action === 'sandbox.exec' ? Math.min((request.timeout ?? 120) * 1000 + 30000, 2147483647) : 180000);
   desktopCalls.set(id, { onData, resolve: result => { finish(); resolve(result); }, reject: error => { finish(); reject(error); } });
   signal.addEventListener('abort', cancel, { once: true }); emit({ type: 'desktop.call', id, request });
+}), signal => new Promise<RuntimeOAuthSnapshot>((resolve, reject) => {
+  signal?.throwIfAborted(); const id = crypto.randomUUID();
+  const finish = () => { clearTimeout(timer); signal?.removeEventListener('abort', cancel); authCalls.delete(id); };
+  const cancel = () => { finish(); emit({ type: 'model.auth.cancel', id }); reject(new Error('模型 OAuth 请求已取消或超时')); };
+  const timer = setTimeout(cancel, 50000);
+  authCalls.set(id, { resolve: snapshot => { finish(); resolve(snapshot); }, reject: error => { finish(); reject(error); } });
+  signal?.addEventListener('abort', cancel, { once: true }); emit({ type: 'model.auth', id });
 }));
 async function handle(raw: unknown): Promise<void> {
   const parsed = workerCommandSchema.safeParse(raw);
@@ -35,6 +44,11 @@ async function handle(raw: unknown): Promise<void> {
     return;
   }
   const message = parsed.data;
+  if (message.type === 'model.auth.result') {
+    const pending = authCalls.get(message.id); if (!pending) return;
+    if (message.snapshot) pending.resolve(message.snapshot); else pending.reject(new Error(message.error ?? '模型 OAuth 请求失败'));
+    return;
+  }
   if (message.type === 'subtask.question') {
     await agent.receiveSubtaskQuestion(message.taskId, message.question);
     return;

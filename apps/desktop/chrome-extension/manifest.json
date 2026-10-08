@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Pi Desktop Browser Bridge",
+  "description": "Connects an explicitly paired Chrome tab to Pi Desktop.",
+  "version": "0.2.0",
+  "permissions": ["tabs", "debugger", "storage"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*", "http://*/*", "https://*/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "Connect to Pi Desktop", "default_popup": "popup.html" },
+  "content_scripts": [{ "matches": ["http://*/*", "https://*/*"], "js": ["content.js"], "run_at": "document_idle", "all_frames": false }]
+}

@@ -1,4 +1,6 @@
 import { useLocale } from "../../hooks/use-locale.ts";
+import { useMotionPresence } from '../../hooks/use-motion-presence.ts';
+import { useDismissOnHidden } from '../../hooks/use-dismiss-on-hidden.ts';
 import { ReferenceIcon } from './reference-icon.tsx';
 import { Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -112,6 +114,7 @@ export function Menu({
   const listRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef(0);
   const [open, setOpen] = useState(false);
+  const present = useMotionPresence(open);
   const [triggerWidth, setTriggerWidth] = useState(0);
   const [position, setPosition] = useState({ left: 0, top: 0, maxHeight: window.innerHeight - 12 });
   const [placedSide, setPlacedSide] = useState(side);
@@ -131,6 +134,7 @@ export function Menu({
     onOpenChange?.(false);
     if (restoreFocus) triggerRef.current?.focus();
   };
+  useDismissOnHidden(triggerRef, open, () => hide(false));
 
   // The list only exists in the frame after `open` flips, so the requested row is focused post-layout.
   useLayoutEffect(() => {
@@ -268,14 +272,17 @@ export function Menu({
         <span className="menu-trigger-label">{display}</span>
         {!iconOnly && <ReferenceIcon name="down" size={14} />}
       </button>
-      {open &&
+      {present &&
         createPortal(
           <div
             id={listId}
             ref={listRef}
             className={['menu-list', listClassName].filter(Boolean).join(' ')}
-            role={content ? 'dialog' : 'menu'}
+            role={open ? (content ? 'dialog' : 'menu') : undefined}
             aria-labelledby={triggerId}
+            aria-hidden={!open}
+            inert={!open}
+            data-motion-state={open ? 'open' : 'closing'}
             data-align={align}
             data-side={placedSide}
             style={{

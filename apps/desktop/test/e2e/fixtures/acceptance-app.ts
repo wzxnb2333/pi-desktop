@@ -14,7 +14,7 @@ export interface CapturedPrompt {
 }
 
 /** All provider requests terminate on loopback; no account credentials are used. */
-export async function acceptanceApp(rendererUrl: string, options: { args?: string[]; authorizeExternalTools?: boolean } = {}) {
+export async function acceptanceApp(rendererUrl: string, options: { args?: string[]; authorizeExternalTools?: boolean; mainFile?: string; providerOAuthFixture?: boolean } = {}) {
   const storage = await mkdtemp(join(tmpdir(), 'pi-acceptance-'));
   let server: Server | undefined;
   let application: ElectronApplication;
@@ -57,6 +57,7 @@ export async function acceptanceApp(rendererUrl: string, options: { args?: strin
     execFileSync('git', ['-C', project, 'commit', '-m', 'initial']);
     const calls: CapturedPrompt[] = [];
     const reviews: CapturedPrompt[] = [];
+    const reviewAuthorizations: (string | undefined)[] = [];
     let reviewMode: 'low' | 'high' | 'uncertain' | 'invalid' | 'fail' | 'hold' = 'low';
     const heldReviews = new Set<ServerResponse>();
     const authorizations: (string | undefined)[] = [];
@@ -83,8 +84,9 @@ export async function acceptanceApp(rendererUrl: string, options: { args?: strin
       const chunks: Buffer[] = [];
       for await (const chunk of request) chunks.push(Buffer.from(chunk));
       const captured = JSON.parse(Buffer.concat(chunks).toString()) as CapturedPrompt;
-      if (captured.messages.some(message => message.role === 'system' && typeof message.content === 'string' && message.content.includes('independent permission reviewer'))) {
+      if (captured.messages.some(message => ['system', 'developer'].includes(message.role) && JSON.stringify(message.content).includes('independent permission reviewer'))) {
         reviews.push(captured);
+        reviewAuthorizations.push(request.headers.authorization);
         if (reviewMode === 'fail') { response.writeHead(400, { 'Content-Type': 'application/json' }); response.end(JSON.stringify({ error: { message: 'REVIEW_FIXTURE_ERROR' } })); return; }
         response.writeHead(200, { 'Content-Type': 'text/event-stream' });
         if (reviewMode === 'hold') { heldReviews.add(response); response.on('close', () => heldReviews.delete(response)); return; }
@@ -95,7 +97,7 @@ export async function acceptanceApp(rendererUrl: string, options: { args?: strin
       authorizations.push(request.headers.authorization);
       if (mode === 'fail') {
         response.writeHead(400, { 'Content-Type': 'application/json' });
-        response.end(JSON.stringify({ error: { message: 'ACCEPTANCE_PROVIDER_ERROR', type: 'invalid_request_error' } }));
+        response.end(JSON.stringify({ error: { message: `${options.providerOAuthFixture ? 'LOCAL_OAUTH_ACCESS_2 ' : ''}ACCEPTANCE_PROVIDER_ERROR`, type: 'invalid_request_error' } }));
         return;
       }
       response.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -136,11 +138,20 @@ export async function acceptanceApp(rendererUrl: string, options: { args?: strin
     data.ui.activeThreadId = 't';
     await writeFile(join(storage, 'desktop.json'), JSON.stringify(data));
     const env = { ...process.env, HOME: home, USERPROFILE: home, PI_DESKTOP_USER_DATA: storage, ELECTRON_RENDERER_URL: rendererUrl } as Record<string, string>;
+    let cliAuthFile: string | undefined;
+    if (options.providerOAuthFixture) {
+      env.PI_PROVIDER_OAUTH_FIXTURE_BASE_URL = url + '/v1';
+      const agentDirectory = join(home, '.pi', 'agent');
+      env.PI_CODING_AGENT_DIR = agentDirectory;
+      await mkdir(agentDirectory, { recursive: true });
+      cliAuthFile = join(agentDirectory, 'auth.json');
+      await writeFile(cliAuthFile, '{"fixture":"leave unchanged"}\n');
+    }
     delete env.ELECTRON_RUN_AS_NODE;
     let page: Page;
     const errors: string[] = [];
     const start = async () => {
-      application = await electron.launch({ args: [resolve('out/main/index.js'), ...(options.args ?? [])], env });
+      application = await electron.launch({ args: [resolve(options.mainFile ?? 'out/main/index.js'), ...(options.args ?? [])], env });
       const observed = new WeakSet<Page>();
       const observe = (target: Page) => { if (!observed.has(target)) { observed.add(target); target.on('pageerror', error => errors.push(error.message)); } };
       application.on('window', observe);
@@ -164,7 +175,8 @@ export async function acceptanceApp(rendererUrl: string, options: { args?: strin
     };
     await start();
     return {
-      storage, project, home, url, calls, reviews, authorizations, errors,
+      storage, project, home, url, calls, reviews, authorizations, reviewAuthorizations, errors,
+      ...(cliAuthFile ? { cliAuthFile } : {}),
       setReview(next: typeof reviewMode) { reviewMode = next; },
       releaseReviews() { for (const response of heldReviews) { send(response, { content: '{"risk":"low","reason":"late fixture approval"}' }); send(response, {}, 'stop'); response.end('data: [DONE]\n\n'); } heldReviews.clear(); },
       get app() { return application; },

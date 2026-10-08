@@ -3,20 +3,21 @@ import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 import { z } from 'zod';
 import type { ModelProvider, ProviderModel } from '../shared/contracts.ts';
 import { registerConfiguredModel } from '../shared/model-runtime.ts';
+import type { ModelAuthResolver, RuntimeOAuthSnapshot } from '../shared/provider-auth.ts';
 
 const verdictSchema = z.object({ risk: z.enum(['low', 'high', 'uncertain']), reason: z.string().trim().min(1).max(2000) }).strict();
 export type ActionReview = z.infer<typeof verdictSchema>;
 export interface ActionReviewInput { tool: string; arguments: unknown; cwd: string; userRequest: string }
 
 /** Independent inference only: no agent tools, project instructions, extension loading or shared history. */
-export async function reviewAction(provider: ModelProvider, configured: ProviderModel, apiKey: string | undefined, input: ActionReviewInput, signal: AbortSignal): Promise<ActionReview> {
+export async function reviewAction(provider: ModelProvider, configured: ProviderModel, apiKey: string | undefined, input: ActionReviewInput, signal: AbortSignal, oauth?: RuntimeOAuthSnapshot, resolveOAuth?: ModelAuthResolver): Promise<ActionReview> {
   signal.throwIfAborted();
   const content = JSON.stringify(input);
   if (content.length > 24000) return { risk: 'uncertain', reason: '操作内容过长，无法完整审查，需要你手动批准。' };
   const reviewSignal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
   try {
     const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, allowModelNetwork: false, signal: reviewSignal });
-    await registerConfiguredModel(runtime, provider, configured, apiKey, ['text']);
+    await registerConfiguredModel(runtime, provider, configured, apiKey, ['text'], oauth, resolveOAuth);
     const model = runtime.getModel(provider.namespace, configured.model);
     if (!model) throw new Error('Reviewer model unavailable');
     const response = await runtime.completeSimple(model, {

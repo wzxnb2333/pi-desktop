@@ -19,6 +19,8 @@ export function ContextUsage({ usage }: { usage: Thread['usage'] }) {
     <strong>{label}</strong>
     <p>{tr('当前')} {format(usage?.contextTokens)} / {format(usage?.contextWindow)} tokens</p>
     {usage && <p>{tr('输入')} {format(usage.input)} {tr('· 输出')} {format(usage.output)} {tr('· 总计')} {format(usage.total)} tokens</p>}
+    {usage?.cacheHitRate !== undefined && <p>{tr('缓存命中')} {usage.cacheHitRate.toLocaleString(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%{usage.cacheRead !== undefined && ' · ' + tr('缓存读 {p0} · 缓存写 {p1} tokens', { p0: format(usage.cacheRead), p1: format(usage.cacheWrite ?? 0) })}</p>}
+    {usage?.outputPerSecond !== undefined && <p>{tr('输出速度')} {usage.outputPerSecond.toLocaleString(getLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} tokens/s</p>}
     {usage?.cost !== undefined && <p>{tr('SDK 记录费用')} ${usage.cost.toFixed(4)}</p>}
   </div>}>
     <span className="context-usage-ring" role="img" tabIndex={0} aria-label={label}>

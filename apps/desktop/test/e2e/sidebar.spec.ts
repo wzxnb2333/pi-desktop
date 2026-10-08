@@ -19,7 +19,7 @@ import { type Browser, type Page, chromium, expect, test } from '@playwright/tes
  */
 const specDir = dirname(fileURLToPath(import.meta.url));
 const sheetDir = join(specDir, '../../src/renderer/src/styles');
-const sheets = ['tokens.css', 'codex-26915-theme.css', 'base.css', 'utilities.css', 'shell.css', 'sidebar.css'];
+const sheets = ['tokens.css', 'codex-26915-theme.css', 'base.css', 'utilities.css', 'shell.css', 'sidebar.css', 'sidebar-motion.css'];
 
 const harness = `
 import { createRoot } from 'react-dom/client';
@@ -263,6 +263,15 @@ test('pinning a shortcut row collects it under 置顶 and takes it out of 最近
   const pinned = activePage.locator('.sidebar-pinned');
   await expect(pinned.locator('.recent-thread')).toHaveCount(1);
   await expect(pinned.locator('.recent-thread')).toHaveAttribute('title', '第二条任务');
+  const pinnedMotion = pinned.locator('.sidebar-motion');
+  await pinned.locator('.pinned-heading').click();
+  await expect(pinnedMotion).toHaveAttribute('aria-hidden', 'true');
+  await expect(pinnedMotion).toHaveAttribute('inert', '');
+  await expect(pinnedMotion).toBeHidden();
+  await expect(activePage.getByRole('button', { name: '置顶会话：第二条任务' })).toHaveCount(0);
+  await pinned.locator('.pinned-heading').click();
+  await expect(pinnedMotion).toHaveAttribute('aria-hidden', 'false');
+  await expect(pinnedMotion).not.toHaveAttribute('inert');
   // A pinned task is a shortcut, not a duplicate: recents drop it, the project list keeps it.
   await expect(activePage.locator('.sidebar-recents .recent-thread')).toHaveCount(3);
   expect((await titles().allTextContents()).map((text) => text.trim())).toContain('第二条任务');
@@ -328,7 +337,11 @@ test('project chats precede recents and duplicate creation and search entries st
   await expect(activePage.getByRole('button', { name: '新建聊天', exact: true })).toHaveCount(1);
   await expect(rows()).toHaveCount(4);
   await activePage.getByRole('button', { name: '最近任务', exact: true }).click();
-  await expect(activePage.locator('.recent-thread')).toHaveCount(0);
+  const recentMotion = activePage.locator('.sidebar-recents .sidebar-motion');
+  await expect(recentMotion).toHaveAttribute('aria-hidden', 'true');
+  await expect(recentMotion).toHaveAttribute('inert', '');
+  await expect(recentMotion).toBeHidden();
+  await expect(activePage.getByRole('button', { name: /最近任务：/ })).toHaveCount(0);
   await expect(rows()).toHaveCount(4);
 });
 
@@ -387,14 +400,87 @@ test('no sidebar label lands on a name another surface resolves', async () => {
   expect(await activePage.getByLabel('新建 示例项目 的任务').count()).toBe(1);
 });
 
-test('a project collapses without touching its neighbours', async () => {
+test('a project collapses without touching neighbours and hides its retained rows', async () => {
   activePage = await openSidebar();
   const first = activePage.locator('.project-row').first();
+  const motion = activePage.locator('.project-group').first().locator('.project-thread-motion');
   await first.getByLabel('折叠 示例项目').click();
-  expect((await titles().allTextContents()).map((text) => text.trim())).toEqual(['另一个项目里的任务']);
+  await expect(motion).toHaveAttribute('aria-hidden', 'true');
+  await expect(motion).toHaveAttribute('inert', '');
+  await expect(motion).toBeHidden();
+  await expect(motion.getByRole('button')).toHaveCount(0);
+  const hiddenTask = motion.locator('.thread-main').first();
+  await hiddenTask.evaluate(element => (element as HTMLButtonElement).focus());
+  await expect(hiddenTask).not.toBeFocused();
+  await expect(motion.locator('.thread-row')).toHaveCount(3);
+  await expect(rows()).toHaveCount(4);
   expect(await first.getByLabel('展开 示例项目').count()).toBe(1);
   await first.getByLabel('展开 示例项目').click();
+  await expect(motion).toHaveAttribute('aria-hidden', 'false');
+  await expect(motion).not.toHaveAttribute('inert');
   await expect(rows()).toHaveCount(4);
+});
+
+test('external project collapse returns focus from a thread to its disclosure', async () => {
+  activePage = await openSidebar();
+  await activePage.locator('.project-thread-motion .thread-main').first().focus();
+  await activePage.evaluate(async () => {
+    const bridge = (window as unknown as { desktop: { invoke(request: unknown): Promise<unknown> } }).desktop;
+    const bootstrap = await bridge.invoke({ op: 'bootstrap' }) as { data: { ui: Record<string, unknown> } };
+    await bridge.invoke({ op: 'ui.update', ui: { ...bootstrap.data.ui, collapsedProjects: ['alpha'] } });
+  });
+  await expect(activePage.getByLabel('展开 示例项目')).toBeFocused();
+});
+
+test('external project collapse restores its open row menu without stealing another menu focus', async () => {
+  activePage = await openSidebar();
+  const updateCollapsedProjects = (collapsedProjects: string[]) => activePage.evaluate(async (ids) => {
+    const bridge = (window as unknown as { desktop: { invoke(request: unknown): Promise<unknown> } }).desktop;
+    const bootstrap = await bridge.invoke({ op: 'bootstrap' }) as { data: { ui: Record<string, unknown> } };
+    await bridge.invoke({ op: 'ui.update', ui: { ...bootstrap.data.ui, collapsedProjects: ids } });
+  }, collapsedProjects);
+
+  const betaMenuTrigger = activePage.locator('.project-group').nth(1).locator('[data-thread-menu] button').first();
+  await betaMenuTrigger.focus();
+  await activePage.keyboard.press('Enter');
+  const betaMenuItem = activePage.getByRole('menuitem').first();
+  await expect(betaMenuItem).toBeFocused();
+  await updateCollapsedProjects(['alpha']);
+  await expect(betaMenuItem).toBeFocused();
+  await activePage.keyboard.press('Escape');
+
+  await activePage.getByLabel('展开 示例项目').click();
+  const alphaMenuTrigger = activePage.locator('.project-group').first().locator('[data-thread-menu] button').first();
+  await alphaMenuTrigger.focus();
+  await activePage.keyboard.press('Enter');
+  const alphaMenuItem = activePage.getByRole('menuitem').first();
+  await expect(alphaMenuItem).toBeFocused();
+  await updateCollapsedProjects(['alpha']);
+  await expect(activePage.getByLabel('展开 示例项目')).toBeFocused();
+});
+
+test('sidebar project motion reverses on a quick reopen', async () => {
+  activePage = await openSidebar();
+  const group = activePage.locator('.project-group').first();
+  const motion = group.locator('.project-thread-motion');
+  await group.getByLabel('折叠 示例项目').click();
+  await expect(motion).toHaveAttribute('inert', '');
+  expect(await motion.evaluate((element) => element.getAnimations().some((animation) => animation.playState === 'running'))).toBe(true);
+  await group.getByLabel('展开 示例项目').click();
+  await expect(motion).toHaveAttribute('aria-hidden', 'false');
+  await expect(motion).not.toHaveAttribute('inert');
+  expect(await motion.evaluate((element) => element.getAnimations().some((animation) => animation.playState === 'running'))).toBe(true);
+  await expect(motion.locator('.thread-row').first()).toBeVisible();
+});
+
+test('sidebar disclosure changes immediately with reduced motion', async () => {
+  activePage = await openSidebar();
+  await activePage.emulateMedia({ reducedMotion: 'reduce' });
+  const motion = activePage.locator('.sidebar-recents .sidebar-motion');
+  await activePage.getByRole('button', { name: '最近任务', exact: true }).click();
+  await expect(motion).toHaveAttribute('aria-hidden', 'true');
+  await expect(motion).toHaveCSS('transition-duration', '0s');
+  expect(await motion.evaluate((element) => element.getAnimations().some((animation) => animation.playState === 'running'))).toBe(false);
 });
 
 test('recent tasks share live selection and project filtering while the footer stays reachable', async () => {

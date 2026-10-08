@@ -1,0 +1,33 @@
+/* One short layout transition lets the docked work area grow with the sidebar. */
+.workspace-sidebar { display: flex; flex: none; min-width: 0; overflow: clip; }
+.workspace-sidebar[data-transitioning="true"] { transition: width 220ms var(--ease-out, cubic-bezier(.16, 1, .3, 1)); }
+.workspace-sidebar[data-resizing="true"] { transition: none; }
+
+/* The sidebar's three disclosure types share one non-staggered grid transition. */
+.sidebar .sidebar-motion {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 280ms cubic-bezier(.19, 1, .22, 1),
+    opacity 180ms cubic-bezier(.19, 1, .22, 1);
+}
+.sidebar .sidebar-motion[data-expanded="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.sidebar .sidebar-motion[aria-hidden="true"] { pointer-events: none; }
+.sidebar .sidebar-motion-clip { min-width: 0; min-height: 0; overflow: hidden; }
+.sidebar .project-thread-list { display: flex; flex-direction: column; }
+.sidebar .sidebar-disclosure-chevron {
+  transform: rotate(0deg);
+  transition: transform 280ms cubic-bezier(.19, 1, .22, 1);
+}
+.sidebar [aria-expanded="true"] .sidebar-disclosure-chevron { transform: rotate(90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-sidebar[data-transitioning="true"],
+  .sidebar .sidebar-motion,
+  .sidebar .sidebar-disclosure-chevron { transition: none; }
+}

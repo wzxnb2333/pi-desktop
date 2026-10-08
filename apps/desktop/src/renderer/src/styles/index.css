@@ -33,6 +33,9 @@
 @import "./memories.css";
 @import "./message-experience.css";
 @import "./workspace-tabs.css";
+@import "./sidebar-motion.css";
+@import "./motion.css";
+@import "./popover-motion.css";
 
 /*
  * Width overrides that used to live here (`.sidebar` / `.review-pane` with !important) are gone on

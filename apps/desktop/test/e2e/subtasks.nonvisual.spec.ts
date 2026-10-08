@@ -36,6 +36,7 @@ test('parent model owns delegation without a per-child dialog; children are obse
   expect(record.parentItemId).toBeTruthy(); expect(child.policy).toBe('deny');
   const childCall = fixture.calls.find(call => call.messages.some(message => message.role === 'user' && JSON.stringify(message.content).includes('CHILD_READ_ONLY_INSPECTION')))!;
   expect(childCall.tools?.map(item => item.function.name)).not.toContain('manage_subtasks'); expect(childCall.tools?.map(item => item.function.name)).not.toContain('write');
+  expect(childCall.tools?.map(item => item.function.name)).not.toContain('ask_user');
   await expect(fixture.page.locator('.sidebar').getByText('主代理委派', { exact: true })).toHaveCount(0);
   await fixture.page.getByRole('textbox', { name: '向 Pi 发送消息', exact: true }).fill('保留父任务草稿');
   const process = fixture.page.locator('[data-disclosure="process:' + record.parentItemId + '"]');
@@ -125,4 +126,49 @@ test('failed durable delegation leaves no dispatchable record and retry works af
     expect(await records()).toHaveLength(0);
   } finally { await rm(blocked, { recursive: true, force: true }); fixture.release(); }
   await idle(); const record = await create(); await settled(record.id).toBe('succeeded');
+});
+
+test('a child inherits the parent model and level, follows an explicit override, and can be retargeted while it runs', async () => {
+  await enable();
+  const state = (await fixture.snapshot()).data;
+  await fixture.invoke({ op: 'settings.save', settings: { ...state.settings, models: [...state.settings.models,
+    { id: 'reasoner', provider: 'local-provider', name: '推理模型', model: 'reasoning', reasoning: true, thinkingLevels: ['off', 'low', 'high'], contextWindow: 128000, maxTokens: 8192 }] } });
+  const childOf = async (id: string) => {
+    const data = (await fixture.snapshot()).data, record = data.subtasks.find(item => item.id === id);
+    return { record, child: data.threads.find(item => item.id === record?.childThreadId) };
+  };
+  const parent = (await fixture.snapshot()).data.threads.find(item => item.id === 't')!;
+
+  // 1) Without an override the child runs exactly like its parent.
+  const plain = await create(); await settled(plain.id).toBe('succeeded'); await idle();
+  const inherited = (await childOf(plain.id)).child!;
+  expect(inherited.modelId).toBe(parent.modelId); expect(inherited.thinking).toBe(parent.thinking);
+  expect((await childOf(plain.id)).record!.definition.modelId).toBeUndefined();
+
+  // 2) An explicit override wins, and the level is clamped to what the chosen model allows.
+  const custom = await create({ modelId: 'reasoner', thinking: 'max' }); await settled(custom.id).toBe('succeeded'); await idle();
+  const overridden = (await childOf(custom.id)).child!;
+  expect(overridden.modelId).toBe('reasoner'); expect(overridden.thinking).toBe('high');
+
+  // 3) A model the settings do not contain is refused before any child is prepared.
+  fixture.requestScopedTool('manage_subtasks', { action: 'subtasks.create', definition: { ...definition, modelId: 'missing-model' } }, 'Delegate to a missing model');
+  await send('Delegate to a missing model'); await idle();
+  expect(JSON.stringify(fixture.calls.at(-1)?.messages)).toContain('模型不存在'); expect(await records()).toHaveLength(2);
+
+  // 4) Retargeting a running child keeps the run alive and moves both the record and the child thread.
+  fixture.holdFor(definition.prompt);
+  const live = await create({ modelId: 'local' }); await settled(live.id).toBe('running'); await idle();
+  fixture.requestScopedTool('manage_subtasks', { action: 'subtasks.update', id: live.id, modelId: 'reasoner', thinking: 'low' }, 'Retarget the running child');
+  await send('Retarget the running child'); await idle();
+  const retargeted = await childOf(live.id);
+  expect(retargeted.record!.definition).toMatchObject({ modelId: 'reasoner', thinking: 'low' });
+  expect(retargeted.child!.modelId).toBe('reasoner'); expect(retargeted.child!.thinking).toBe('low');
+  expect((await childOf(live.id)).record!.status).toBe('running');
+
+  // 5) null puts the child back on the parent's model and level.
+  fixture.requestScopedTool('manage_subtasks', { action: 'subtasks.update', id: live.id, modelId: null, thinking: null }, 'Put the child back on the parent');
+  await send('Put the child back on the parent'); await idle();
+  const cleared = (await childOf(live.id)).record!.definition;
+  expect(cleared.modelId).toBeUndefined(); expect(cleared.thinking).toBeUndefined();
+  fixture.release(); await settled(live.id).toBe('succeeded'); await idle();
 });

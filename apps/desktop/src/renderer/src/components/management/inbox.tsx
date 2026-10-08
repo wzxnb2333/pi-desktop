@@ -1,5 +1,6 @@
 import { tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
+import { useContentMotion } from '../../hooks/use-content-motion.ts';
 import { Inbox } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { statusText } from '../../lib/labels.ts';
@@ -16,6 +17,8 @@ export function InboxPage() {
   useLocale();
   const { data, selectThread, setReviewOpen, invoke } = useApp();
   const [filter, setFilter] = useState<Filter>('pending');
+  const results = useRef<HTMLDivElement>(null);
+  useContentMotion(results, filter);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -80,7 +83,7 @@ export function InboxPage() {
     {failures.length > 0 && <div className="form-feedback" data-error="true" role="alert">
       <ul>{failures.map(item => <li key={item.id}>{item.title}：{item.message}</li>)}</ul>
     </div>}
-    <div className="field-stack" aria-busy={busy}>{visible.map(thread => {
+    <div ref={results} className="field-stack" aria-busy={busy}>{visible.map(thread => {
       const canReview = eligible.some(item => item.id === thread.id);
       const job = data.automations.find(item => item.id === thread.automationId);
       const retryDisabled = !job || data.threads.some(item => item.automationId === job.id && ['running', 'waiting'].includes(item.status));

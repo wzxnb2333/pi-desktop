@@ -1,4 +1,5 @@
 import { translate } from '../shared/localization.ts';
+import type { Provider } from '@earendil-works/pi-ai';
 import { execFile } from 'node:child_process';
 import { copyFile, mkdir, readFile, realpath, rm, rmdir, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join } from 'node:path';
@@ -32,7 +33,8 @@ import { GitService, gitRun } from './git.ts';
 import { GitWorkflow } from './git-workflow.ts';
 import { gitProcessProblems, onGitProcessProblems, ownGitController, retryGitProcessStop } from './git-process.ts';
 import { modelCatalog } from './model-catalog.ts';
-import { catalogModel, findModel } from '../shared/model-configuration.ts';
+import { catalogModel, findModel, validateProvider } from '../shared/model-configuration.ts';
+import { ProviderAuth, providerOAuthKey } from './provider-auth.ts';
 import { safeProjectPath } from './policy.ts';
 import { sandboxPowerShell } from './windows-sandbox.ts';
 import { PreviewService } from './preview.ts';
@@ -44,7 +46,7 @@ import { addHarnessDraftAttachments, appendHarnessDraft, harnessApprovals, harne
 import { resolveHarnessFocus } from './harness-focus.ts';
 import { openDesktopView } from './desktop-views.ts';
 import { VoiceService } from './voice.ts';
-import { activeSubtask, type Subtask, type SubtaskToolRequest } from '../shared/subtasks.ts';
+import { activeSubtask, type Subtask, type SubtaskDefinition, type SubtaskToolRequest } from '../shared/subtasks.ts';
 import { generateMemories } from './memory-generation.ts';
 import { memoryScopeKey, type MemoryScope } from '../shared/memories.ts';
 import { changedWorkerSettingGroups } from './settings-diff.ts';
@@ -94,10 +96,12 @@ import { McpOAuth, oauthCredentialKey } from './mcp-oauth.ts';
 import { mcpResourceTarget } from './mcp-resources.ts';
 import { operationSchema } from '../shared/operations.ts';
 import { BrowserTools } from './browser-tools.ts';
+import { ChromeBridge } from './chrome-bridge.ts';
 import { BrowserAnnotations } from './browser-annotations.ts';
 import { BrowserHistory } from './browser-history.ts';
 import { ArtifactPreview } from './artifact-preview.ts';
 import type { BrowserToolRequest } from '../shared/browser-tools.ts';
+import { browserControlAllowed } from '../shared/browser-access.ts';
 import type { AutomationToolRequest } from '../shared/automation-tools.ts';
 import { toolResultSchema, validateResultSize } from '../shared/tool-results.ts';
 
@@ -136,7 +140,9 @@ export class DesktopApplication {
   readonly worktreeCreations: WorktreeCreations;
   readonly plugins: Plugins;
   readonly mcpOAuth: McpOAuth;
+  readonly providerAuth: ProviderAuth;
   readonly browserTools: BrowserTools;
+  readonly chromeBridge: ChromeBridge;
   readonly browserAnnotations: BrowserAnnotations;
   readonly browserHistory: BrowserHistory;
   readonly artifactPreview: ArtifactPreview;
@@ -158,6 +164,8 @@ export class DesktopApplication {
   private readonly reviewJobs = new Map<string, { controller: AbortController; done: Promise<void> }>();
   private readonly fileSearch = new FileSearchService();
   private readonly workers = new Map<string, AgentHost>();
+  private readonly workerProviders = new Map<string, string>();
+  private readonly authUsers = new Map<string, string>();
   private readonly starting = new Map<string, Promise<AgentHost>>();
   private readonly startupControllers = new Map<string, AbortController>();
   private readonly staleWorkers = new Set<string>();
@@ -182,6 +190,7 @@ export class DesktopApplication {
     readonly window: BrowserWindow,
     readonly storage: string,
     readonly workerFile: string,
+    providerAuthProviders?: () => readonly Provider[],
   ) {
     this.store = new JsonStore(storage);
     this.composer = new ComposerService(() => this.store.data, storage, this.attachments);
@@ -189,13 +198,24 @@ export class DesktopApplication {
     this.memories = new Memories(storage);
     this.browserHistory = new BrowserHistory(storage, error => this.error(error));
     this.vault = new SecretVault(storage, safeStorage, id => {
-      if (this.store.data.settings.modelProviders.some(provider => id === `provider:${provider.id}`)) return true;
+      const provider = this.store.data.settings.modelProviders.find(provider => id === `provider:${provider.id}`);
+      if (provider) return providerOAuthKey(provider).slice('provider-oauth:'.length);
+      if (id.startsWith('provider-oauth:')) return this.store.data.settings.modelProviders.some(provider => id === providerOAuthKey(provider));
       const servers = this.credentialServers();
       const server = servers.find(server => id === `mcp:${server.id}`);
       return server ? mcpCredentialReference(server) : id.startsWith('mcp-oauth:') && servers.some(server => id === oauthCredentialKey(server));
     });
     this.mcpOAuth = new McpOAuth(this.vault, url => shell.openExternal(url), async config =>
       (await this.plugins.settings(this.store.data.settings)).mcpServers.some(server => oauthCredentialKey(server) === oauthCredentialKey(config)));
+    this.providerAuth = new ProviderAuth(this.vault, url => shell.openExternal(url), config =>
+      this.store.data.settings.modelProviders.some(provider => providerOAuthKey(provider) === providerOAuthKey(config) && provider.authMethod === config.authMethod),
+      (owner, status) => {
+        for (const entry of this.windows.entries.values()) {
+          if (entry.window.isDestroyed() || entry.window.webContents.isDestroyed()) continue;
+          entry.window.webContents.send('desktop:event', { type: 'provider.auth', status: entry.window.id === owner ? status :
+            { id: status.id, connected: status.connected, phase: status.phase } });
+        }
+      }, providerAuthProviders);
     this.terminals = new TerminalService((event) => this.emit(event));
     this.preview = new PreviewService(window, () => this.store.data.ui.locale, (event, owner) => {
       if (event.type === 'panel.command') {
@@ -228,7 +248,11 @@ export class DesktopApplication {
     }, (threadId, tabId, url, title, navigation) => this.browserHistory.visit(threadId + '/' + tabId, url, title, navigation), () => this.store.data.settings.shortcuts ?? {});
     this.git = new GitService(storage);
     this.worktreeCreations = new WorktreeCreations(storage, this.git);
-    this.browserTools = new BrowserTools(this.preview, origin => this.store.data.settings.browserSitePolicies[origin] ?? 'ask');
+    this.chromeBridge = new ChromeBridge(event => {
+      this.emit({ type: 'browser.bridge', sessionId: event.sessionId, state: event.type });
+    });
+    void this.chromeBridge.start().catch(error => this.error(error));
+    this.browserTools = new BrowserTools(this.preview, origin => this.store.data.settings.browserSitePolicies[origin] ?? 'ask', this.chromeBridge);
     this.browserAnnotations = new BrowserAnnotations(storage, this.preview, id => { const thread = this.thread(id); if (thread.deletedAt) throw new Error('任务已移入回收站'); return thread; }, (id, annotations) => this.store.saveBrowserAnnotations(id, annotations));
     this.artifactPreview = new ArtifactPreview(storage, id => { const thread = this.thread(id); if (thread.deletedAt) throw new Error('任务已移入回收站'); return thread; }, (id, directoryId) => this.directory(id, directoryId).path, (id, annotations) => this.store.saveArtifactAnnotations(id, annotations), error => this.error(error));
     this.gitWorkflow = new GitWorkflow(this.git);
@@ -243,6 +267,7 @@ export class DesktopApplication {
     this.subtasks = new Subtasks({ records: () => this.store.data.subtasks, threads: () => this.store.data.threads,
       enabled: () => this.store.data.settings.subtasksEnabled,
       prepare: (record, signal, progress) => this.prepareSubtask(record, signal, progress),
+    retarget: (record, definition) => this.retargetSubtask(record, definition),
       run: (record, child, signal) => this.runSubtask(record, child, signal),
       save: records => this.store.saveSubtasks(records), deliver: (parentId, id) => this.store.deliverSubtask(parentId, id),
       notifyParent: async (parentId, taskId, question) => {
@@ -395,6 +420,7 @@ export class DesktopApplication {
     try { await promise; } finally { this.openingWindows.delete(requestKey); }
   }
   closeWindow(window: BrowserWindow, preserveOpen: boolean): void {
+    this.providerAuth.closeOwner(window.id);
     this.voice.closeOwner(window.webContents.id);
     this.artifactPreview.close(window);
     this.browserAnnotations.discard(window.id);
@@ -463,6 +489,12 @@ export class DesktopApplication {
   private providerLabel(id: string): string {
     const model = this.store.data.settings.models.find(item => item.id === id);
     return model?.name || model?.model || id || '未选择模型';
+  }
+  private assertProviderIdle(id: string): void {
+    if ([...this.authUsers.values()].includes(id) || this.store.data.threads.some(thread =>
+      (this.workerProviders.get(thread.id) === id || this.store.data.settings.models.some(model => model.id === thread.modelId && model.provider === id)) &&
+      (this.activeSends.has(thread.id) || this.starting.has(thread.id) || this.finalizingRuns.has(thread.id) || ['running', 'waiting'].includes(thread.status))))
+      throw new Error('此提供商正在推理，请结束活动任务后再修改认证或账号');
   }
   private projectDirectoryConfig(project: Project): ProjectDirectoryConfig {
     return {
@@ -1304,9 +1336,11 @@ export class DesktopApplication {
       const model = settings.models.find((item) => item.id === (override?.modelId ?? thread.modelId));
       const provider = settings.modelProviders.find((item) => item.id === model?.provider);
       if (!model || !provider) throw new Error('请先在设置中配置模型提供商与模型，再为任务选择模型。');
-      const apiKey = await this.vault.get(`provider:${provider.id}`);
+      if (this.providerAuth.pending(provider.id)) throw new Error('此提供商正在登录，请等待登录完成');
+      const apiKey = provider.authMethod === 'oauth' ? undefined : await this.vault.get(`provider:${provider.id}`);
+      const oauth = provider.authMethod === 'oauth' ? await this.providerAuth.resolve(provider, signal) : undefined;
       if (
-        !apiKey &&
+        !apiKey && !oauth &&
         !(provider.kind === 'custom' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?=[:/]|$)/.test(provider.baseUrl))
       )
         throw new Error('该模型提供商尚未设置 API Key');
@@ -1318,7 +1352,7 @@ export class DesktopApplication {
       }
       const thinking = resolveThinkingLevel(model, override?.thinking ?? thread.thinking);
       if (!override) thread.thinking = thinking;
-      return { settings, model, modelProvider: provider, apiKey, mcp, trusted: project ? taskDirectory(project, thread).trusted : false,
+      return { settings, model, modelProvider: provider, apiKey, oauth, mcp, trusted: project ? taskDirectory(project, thread).trusted : false,
         directories: project ? structuredClone(projectDirectories(project).filter(directory => !thread.subtaskId || directory.id === (thread.directoryId ?? primaryDirectory(project).id)).map(directory => taskDirectory(project, thread, directory.id))) : [], thread: structuredClone({ ...thread, ...override, thinking }) };
       });
       this.settingsWrites = snapshot;
@@ -1330,6 +1364,7 @@ export class DesktopApplication {
         () => {
           if (this.workers.get(thread.id) !== host) return;
           this.workers.delete(thread.id);
+          this.workerProviders.delete(thread.id);
           if (thread.mcp) thread.mcp = thread.mcp.map(item => ({ ...item, state: 'disconnected' }));
           for (const [id, pending] of this.approvals)
             if (pending.approval.threadId === thread.id) this.approvals.delete(id);
@@ -1794,15 +1829,18 @@ export class DesktopApplication {
             return this.runServiceTool(thread, configuration.thread, request as ServiceToolRequest, signal);
           if (request.action === 'settings.read' || request.action === 'settings.models' || request.action === 'settings.inputCatalog' || request.action === 'settings.apply')
             return this.runSettingsTool(thread, configuration.thread, request as ManageSettingsToolRequest, signal);
-          if (request.action === 'subtasks.list' || request.action === 'subtasks.create' || request.action === 'subtasks.read' || request.action === 'subtasks.stop' || request.action === 'subtasks.reply' || request.action === 'subtasks.wait')
+          if (request.action === 'subtasks.list' || request.action === 'subtasks.create' || request.action === 'subtasks.update' || request.action === 'subtasks.read' || request.action === 'subtasks.stop' || request.action === 'subtasks.reply' || request.action === 'subtasks.wait')
             return this.runSubtaskTool(thread, configuration.thread, request, signal);
-          return this.runBrowserTool(thread, configuration.thread, configuration.trusted, id, request as BrowserToolRequest, signal);
+          return this.runBrowserTool(thread, configuration.thread, configuration.trusted, id, request as BrowserToolRequest, signal, onData);
         },
+        configuration.oauth ? authSignal => this.providerAuth.resolve(configuration.modelProvider, authSignal) : undefined,
       );
       this.workers.set(thread.id, host);
+      this.workerProviders.set(thread.id, configuration.modelProvider.id);
       const detach = () => {
         if (this.workers.get(thread.id) !== host) return;
         this.workers.delete(thread.id);
+        this.workerProviders.delete(thread.id);
         for (const [id, pending] of this.approvals) if (pending.approval.threadId === thread.id) this.approvals.delete(id);
         if (thread.mcp) thread.mcp = thread.mcp.map(item => ({ ...item, state: 'disconnected' }));
         this.broadcastApprovals(); this.changed();
@@ -1832,11 +1870,11 @@ export class DesktopApplication {
     this.starting.set(thread.id, promise);
     return promise;
   }
-  private async runBrowserTool(thread: Thread, initial: Thread, trusted: boolean, id: string, request: BrowserToolRequest, signal: AbortSignal) {
+  private async runBrowserTool(thread: Thread, initial: Thread, trusted: boolean, id: string, request: BrowserToolRequest, signal: AbortSignal, onData: (data: Uint8Array) => void) {
     const check = () => {
       signal.throwIfAborted();
       if (this.store.data.operations.some(item => item.kind === 'browser.clear' && item.status === 'running')) throw new Error('浏览器正在清理数据，请稍后重试');
-      if (!trusted || !this.directory(thread.id).trusted || initial.planMode || initial.policy === 'deny' || thread.planMode || thread.policy === 'deny' || thread.deletedAt || thread.review || thread.sidechat)
+      if (!browserControlAllowed(initial, trusted) || !browserControlAllowed(thread, this.directory(thread.id).trusted))
         throw new Error('当前任务权限禁止浏览器操作');
     };
     check();
@@ -1847,14 +1885,26 @@ export class DesktopApplication {
       finally { if (thread.status === 'waiting') thread.status = 'running'; this.changed(); }
     };
     await this.operations.start({ id, threadId: thread.id, directoryId: request.tabId ?? '', kind: 'browser.' + request.action }, async (jobSignal, progress) => {
+      const report = (stage: string) => {
+        progress(stage);
+        onData(new TextEncoder().encode(JSON.stringify({ backend: request.backend ?? 'in-app', action: request.action, tabId: request.tabId, operationId: id, stage })));
+      };
       check();
       if (initial.policy === 'ask' || thread.policy === 'ask') {
-        progress('等待浏览器操作审批');
+        report('等待浏览器操作审批');
         const reply = await question(translate(this.store.data.ui.locale, '允许执行此浏览器操作？'), JSON.stringify(request, null, 2), [translate(this.store.data.ui.locale, '拒绝'), translate(this.store.data.ui.locale, '允许这一次')], jobSignal);
         if (reply.response !== 1) throw new Error('用户拒绝了本次操作');
       }
-      const result = await this.browserTools.run(thread.id, request, source, jobSignal, async url => {
+      const result = await this.browserTools.run(thread.id, request, source, jobSignal, async (url, scope) => {
         check(); const origin = new URL(url).origin;
+        if (scope === 'tab') {
+          report(request.backend === 'chrome' ? '等待 Chrome 新标签授权' : '等待新标签授权');
+          const answer = await question(translate(this.store.data.ui.locale, request.backend === 'chrome' ? '允许为当前任务打开 Chrome 新标签？' : '允许为当前任务打开新标签？'), url,
+            [translate(this.store.data.ui.locale, '拒绝'), translate(this.store.data.ui.locale, '允许这一次')], jobSignal);
+          jobSignal.throwIfAborted(); check();
+          if (answer.response !== 1) throw new Error('用户拒绝了本次操作');
+          return;
+        }
         const policy = this.store.data.settings.browserSitePolicies[origin];
         if (policy === 'deny') throw new Error('此网站的智能体访问已被拒绝');
         if (policy === 'allow') return;
@@ -1864,7 +1914,7 @@ export class DesktopApplication {
         if (answer.response === 2 || answer.response === 3) await this.handle({ op: 'browser.site', origin, policy: answer.response === 2 ? 'allow' : 'deny' }, false, source);
         if (![1, 2].includes(answer.response)) throw new Error('此网站的智能体访问已被拒绝');
         if (this.store.data.settings.browserSitePolicies[origin] === 'deny') throw new Error('此网站的智能体访问已被拒绝');
-      }, progress);
+      }, report, check);
       check(); validateResultSize(result);
       return operationSchema.shape.result.parse(result);
     });
@@ -1880,6 +1930,7 @@ export class DesktopApplication {
     this.staleWorkers.delete(id);
     const host = this.workers.get(id);
     this.workers.delete(id);
+    this.workerProviders.delete(id);
     await host?.dispose();
     const thread = this.store.data.threads.find(item => item.id === id);
     if (thread?.mcp) thread.mcp = thread.mcp.map(item => ({ ...item, state: 'disconnected' }));
@@ -2064,11 +2115,13 @@ export class DesktopApplication {
       if (this.store.data.operations.some(record => record.threadId === thread.id && record.kind === 'environment.initialization' && record.status === 'running')) throw new Error('环境初始化正在运行，请等待完成或停止项目动作');
       if (this.store.data.operations.some(record => record.threadId === thread.id && record.kind.startsWith('worktree.') && record.status === 'running')) throw new Error('工作区操作正在进行，请稍后发送');
       if (thread.deletedAt) throw new Error('请先从回收站恢复任务');
+      const model = this.store.data.settings.models.find(model => model.id === (override?.modelId ?? thread.modelId));
+      if (model && this.providerAuth.pending(model.provider)) throw new Error('此提供商正在登录，请等待登录完成');
       const busy = this.activeSends.has(thread.id) || ['running', 'waiting'].includes(thread.status);
       if (busy && !queue) throw new Error('任务正在运行，请选择排队、引导或停止');
       queued = busy && !!queue;
       await onStart?.();
-      if (!queued) { thread.status = 'running'; this.activeSends.add(thread.id); controller = new AbortController(); this.runControllers.set(thread.id, controller); }
+      if (!queued) { thread.status = 'running'; this.activeSends.add(thread.id); if (model) this.authUsers.set('send:' + thread.id, model.provider); controller = new AbortController(); this.runControllers.set(thread.id, controller); }
       else controller = this.runControllers.get(thread.id);
       thread.reviewed = false;
     });
@@ -2131,6 +2184,7 @@ export class DesktopApplication {
       if (!queued) { this.finalizingRuns.delete(thread.id); this.runControllers.delete(thread.id); }
       if (!queued) {
         this.activeSends.delete(thread.id);
+        this.authUsers.delete('send:' + thread.id);
         if (override) this.staleWorkers.add(thread.id);
         if (thread.status === 'running' || controller?.signal.aborted) thread.status = failed && !controller?.signal.aborted ? 'error' : 'idle';
         this.changed();
@@ -2188,10 +2242,17 @@ export class DesktopApplication {
     signal.throwIfAborted(); const parent = this.thread(record.parentThreadId);
     if (parent.deletedAt || parent.archived) throw new Error('父任务不可用');
     const definition = record.definition;
+    // The child follows its parent unless the delegation itself named a model or a reasoning level. The
+    // level is clamped to the model that actually runs, so a level the model cannot reach never reaches it.
+    const chosen = definition.modelId ? this.store.data.settings.models.find(model => model.id === definition.modelId) : undefined;
+    if (definition.modelId && !chosen) throw new Error('子任务所选模型不存在，请检查模型设置');
+    const runningModel = chosen ?? this.store.data.settings.models.find(model => model.id === parent.modelId);
+    const childModelId = definition.modelId ?? parent.modelId;
+    const childThinking = resolveThinkingLevel(runningModel, definition.thinking ?? parent.thinking);
     const policy = parent.planMode || parent.policy === 'deny' || definition.policy === 'deny' ? 'deny' : parent.policy === 'ask' || definition.policy === 'ask' ? 'ask' : 'auto';
     progress(definition.environment === 'worktree' ? '创建子任务 Worktree' : '准备只读子任务');
     const child = await this.createThread(parent.projectId, definition.environment === 'worktree', parent.directoryId, definition.startPoint, signal, thread => {
-      thread.title = definition.title; thread.subtaskId = record.id; thread.modelId = parent.modelId; thread.thinking = parent.thinking; thread.policy = policy;
+      thread.title = definition.title; thread.subtaskId = record.id; thread.modelId = childModelId; thread.thinking = childThinking; thread.policy = policy;
       if (definition.environment === 'local') { thread.cwd = parent.cwd; thread.worktreeBranch = parent.worktreeBranch; thread.baseCommit = parent.baseCommit; }
     }, true);
     const initialization = this.store.data.operations.find(item => item.threadId === child.id && item.kind === 'environment.initialization');
@@ -2215,6 +2276,25 @@ export class DesktopApplication {
     if (!result) throw new Error('子任务未返回最终回答，请查看任务记录');
     return result;
   }
+  /** Refuses a delegation that names a model the settings no longer contain, before any child is prepared. */
+  private assertSubtaskTarget(definition: SubtaskDefinition): void {
+    if (definition.modelId && !this.store.data.settings.models.some(model => model.id === definition.modelId))
+      throw new Error('子任务所选模型不存在，请检查模型设置');
+  }
+  /** Applies a delegation's model and reasoning level to the child thread that already runs it. */
+  private retargetSubtask(record: Subtask, definition: SubtaskDefinition): void {
+    const parent = this.thread(record.parentThreadId);
+    const chosen = definition.modelId ? this.store.data.settings.models.find(model => model.id === definition.modelId) : undefined;
+    if (definition.modelId && !chosen) throw new Error('子任务所选模型不存在，请检查模型设置');
+    const child = record.childThreadId ? this.store.data.threads.find(thread => thread.id === record.childThreadId) : undefined;
+    if (!child) return;
+    child.modelId = definition.modelId ?? parent.modelId;
+    child.thinking = resolveThinkingLevel(chosen ?? this.store.data.settings.models.find(model => model.id === parent.modelId), definition.thinking ?? parent.thinking);
+    child.updatedAt = Date.now();
+    // A live run keeps the configuration it captured, and dropping its worker would abort it, so the new
+    // configuration is picked up by the child's next turn instead.
+    if (!['running', 'waiting'].includes(child.status)) void this.dropWorker(child.id);
+  }
   private async runSubtaskTool(thread: Thread, initial: Thread, request: SubtaskToolRequest, signal: AbortSignal) {
     const runSignal = this.runControllers.get(thread.id)?.signal;
     if (runSignal) signal = AbortSignal.any([signal, runSignal]);
@@ -2226,7 +2306,8 @@ export class DesktopApplication {
     check();
     // The opted-in parent owns delegation. Child file/command approvals retain their normal policy.
     check(); let result: unknown;
-    if (request.action === 'subtasks.create') result = await this.subtasks.create(thread.id, crypto.randomUUID(), request.definition);
+    if (request.action === 'subtasks.create') { this.assertSubtaskTarget(request.definition); result = await this.subtasks.create(thread.id, crypto.randomUUID(), request.definition); }
+    else if (request.action === 'subtasks.update') { result = await this.subtasks.update(thread.id, request.id, { modelId: request.modelId, thinking: request.thinking }); this.changed(); await this.store.save(); }
     else if (request.action === 'subtasks.list') result = this.store.data.subtasks.filter(item => item.parentThreadId === thread.id);
     else if (request.action === 'subtasks.reply') result = await this.subtasks.reply(thread.id, request.id, request.questionId, request.answer, signal);
     else if (request.action === 'subtasks.wait') result = await this.subtasks.wait(thread.id, request.cursor, request.timeoutMs, signal);
@@ -2239,7 +2320,12 @@ export class DesktopApplication {
   }
   private async memorySecrets(settings = this.store.data.settings): Promise<string[]> {
     const result: string[] = [];
-    for (const provider of settings.modelProviders) { const key = await this.vault.get('provider:' + provider.id); if (key) result.push(key); }
+    for (const provider of settings.modelProviders) {
+      const key = await this.vault.get('provider:' + provider.id); if (key) result.push(key);
+      const raw = await this.vault.get(providerOAuthKey(provider));
+      if (raw) { const credential: unknown = JSON.parse(raw); if (credential && typeof credential === 'object')
+        for (const [name, value] of Object.entries(credential)) if (['refresh', 'access'].includes(name) && typeof value === 'string' && value) result.push(value); }
+    }
     for (const server of settings.mcpServers) { const raw = await this.vault.get('mcp:' + server.id); if (raw) { const values: unknown = JSON.parse(raw); if (values && typeof values === 'object') result.push(...Object.values(values).filter((value): value is string => typeof value === 'string')); } }
     return result;
   }
@@ -2251,30 +2337,36 @@ export class DesktopApplication {
     const source = structuredClone(thread);
     return this.operations.start({ id: requestId, threadId: thread.id, directoryId: memoryScopeKey(scope), kind: 'memory.generate' }, async (signal, progress) => {
       progress('正在准备记忆来源');
+      try {
       const configuration = this.settingsWrites.catch(() => {}).then(async () => {
         signal.throwIfAborted();
         const settings = structuredClone(this.store.data.settings);
         const model = settings.models.find(item => item.id === source.modelId);
         const provider = settings.modelProviders.find(item => item.id === model?.provider);
         if (!model || !provider) throw new Error('记忆生成模型不可用');
-        return { model, provider, secrets: await this.memorySecrets(settings), apiKey: await this.vault.get('provider:' + provider.id) };
+        if (this.providerAuth.pending(provider.id)) throw new Error('此提供商正在登录，请等待登录完成');
+        this.authUsers.set(requestId, provider.id);
+        return { model, provider, secrets: await this.memorySecrets(settings),
+          apiKey: provider.authMethod === 'oauth' ? undefined : await this.vault.get('provider:' + provider.id),
+          oauth: provider.authMethod === 'oauth' ? await this.providerAuth.resolve(provider, signal) : undefined };
       });
       this.settingsWrites = configuration;
-      const { model, provider, secrets, apiKey } = await configuration; signal.throwIfAborted();
+      const { model, provider, secrets, apiKey, oauth } = await configuration; signal.throwIfAborted();
       if (thread.deletedAt || automatic && (!this.store.data.settings.memory.autoGenerate || this.disposing)) throw new Error('记忆生成已取消');
       if (scope.kind === 'project' && scope.projectId !== thread.projectId) throw new Error('记忆来源不属于所选项目');
       if (this.memories.snapshot().revision !== snapshot.revision) throw new Error('生成期间记忆已更改，请重新生成');
       const input = this.memories.eligible(memoryInput(source, secrets), scope);
       if (!input.messages.length) { if (automatic) return { count: 0 }; throw new Error('没有可用于记忆的用户消息'); }
       if (this.memories.processed(input, scope)) { if (automatic) return { count: 0 }; throw new Error('这些消息已处理，请先添加新的用户消息'); }
-      if (!apiKey && !(provider.kind === 'custom' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?=[:/]|$)/.test(provider.baseUrl))) throw new Error('该模型提供商尚未设置 API Key');
+      if (!apiKey && !oauth && !(provider.kind === 'custom' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?=[:/]|$)/.test(provider.baseUrl))) throw new Error('该模型提供商尚未设置 API Key');
       progress('正在提取记忆候选');
-      const output = await generateMemories(provider, model, apiKey, input, AbortSignal.any([signal, AbortSignal.timeout(120000)]));
+      const output = await generateMemories(provider, model, apiKey, input, AbortSignal.any([signal, AbortSignal.timeout(120000)]), oauth, oauth ? authSignal => this.providerAuth.resolve(provider, authSignal) : undefined);
       signal.throwIfAborted();
       if (thread.deletedAt || automatic && (!this.store.data.settings.memory.autoGenerate || this.disposing)) throw new Error('记忆生成已取消');
       const count = await this.memories.addGenerated(input, scope, model.id, output, secrets, snapshot.revision, signal);
       this.store.data.memoryRevision = this.memories.snapshot().revision; this.changed();
       return { count };
+      } finally { this.authUsers.delete(requestId); }
     });
   }
   private validateAutomation(job: Automation): void {
@@ -2333,7 +2425,7 @@ export class DesktopApplication {
       const terminal = this.terminals.list().find(item => item.id === request.id);
       if (terminal) this.windows.assertEditable(source, terminal.threadId);
     }
-    if (!locked && ['settings.save', 'settings.patch', 'composer.template', 'provider.key', 'mcp.secret', 'mcp.secretStatus', 'mcp.oauthStart', 'resource.create', 'resource.refresh', 'browser.site'].includes(request.op)) {
+    if (!locked && ['settings.save', 'settings.patch', 'composer.template', 'provider.key', 'provider.oauthStart', 'provider.oauthLogout', 'mcp.secret', 'mcp.secretStatus', 'mcp.oauthStart', 'resource.create', 'resource.refresh', 'browser.site'].includes(request.op)) {
       const operation = this.settingsWrites.catch(() => {}).then(() => this.handle(request, true, source));
       this.settingsWrites = operation;
       return operation;
@@ -2394,6 +2486,19 @@ export class DesktopApplication {
         if (request.policy === 'ask') delete policies[request.origin]; else policies[request.origin] = request.policy;
         return this.handle({ op: 'settings.patch', patch: { browserSitePolicies: policies } }, true, source);
       }
+      case 'browser.bridge.status':
+        return this.chromeBridge.status();
+      case 'browser.bridge.pair':
+        return this.chromeBridge.createPairing();
+      case 'browser.bridge.disconnect':
+        this.chromeBridge.disconnect(request.sessionId); return null;
+      case 'browser.bridge.grant':
+        if (request.allowed && !browserControlAllowed(this.thread(request.threadId), this.directory(request.threadId).trusted)) throw new Error('当前任务权限禁止浏览器操作');
+        this.chromeBridge.authorize(request.threadId, request.tabId, request.allowed); return this.chromeBridge.status();
+      case 'browser.bridge.focus':
+        await this.chromeBridge.focus(request.sessionId, request.tabId); return null;
+      case 'browser.bridge.tabs':
+        return this.chromeBridge.tabs(request.threadId);
       case 'plugin.pick': {
         const picked = await dialog.showOpenDialog(source, { title: translate(this.store.data.ui.locale, '选择插件来源'), properties: [request.kind === 'archive' ? 'openFile' : 'openDirectory'], ...(request.kind === 'archive' ? { filters: [{ name: 'ZIP', extensions: ['zip'] }] } : {}) });
         if (picked.canceled || !picked.filePaths[0]) return null;
@@ -3020,7 +3125,13 @@ export class DesktopApplication {
       case 'goal.control':
         return this.goals.control(request.threadId, request.goalId, request.revision, request.action);
       case 'subtask.create':
+        this.assertSubtaskTarget(request.definition)
         return this.subtasks.create(request.parentThreadId, request.requestId, request.definition);
+      case 'subtask.update': {
+        const updated = await this.subtasks.update(request.parentThreadId, request.id, { modelId: request.modelId, thinking: request.thinking });
+        this.changed(); await this.store.save();
+        return updated;
+      }
       case 'subtask.stop':
         await this.subtasks.stop(request.parentThreadId, request.id); return null;
       case 'subtask.deliver': {
@@ -3142,8 +3253,12 @@ export class DesktopApplication {
       case 'thread.compact': {
         const thread = this.thread(request.id);
         if (['running', 'waiting'].includes(thread.status)) throw new Error('请等待任务空闲再压缩上下文');
-        const host = await this.ensureWorker(thread);
-        await host.request({ type: 'compact', requestId: crypto.randomUUID() });
+        const model = this.store.data.settings.models.find(model => model.id === thread.modelId), key = 'compact:' + thread.id;
+        if (this.authUsers.has(key)) throw new Error('上下文正在压缩');
+        if (model && this.providerAuth.pending(model.provider)) throw new Error('此提供商正在登录，请等待登录完成');
+        if (model) this.authUsers.set(key, model.provider);
+        try { const host = await this.ensureWorker(thread); await host.request({ type: 'compact', requestId: crypto.randomUUID() }); }
+        finally { this.authUsers.delete(key); }
         return null;
       }
       case 'thread.revise': {
@@ -3336,18 +3451,26 @@ export class DesktopApplication {
         if (settingKeys.includes('mcpServers')) for (const server of next.mcpServers) validateMcpConfiguration(server);
         if (settingKeys.includes('models') || settingKeys.includes('modelProviders')) {
           const catalog = modelCatalog();
+          for (const provider of next.modelProviders) validateProvider(provider, catalog);
           for (const provider of next.modelProviders) provider.hasKey = await this.vault.has(`provider:${provider.id}`);
           // The catalogue is a default, not a fence: the settings page lets the user own the level list, and
           // `normalizeThinking` only fills in the catalogue levels when the user left none.
           this.normalizeThinking(next, false);
         }
         updateIgnoredSkills(this.store.data.settings, next);
+        const changedProviders = this.store.data.settings.modelProviders.filter(old => {
+          const current = next.modelProviders.find(item => item.id === old.id);
+          return !current || providerOAuthKey(old) !== providerOAuthKey(current) || old.authMethod !== current.authMethod;
+        });
+        for (const provider of changedProviders) this.assertProviderIdle(provider.id);
+        const retiredProviders = changedProviders.filter(old => !next.modelProviders.some(current => providerOAuthKey(old) === providerOAuthKey(current)));
+        for (const provider of next.modelProviders) if (retiredProviders.some(old => old.id === provider.id)) provider.hasKey = false;
         const retiredOAuth = settingKeys.includes('mcpServers') ? this.store.data.settings.mcpServers.filter(server => {
           const key = oauthCredentialKey(server);
           return key && !next.mcpServers.some(current => oauthCredentialKey(current) === key);
         }) : [];
         const removed = [
-          ...this.store.data.settings.modelProviders.filter(old => !next.modelProviders.some(item => item.id === old.id)).map(provider => `provider:${provider.id}`),
+          ...retiredProviders.flatMap(provider => [`provider:${provider.id}`, providerOAuthKey(provider)]),
           ...(settingKeys.includes('mcpServers') ? retiredMcpCredentials(this.credentialServers(), this.credentialServers(next)) : []),
         ];
         const changed = changedWorkerSettingGroups(this.store.data.settings, next);
@@ -3357,7 +3480,7 @@ export class DesktopApplication {
         if (settingKeys.includes('models') || settingKeys.includes('modelProviders') || settingKeys.includes('mcpServers')) {
           for (const operation of this.store.data.operations) if (operation.status === 'running' && operation.kind.startsWith('mcp.oauth.') && retiredOAuth.some(server => server.id === operation.directoryId))
             this.operations.cancel('', operation.id);
-          const warning = await this.mcpOAuth.changeConfigurations(retiredOAuth, () => this.vault.removeForSettings(removed, commit));
+          const warning = await this.providerAuth.changeConfigurations(changedProviders, () => this.mcpOAuth.changeConfigurations(retiredOAuth, () => this.vault.removeForSettings(removed, commit)));
           if (warning) this.error(new Error(warning));
         } else await commit();
         if (releaseVoice) this.voice.releaseModels();
@@ -3396,6 +3519,7 @@ export class DesktopApplication {
         if (!provider) throw new Error('模型提供商已不存在，请重新打开设置后重试。');
         if (request.base && !sameSetting({ ...provider, hasKey: false }, { ...request.base, hasKey: false }))
           throw new Error('设置已在其他位置修改，当前草稿已保留。请重新打开设置后重试。');
+        if (provider.authMethod !== 'oauth') this.assertProviderIdle(provider.id);
         // Every model of this provider runs on the same credential, so they all restart.
         const affected = this.store.data.threads.filter((thread) => this.store.data.settings.models
           .some(model => model.id === thread.modelId && model.provider === request.id));
@@ -3404,6 +3528,24 @@ export class DesktopApplication {
         await this.invalidateWorkers(affected.map(thread => thread.id)).catch(error => this.error(error));
         this.changed();
         return null;
+      }
+      case 'provider.oauthStatus':
+      case 'provider.oauthStart':
+      case 'provider.oauthCancel':
+      case 'provider.oauthAnswer':
+      case 'provider.oauthOpen':
+      case 'provider.oauthLogout': {
+        const provider = this.store.data.settings.modelProviders.find(provider => provider.id === request.id);
+        if (!provider) throw new Error('模型提供商已不存在，请重新打开设置');
+        if (this.disposing || source.isDestroyed()) throw new Error('OAuth 交互已结束');
+        if (request.op === 'provider.oauthStatus') return this.providerAuth.status(provider, source.id);
+        if (request.op === 'provider.oauthCancel') { this.providerAuth.cancel(provider, source.id, request.operationId); return null; }
+        if (request.op === 'provider.oauthAnswer') { this.providerAuth.answer(provider, source.id, request.operationId, request.promptId, request.value); return null; }
+        if (request.op === 'provider.oauthOpen') { await this.providerAuth.openLink(provider, source.id, request.operationId); return null; }
+        this.assertProviderIdle(provider.id);
+        await this.invalidateWorkers(this.store.data.threads.filter(thread => this.store.data.settings.models.some(model => model.id === thread.modelId && model.provider === provider.id)).map(thread => thread.id));
+        this.assertProviderIdle(provider.id);
+        return request.op === 'provider.oauthStart' ? this.providerAuth.start(provider, source.id) : this.providerAuth.logout(provider, source.id);
       }
       case 'resource.pick': {
         const result = await dialog.showOpenDialog(source, {
@@ -3931,6 +4073,7 @@ export class DesktopApplication {
   }
   async dispose(): Promise<void> {
     this.disposing = true;
+    await this.providerAuth.dispose();
     for (const task of this.creatingTasks.values()) task.controller.abort();
     await Promise.allSettled([...this.openingWindows.values()]);
     await Promise.allSettled([...this.creatingChats.values(), ...this.bindingChats.values(), ...[...this.creatingTasks.values()].map(task => task.done)]);
@@ -3944,6 +4087,7 @@ export class DesktopApplication {
     this.scheduler.stop();
     await this.artifactPreview.dispose();
     await this.browserAnnotations.dispose();
+    await this.chromeBridge.dispose();
     this.mcpOAuth.dispose();
     clearInterval(this.worktreeCleanupTimer);
     this.quickShortcut.dispose();

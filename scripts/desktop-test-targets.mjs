@@ -57,7 +57,7 @@ export const targets = {
   },
   models: {
     label: '模型与思考程度', unit: ['model-configuration.test.ts'],
-    ui: [{ file: 'settings.spec.ts', grep: 'built-in provider|custom mode|allowed thinking levels|mode selection|model collection|model deletion|invalid hidden model|compact model picker' }],
+    ui: [{ file: 'settings.spec.ts', grep: 'built-in provider|custom mode|allowed thinking levels|mode selection|model collection|provider deletion|invalid hidden model|compact model picker' }, { file: 'provider-oauth-ui.spec.ts' }],
     native: [{ file: 'model-settings.nonvisual.spec.ts' }],
   },
   'settings-storage': {
@@ -102,7 +102,16 @@ export const targets = {
   },
   'browser-tools': {
     label: '浏览器工具与权限', unit: ['browser-tools.test.ts'],
+    ui: [{ file: 'activity.spec.ts', grep: 'browser feedback' }],
     native: [{ file: 'browser-tools.nonvisual.spec.ts' }],
+  },
+  'browser-control': {
+    label: '浏览器协议、引用与等待条件', unit: ['browser-tools.test.ts'],
+  },
+  'browser-bridge': {
+    label: 'Chrome 扩展 Loopback 桥接', unit: ['browser-bridge.test.ts', 'chrome-extension-input.test.mjs', 'chrome-extension-lifecycle.test.mjs'],
+    ui: [{ file: 'browser-bridge.spec.ts' }],
+    native: [{ file: 'browser-bridge.nonvisual.spec.ts' }],
   },
   'browser-history': {
     label: '浏览历史与清理', unit: ['browser-history.test.ts'],
@@ -228,7 +237,17 @@ export const targets = {
     ui: [{ file: 'chat-recovery.spec.ts', grep: 'new chat|project creation' }, { file: 'form-navigation.spec.ts', grep: 'new tasks are created only after' }],
     native: [{ file: 'task-creation.nonvisual.spec.ts' }, { file: 'automation-queue.nonvisual.spec.ts', grep: 'worktree automation waits' }, { file: 'subtasks.nonvisual.spec.ts', grep: 'a real independent Worktree' }],
   },
-  goals: {
+  'usage-stats': {
+    label: '上下文占用的缓存命中率与输出速度', unit: ['usage-stats.test.ts'],
+  },
+  'tool-labels': {
+    label: '桌面接口工具名与错误文案的多语言', unit: ['tool-labels.test.ts', 'error-translations.test.ts'],
+    native: [{ file: 'localization.nonvisual.spec.ts', grep: 'tool names in the information stream stay localized' }],
+  },
+  'ask-user': {
+    label: '向用户提问（计划与普通模式）', unit: ['ask-user-tool.test.ts'],
+    native: [{ file: 'ask-user.nonvisual.spec.ts' }],
+  },  goals: {
     label: '持续目标', unit: ['goals.test.ts', 'goal-persistence.test.ts'],
     ui: [{ file: 'goal-recovery.spec.ts' }],
     native: [{ file: 'goals.nonvisual.spec.ts', grep: 'goal UI persists|pause, stop, closing|real provider errors|long goal forms|goal disk failures|goal completion storage|archived goal rounds|goal pause storage failure' }],
@@ -279,6 +298,12 @@ export const targets = {
   oauth: {
     label: 'MCP OAuth', unit: ['mcp-oauth.test.ts'], native: [{ file: 'mcp-oauth.nonvisual.spec.ts' }],
     ui: [{ file: 'mcp-settings.spec.ts', grep: 'OAuth' }],
+  },
+  'provider-oauth': {
+    label: '模型提供商 OAuth 与凭据生命周期',
+    unit: ['provider-oauth.test.ts', 'model-oauth-runtime.test.ts', 'model-configuration.test.ts', 'settings-save.test.ts', 'settings-persistence.test.ts'],
+    ui: [{ file: 'provider-oauth-ui.spec.ts' }],
+    native: [{ file: 'provider-oauth.nonvisual.spec.ts' }],
   },
   'mcp-connection': {
     label: 'MCP 连接测试进度、取消与恢复', unit: ['mcp.test.ts', 'operations.test.ts'],

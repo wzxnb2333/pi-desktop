@@ -1,4 +1,4 @@
-import { type BrowserWindow, dialog, type DownloadItem, session, shell, WebContentsView, type WebContentsViewConstructorOptions } from 'electron';
+import { type BrowserWindow, dialog, type DownloadItem, session, shell, webContents, WebContentsView, type WebContentsViewConstructorOptions } from 'electron';
 import { type DesktopEvent, type DesktopRequest, webUrlSchema } from '../shared/contracts.ts';
 import type { Locale } from '../shared/locale.ts';
 import { translate } from '../shared/localization.ts';
@@ -23,6 +23,15 @@ export class PreviewService {
     let surface = this.surfaces.get(window.id);
     if (!surface) { surface = { active: '', visible: false, bounds: { x: 0, y: 0, width: 0, height: 0 }, revision: 0 }; this.surfaces.set(window.id, surface); }
     return surface;
+  }
+  private present(key: string, page: Page, surface: Surface): void {
+    const foreground = surface.visible && key === surface.active;
+    const background = !foreground && Boolean(page.automated);
+    if (background) page.window.contentView.addChildView(page.view, 0);
+    else if (foreground) page.window.contentView.addChildView(page.view);
+    // Hidden native views have a zero-sized DOM viewport. Keep automated pages painted
+    // below the app so inspect references and later input use the same viewport.
+    page.view.setVisible(foreground || background);
   }
   private configure(): void {
     if (this.configured) return;
@@ -140,8 +149,10 @@ export class PreviewService {
       window.contentView.addChildView(page.view);
       page.window = window;
     }
-    for (const [key, page] of this.pages) if (page.window === window) page.view.setVisible(surface.visible && key === surface.active);
-    if (!page) return false;
+    if (!page) {
+      for (const [key, current] of this.pages) if (current.window === window) this.present(key, current, surface);
+      return false;
+    }
     this.bounds(surface.bounds, window);
     this.publish(page);
     return true;
@@ -149,19 +160,20 @@ export class PreviewService {
   bounds(bounds: Bounds, window = this.window): void {
     const surface = this.surface(window);
     const revision = ++surface.revision;
+    const wasVisible = surface.visible;
     surface.bounds = bounds;
     surface.visible = bounds.width > 0 && bounds.height > 0 && !bounds.occluded;
     const active = this.pages.get(surface.active);
-    if (bounds.occluded && bounds.width > 0 && bounds.height > 0 && active?.window === window && !active.view.webContents.isDestroyed() && active.view.getVisible()) {
+    if (bounds.occluded && wasVisible && bounds.width > 0 && bounds.height > 0 && active?.window === window && !active.view.webContents.isDestroyed() && active.view.getVisible()) {
       // Native views sit above DOM popovers. Keep their last frame in the renderer while the
       // interactive native view is covered; the image never touches disk or browser history.
       void active.view.webContents.capturePage().then(image => {
         if (surface.revision !== revision || window.isDestroyed() || active.view.webContents.isDestroyed()) return;
         this.emit({ type: 'preview.snapshot', threadId: active.threadId, tabId: active.tabId, image: image.toDataURL() });
         if (active.view.webContents.isFocused()) window.webContents.focus();
-        active.view.setVisible(false);
+        this.present(surface.active, active, surface);
       }).catch(() => {
-        if (surface.revision === revision && !active.view.webContents.isDestroyed()) active.view.setVisible(false);
+        if (surface.revision === revision && !active.view.webContents.isDestroyed()) this.present(surface.active, active, surface);
       });
       return;
     }
@@ -170,7 +182,7 @@ export class PreviewService {
     const size = window.getContentBounds();
     for (const [key, page] of this.pages) {
       if (page.window !== window) continue;
-      page.view.setVisible(surface.visible && key === surface.active);
+      this.present(key, page, surface);
       if (surface.visible && key === surface.active) page.view.setBounds({ x: Math.min(bounds.x, size.width), y: Math.min(bounds.y, size.height), width: Math.max(0, Math.min(bounds.width, size.width - bounds.x)), height: Math.max(0, Math.min(bounds.height, size.height - bounds.y)) });
     }
   }
@@ -231,9 +243,9 @@ export class PreviewService {
     const surface = this.surface(window);
     surface.visible = false;
     surface.revision++;
-    for (const page of this.pages.values()) if (page.window === window) {
+    for (const [key, page] of this.pages) if (page.window === window) {
       if (!page.view.webContents.isDestroyed() && page.view.webContents.isFocused()) window.webContents.focus();
-      page.view.setVisible(false);
+      this.present(key, page, surface);
     }
   }
   closeWindow(window: BrowserWindow): void {
@@ -250,7 +262,17 @@ export class PreviewService {
   agentTabs(threadId: string) {
     return [...this.pages.values()].filter(page => page.threadId === threadId && !page.view.webContents.isDestroyed()).map(page => ({ tabId: page.tabId, url: page.view.webContents.getURL(), title: page.view.webContents.getTitle() }));
   }
-  async capture(threadId: string, tabId: string) {
+  agentFocus(threadId: string, tabId: string, window: BrowserWindow): () => void {
+    const focused = webContents.getFocusedWebContents();
+    const appFocused = focused === window.webContents;
+    return () => {
+      if (!appFocused || window.isDestroyed() || !window.isFocused()) return;
+      const current = webContents.getFocusedWebContents();
+      const page = this.pages.get(threadId + '/' + tabId);
+      if (!current || current === page?.view.webContents) window.webContents.focus();
+    };
+  }
+  async capture(threadId: string, tabId: string, signal?: AbortSignal) {
     const page = this.pages.get(threadId + '/' + tabId);
     if (!page || page.view.webContents.isDestroyed()) throw new Error('浏览器标签不存在，请先打开网页');
     const hidden = !page.view.getVisible();
@@ -259,8 +281,16 @@ export class PreviewService {
       page.window.contentView.addChildView(page.view, 0);
       page.view.setVisible(true);
     }
-    try { return await page.view.webContents.capturePage(); }
+    const capture = page.view.webContents.capturePage();
+    let abort: (() => void) | undefined;
+    const interrupted = new Promise<never>((_resolve, reject) => {
+      abort = () => reject(signal?.reason instanceof Error ? signal.reason : new Error('浏览器截图操作已取消'));
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) abort();
+    });
+    try { return await Promise.race([capture, interrupted]); }
     finally {
+      if (abort) signal?.removeEventListener('abort', abort);
       if (hidden && !page.window.isDestroyed() && !page.view.webContents.isDestroyed()) {
         page.view.setVisible(false);
         page.window.contentView.addChildView(page.view);
@@ -271,9 +301,32 @@ export class PreviewService {
   agentContents(threadId: string, tabId: string, window?: BrowserWindow, allowed?: (url: string) => boolean, create = false) {
     const page = this.pages.get(threadId + '/' + tabId) ?? (create && window ? this.create(threadId, tabId, window) : undefined);
     if (!page || page.view.webContents.isDestroyed()) throw new Error('浏览器标签不存在，请先打开网页');
+    if (!create && page.view.webContents.isCrashed()) throw new Error('网页进程已结束，请重新导航或刷新页面');
     if (allowed) page.automated = allowed;
     if (!page.view.getBounds().width || !page.view.getBounds().height) page.view.setBounds({ x: 0, y: 0, width: 1024, height: 768 });
+    this.present(threadId + '/' + tabId, page, this.surface(page.window));
     return page.view.webContents;
+  }
+  async agentInput<T>(threadId: string, tabId: string, perform: () => Promise<T>): Promise<T> {
+    const page = this.pages.get(threadId + '/' + tabId);
+    if (!page || page.view.webContents.isDestroyed()) throw new Error('浏览器标签不存在，请先打开网页');
+    const hidden = !page.view.getVisible();
+    const appFocused = page.window.webContents.isFocused();
+    if (hidden) { page.window.contentView.addChildView(page.view, 0); page.view.setVisible(true); }
+    try {
+      // Native input needs a painted viewport. The app remains above this view and retains focus.
+      await new Promise<void>(resolve => setTimeout(resolve, 20));
+      return await perform();
+    } finally {
+      if (hidden && !page.window.isDestroyed() && !page.view.webContents.isDestroyed()) {
+        page.view.setVisible(false); page.window.contentView.addChildView(page.view);
+        this.bounds(this.surface(page.window).bounds, page.window);
+      }
+      if (appFocused && !page.window.isDestroyed() && page.window.isFocused()) {
+        const focused = webContents.getFocusedWebContents();
+        if (!focused || focused === page.view.webContents) page.window.webContents.focus();
+      }
+    }
   }
 }
 

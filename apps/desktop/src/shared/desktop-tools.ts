@@ -163,4 +163,4 @@ export function desktopToolCatalogFor(families: readonly DesktopToolFamily[], wa
  * may map to these ops: they belong to the user alone.
  */
 export const forbiddenDesktopFields = ['policy', 'planMode', 'sandbox', 'toolPolicies', 'mcpToolPolicies', 'permissions', 'approval', 'approved', 'secret', 'apiKey', 'apiKeyPlain', 'password', 'token'] as const;
-export const forbiddenDesktopOps = ['approval.reply', 'provider.key', 'mcp.secret', 'plugin.start', 'plugin.pick', 'plugin.cancel', 'terminal.input'] as const;
+export const forbiddenDesktopOps = ['approval.reply', 'provider.key', 'provider.oauthStatus', 'provider.oauthStart', 'provider.oauthCancel', 'provider.oauthAnswer', 'provider.oauthOpen', 'provider.oauthLogout', 'mcp.secret', 'plugin.start', 'plugin.pick', 'plugin.cancel', 'terminal.input'] as const;

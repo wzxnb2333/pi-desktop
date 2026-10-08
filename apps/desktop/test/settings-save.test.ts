@@ -17,6 +17,7 @@ const provider: ModelProvider = {
   baseUrl: 'https://api.openai.com/v1',
   api: 'openai-responses',
   hasKey: true,
+  authMethod: 'api_key',
 };
 const second: ModelProvider = {
   ...provider,

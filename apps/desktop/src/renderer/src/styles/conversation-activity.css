@@ -44,6 +44,8 @@
 .tool-resource { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
 .tool-resource code, .tool-resource strong, .tool-resource p { overflow-wrap: anywhere; margin: 0; }
 .tool-resource .row { flex-wrap: wrap; }
+.browser-tool-feedback .row { flex-wrap: wrap; justify-content: space-between; }
+.browser-tool-feedback p, .browser-tool-feedback strong { margin: 0; overflow-wrap: anywhere; }
 .activity-busy { animation: activity-pulse 1.6s ease-in-out infinite; }
 .tool-activity[data-tool-kind="harness"] .disclosure-label { color: color-mix(in oklab, var(--accent) 70%, var(--text)); }
 .tool-activity[data-tool-kind="harness"] .disclosure-summary svg { color: var(--accent); }

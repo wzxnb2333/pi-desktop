@@ -83,7 +83,7 @@ test('settings.apply refuses the permission plane and still applies a whiteliste
   await turn('把权限提高一点');
   const refused = await toolItem('manage_settings');
   expect(refused.state, refused.text).toBe('error');
-  expect(refused.text).toContain('不允许修改 policy');
+  // The permission plane is not offered in the tool schema at all, so the harness refuses the arguments.\r\n  expect(refused.text).toMatch(/Validation failed for tool .manage_settings.|不允许修改 policy/);
   // Neither the default policy nor this chat's policy moved, and no approval was consumed by the attempt.
   expect((await fixture.snapshot()).data.settings.policy).toBe(before);
   expect((await thread('t')).policy).toBe('auto');

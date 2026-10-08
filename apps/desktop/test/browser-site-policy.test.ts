@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { EventEmitter } from 'node:events';
 import type { BrowserWindow } from 'electron';
 import { BrowserTools } from '../src/main/browser-tools.ts';
 import type { PreviewService } from '../src/main/preview.ts';
@@ -7,15 +8,17 @@ import { browserSiteOrigin } from '../src/shared/browser-tools.ts';
 
 function policyFixture() {
   let policy: 'ask' | 'allow' | 'deny' = 'allow', executions = 0, navigations = 0;
-  const contents = {
-    getURL: () => 'https://example.org/private', isDestroyed: () => false, stop() {},
+  const contents = Object.assign(new EventEmitter(), {
+    getURL: () => 'https://example.org/private', isDestroyed: () => false, isCrashed: () => false, stop() {},
     loadURL: async () => { navigations++; },
     executeJavaScriptInIsolatedWorld: async () => { executions++; return { text: 'PRIVATE_PAGE' }; },
-  } as unknown as ReturnType<PreviewService['agentContents']>;
+  }) as unknown as ReturnType<PreviewService['agentContents']>;
   let entered!: () => void, release!: () => void;
   const ready = new Promise<void>(resolve => { entered = resolve; });
   const gate = new Promise<void>(resolve => { release = resolve; });
   const preview = {
+    agentFocus: () => () => {},
+    agentTabs: () => [{ tabId: 'page', url: 'https://example.org/private', title: 'Fixture' }],
     agentContents: () => contents,
     capture: async () => { entered(); await gate; return { isEmpty: () => false, toPNG: () => Buffer.from('PRIVATE_IMAGE') }; },
   } as unknown as PreviewService;
@@ -56,6 +59,7 @@ test('closing a browser tab targets only the existing tab and skips website auth
   let authorized = false;
   let closed: { threadId: string; tabId: string; action: string } | undefined;
   const preview = {
+    agentFocus: () => () => {},
     agentContents: () => ({ getURL: () => 'https://example.org/' } as ReturnType<PreviewService['agentContents']>),
     action: async (threadId: string, tabId: string, action: string) => { closed = { threadId, tabId, action }; },
   } as unknown as PreviewService;
@@ -63,7 +67,7 @@ test('closing a browser tab targets only the existing tab and skips website auth
   const result = await tools.run('t', { action: 'close', tabId: 'page' }, {} as BrowserWindow, new AbortController().signal, async () => { authorized = true; }, () => {});
   assert.deepEqual(closed, { threadId: 't', tabId: 'page', action: 'close' });
   assert.equal(authorized, false);
-  assert.deepEqual(result.result.content, [{ type: 'text', text: JSON.stringify({ tabId: 'page', status: 'closed' }) }]);
+  assert.deepEqual(result.result.content, [{ type: 'text', text: JSON.stringify({ backend: 'in-app', tabId: 'page', status: 'closed' }) }]);
 });
 
 test('a denied operation releases the tab and one-time approval still works without a saved allow rule', async () => {
@@ -72,4 +76,15 @@ test('a denied operation releases the tab and one-time approval still works with
   fixture.setPolicy('ask');
   const result = await fixture.tools.run('t', { action: 'inspect', tabId: 'page' }, {} as BrowserWindow, new AbortController().signal, async () => {}, () => {});
   assert.equal(fixture.executions, 1); assert.match(String(result.result.content[0].text), /PRIVATE_PAGE/);
+});
+
+test('a new in-app tab needs separate consent even when its website is allowed', async () => {
+  const fixture = policyFixture(); const scopes: Array<string | undefined> = [];
+  await assert.rejects(fixture.tools.run('t', { action: 'open', url: 'https://example.org/private' }, {} as BrowserWindow, new AbortController().signal, async (_url, scope) => {
+    scopes.push(scope); if (scope === 'tab') throw new Error('TAB_CONSENT_DENIED');
+  }, () => {}), /TAB_CONSENT_DENIED/);
+  assert.deepEqual(scopes, [undefined, 'tab']); assert.equal(fixture.navigations, 0); assert.equal(fixture.executions, 0);
+  scopes.length = 0;
+  await fixture.tools.run('t', { action: 'navigate', tabId: 'page', url: 'https://example.org/private' }, {} as BrowserWindow, new AbortController().signal, async (_url, scope) => { scopes.push(scope); }, () => {});
+  assert.deepEqual(scopes, [undefined]); assert.equal(fixture.navigations, 1);
 });

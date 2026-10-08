@@ -137,3 +137,17 @@ test('native browser dialogs follow live locale without recreating tabs or clear
   expect(permission).toMatchObject({ message: fixture.url + ' requests permission: notifications', buttons: ['Deny', 'Allow for this session'], defaultId: 0, cancelId: 0 });
   expect(fixture.calls).toHaveLength(0);
 });
+
+test('tool names in the information stream stay localized', async () => {
+  // One turn first: the worker reports its tool catalog (Chinese source labels) with the resources event.
+  await fixture.invoke({ op: 'thread.send', id: 't', text: '列出可用工具', attachments: [] });
+  await expect.poll(async () => (await fixture.snapshot()).data.threads.find(item => item.id === 't')?.status).toBe('idle');
+  await fixture.invoke({ op: 'ui.update', ui: { ...(await fixture.snapshot()).data.ui, locale: 'en-US' } });
+  await expect(fixture.page.locator('html')).toHaveAttribute('lang', 'en-US');
+  await fixture.page.locator('.composer-input').fill('@');
+  const labels = fixture.page.locator('.composer-suggestion-label');
+  await expect(labels.first()).toBeVisible();
+  // The catalog reports tool ids, so the list must at least stay free of Chinese source strings.
+  const shown = (await labels.allInnerTexts()).join(' | ');
+  expect(shown).not.toMatch(/[\u4e00-\u9fff]/);
+});

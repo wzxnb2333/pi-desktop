@@ -1,4 +1,6 @@
 import { useLocale } from "../../hooks/use-locale.ts";
+import { useMotionPresence } from '../../hooks/use-motion-presence.ts';
+import { useDismissOnHidden } from '../../hooks/use-dismiss-on-hidden.ts';
 import {
   cloneElement,
   useEffect,
@@ -32,6 +34,7 @@ export function Tooltip({ label, delay = 200, children }: TooltipProps) {
   const id = useId();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [visible, setVisible] = useState(false);
+  const present = useMotionPresence(visible);
   const anchorRef = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 0, top: 0 });
@@ -92,6 +95,7 @@ export function Tooltip({ label, delay = 200, children }: TooltipProps) {
     clearTimeout(timer.current);
     setVisible(false);
   };
+  useDismissOnHidden(anchorRef, visible, cancel);
 
   return (
     <span
@@ -115,9 +119,19 @@ export function Tooltip({ label, delay = 200, children }: TooltipProps) {
       }}
     >
       {cloneElement(children, visible ? { 'aria-describedby': id } : {})}
-      {visible &&
+      {present &&
         createPortal(
-          <div role="tooltip" id={id} ref={tipRef} className="tooltip" data-side={side} style={position}>
+          <div
+            role={visible ? 'tooltip' : undefined}
+            id={id}
+            ref={tipRef}
+            className="tooltip"
+            data-side={side}
+            data-motion-state={visible ? 'open' : 'closing'}
+            aria-hidden={!visible}
+            inert={!visible}
+            style={position}
+          >
             <div className="tooltip-content">
               <div className="tooltip-label">{label}</div>
             </div>

@@ -75,7 +75,7 @@ test('a built-in provider may override its endpoint without becoming a custom pr
 
 test('providers and models are separate records with strict schemas', () => {
   assert.deepEqual(modelProviderSchema.parse({ id: 'provider-1', name: 'OpenAI', namespace: 'openai' }),
-    { id: 'provider-1', name: 'OpenAI', kind: 'builtin', namespace: 'openai', baseUrl: '', api: 'openai-completions', hasKey: false });
+    { id: 'provider-1', name: 'OpenAI', kind: 'builtin', namespace: 'openai', baseUrl: '', api: 'openai-completions', hasKey: false, authMethod: 'api_key' });
   assert.throws(() => modelProviderSchema.parse({ id: 'provider-1', name: 'OpenAI', namespace: 'openai', model: 'gpt-4.1' }));
   const model = { id: 'model-1', provider: 'provider-1', name: '测试模型', model: 'gpt-4.1' };
   assert.equal(providerModelSchema.parse(model).contextWindow, 128000);

@@ -6,12 +6,14 @@ export const MODEL_APIS: readonly ModelApi[] = ['openai-completions', 'openai-re
 
 /** A provider that talks to a user-supplied endpoint and carries its own protocol. */
 export function customProvider(id: string, name: string): ModelProvider {
-  return { id, name, kind: 'custom', namespace: 'desktop-' + id, baseUrl: '', api: 'openai-completions', hasKey: false };
+  return { id, name, kind: 'custom', namespace: 'desktop-' + id, baseUrl: '', api: 'openai-completions', hasKey: false, authMethod: 'api_key' };
 }
 
 /** A provider that uses one namespace from the SDK catalog; the endpoint stays optional. */
-export function builtinProvider(id: string, namespace: string): ModelProvider {
-  return { id, name: namespace, kind: 'builtin', namespace, baseUrl: '', api: 'openai-completions', hasKey: false };
+export function builtinProvider(id: string, namespace: string, catalog?: ModelCatalog | null): ModelProvider {
+  const auth = catalogProvider(catalog ?? null, namespace)?.auth;
+  return { id, name: namespace, kind: 'builtin', namespace, baseUrl: '', api: 'openai-completions', hasKey: false,
+    authMethod: auth?.oauth && !auth.apiKey ? 'oauth' : 'api_key' };
 }
 
 export function catalogProvider(catalog: ModelCatalog | null, namespace: string): CatalogProvider | undefined {
@@ -72,6 +74,10 @@ export function validateProvider(provider: ModelProvider, catalog: ModelCatalog 
     if (!catalogProvider(catalog, provider.namespace)) throw new Error(label + '：内置供应商已不存在，请重新选择');
   }
   const endpoint = provider.baseUrl.trim();
+  if (provider.authMethod === 'oauth') {
+    if (provider.kind !== 'builtin' || !catalogProvider(catalog, provider.namespace)?.auth?.oauth) throw new Error(label + '：此提供商不支持 OAuth');
+    if (endpoint) throw new Error(label + '：OAuth 仅允许 SDK 官方端点，请清空 Base URL');
+  }
   if (provider.kind === 'custom' && !endpoint) throw new Error(label + '：请填写接口服务地址');
   if (endpoint) checkEndpoint(label, endpoint);
 }

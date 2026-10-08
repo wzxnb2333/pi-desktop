@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { cacheHitPercent, outputPerSecond } from '../../../src/shared/usage-stats.ts';
 import { App } from '../../../src/renderer/src/App.tsx';
 import { defaultData, modelProviderSchema, projectSchema, providerModelSchema, threadSchema, timelineSchema, type DesktopData, type DesktopEvent, type DesktopRequest, type Thread } from '../../../src/shared/contracts.ts';
 import { applyUiPatch } from '../../../src/shared/ui-patches.ts';
@@ -11,7 +12,7 @@ data = { ...data, projects: [projectSchema.parse({ id: 'p', name: '测试项目'
   threads: [makeThread('t', '主对话'), makeThread('short', '短任务'), makeThread('long', '用于测试省略的非常非常长的任务标题'), makeThread('chat', '独立聊天', '')],
   ui: { ...data.ui, activeThreadId: 't', sidebarWidth: 240, summaryOpen: true } };
 data.threads[0].items = [timelineSchema.parse({ id: 'question', role: 'user', timestamp: 1, text: '核对界面' }), timelineSchema.parse({ id: 'earlier', role: 'assistant', timestamp: 2, text: '更早的内容\n\n'.repeat(45) }), timelineSchema.parse({ id: 'question-2', role: 'user', timestamp: 3, text: '引用这些片段' }), timelineSchema.parse({ id: 'answer', role: 'assistant', timestamp: 4, text: quoteText })];
-data.threads[0].usage = { input: 12000, output: 4384, total: 16384, contextTokens: 16384, contextWindow: 131072, contextPercent: 12.5, cost: 0.003 };
+data.threads[0].usage = { input: 12000, output: 4384, total: 16384, contextTokens: 16384, contextWindow: 131072, contextPercent: 12.5, cost: 0.003, cacheRead: 10800, cacheWrite: 300, cacheHitRate: cacheHitPercent(10800, 12000), outputPerSecond: outputPerSecond(4384, 70000) };
 const listeners = new Set<(event: DesktopEvent) => void>();
 const calls: DesktopRequest[] = [];
 let release: (() => void) | undefined, hold = false;

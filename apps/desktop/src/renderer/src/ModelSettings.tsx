@@ -1,7 +1,7 @@
-import { Check, Eye, EyeOff, KeyRound, Plus, Search, Trash2 } from 'lucide-react';
+import { Check, ChevronRight, Eye, EyeOff, KeyRound, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { type ModelApi, type ModelCatalog, type ModelProvider, type ProviderModel, thinkingSchema } from '../../shared/contracts.ts';
-import { localizeAppError, tr } from '../../shared/localization.ts';
+import { type DesktopRequest, type ModelApi, type ModelCatalog, type ModelProvider, type ProviderModel, thinkingSchema } from '../../shared/contracts.ts';
+import { getLocale, localizeAppError, tr } from '../../shared/localization.ts';
 import {
   MODEL_APIS, builtinProvider, catalogModel, catalogProvider, customModel, customProvider,
   modelFromCatalog, providerModels, validateProvider,
@@ -9,6 +9,7 @@ import {
 import { allowedThinkingLevels, type ThinkingLevel } from '../../shared/thinking.ts';
 import { thinkingLabels } from './lib/labels.ts';
 import { useLocale } from './hooks/use-locale.ts';
+import { useContentMotion } from './hooks/use-content-motion.ts';
 import { Button } from './components/primitives/button.tsx';
 import { ConfirmDialog } from './components/primitives/dialog.tsx';
 import { FieldRow } from './components/primitives/field-row.tsx';
@@ -16,6 +17,7 @@ import { IconButton } from './components/primitives/icon-button.tsx';
 import { Menu } from './components/primitives/menu.tsx';
 import { Tabs } from './components/primitives/tabs.tsx';
 import { API_LABELS, ModelConnection } from './ModelConnection.tsx';
+import { ProviderAuth } from './ProviderAuth.tsx';
 import { SettingsSection } from './SettingsSection.tsx';
 
 /** Compact capability figures for the model row: `1M`, `384K`, `204.8K`; the tooltip keeps it exact. */
@@ -39,8 +41,9 @@ const PROVIDER_DRAFT: ProviderDraft = { mode: 'builtin', name: '', namespace: ''
  * Two levels: a connection plus one credential per provider, then any number of models under it.
  * The left pane selects a provider, the right pane edits its connection and its models.
  */
-export function ModelSettings({ providers, models, defaultId, defaultThinking, selected, keys, catalog, catalogError, error, onSelect, onAddProvider, onChange, onRetry, onKey, onAddModel, onModelChange, onModelDelete, onDefault, onDefaultThinking, onDeleteProvider }: {
+export function ModelSettings({ providers, savedProviderIds, models, defaultId, defaultThinking, selected, keys, catalog, catalogError, error, invoke, persist, onSelect, onAddProvider, onChange, onRetry, onKey, onAddModel, onModelChange, onModelDelete, onDefault, onDefaultThinking, onDeleteProvider }: {
   providers: ModelProvider[];
+  savedProviderIds: string[];
   models: ProviderModel[];
   defaultId: string;
   defaultThinking: ThinkingLevel;
@@ -49,6 +52,8 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
   catalog: ModelCatalog | null;
   catalogError: string;
   error?: string;
+  invoke(request: DesktopRequest): Promise<unknown>;
+  persist(): Promise<boolean>;
   onSelect(id: string): void;
   onAddProvider(provider: ModelProvider): void;
   onChange(patch: Partial<ModelProvider>): void;
@@ -62,6 +67,7 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
   onDeleteProvider(id: string): void;
 }) {
   useLocale();
+  const locale = getLocale();
   const [query, setQuery] = useState('');
   const [draft, setDraft] = useState<ProviderDraft | null>(null);
   const [draftError, setDraftError] = useState('');
@@ -70,10 +76,13 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
   const [editingModel, setEditingModel] = useState('');
   const [addingModel, setAddingModel] = useState<'builtin' | 'custom' | ''>('');
   const [catalogPicks, setCatalogPicks] = useState<string[]>([]);
+  const [catalogQuery, setCatalogQuery] = useState('');
   const [customId, setCustomId] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
   const collection = useRef<HTMLElement>(null);
   const editor = useRef<HTMLDivElement>(null);
+  useContentMotion(editor, selected + '/' + (draft ? 'new' : 'edit'));
   /** The model new sessions start from; the select shows it even before the settings are saved. */
   const defaultModel = models.find(model => model.id === defaultId) ?? models[0];
   useEffect(() => {
@@ -83,8 +92,12 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
     input?.closest('details')?.setAttribute('open', '');
     input?.focus();
   }, [error, selected]);
-  useEffect(() => { setEditingModel(''); setAddingModel(''); setCatalogPicks([]); setCustomId(''); }, [selected]);
+  useEffect(() => { setEditingModel(''); setAddingModel(''); setCatalogPicks([]); setCatalogQuery(''); setCustomId(''); setShowKey(false); }, [selected]);
   const provider = providers.find(item => item.id === selected);
+  const catalogAuth = provider?.kind === 'builtin' ? catalogProvider(catalog, provider.namespace)?.auth : undefined;
+  const oauth = catalogAuth?.oauth;
+  const apiKeyAvailable = provider?.kind === 'custom' || catalogAuth?.apiKey !== false;
+  const authMethod = provider && (provider.kind === 'custom' || !oauth || provider.authMethod !== 'oauth' ? 'api_key' : 'oauth');
   const modelsOf = (id: string) => providerModels(models, id);
   const visible = providers.filter(item => [item.name, item.namespace, ...modelsOf(item.id).flatMap(model => [model.name, model.model])]
     .join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
@@ -100,7 +113,7 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
       const id = crypto.randomUUID();
       if (draft.mode === 'builtin') {
         if (!draft.namespace) throw new Error(tr('请选择内置供应商'));
-        const created: ModelProvider = { ...builtinProvider(id, draft.namespace), name: draft.name.trim() || draft.namespace };
+        const created: ModelProvider = { ...builtinProvider(id, draft.namespace, catalog), name: draft.name.trim() || draft.namespace };
         validateProvider(created, catalog);
         onAddProvider(created);
       } else {
@@ -109,6 +122,7 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
         onAddProvider(created);
       }
       setDraft(null);
+      requestAnimationFrame(() => editor.current?.querySelector<HTMLInputElement>('input')?.focus());
     } catch (reason) {
       setDraftError(reason instanceof Error ? reason.message : String(reason));
     }
@@ -126,7 +140,22 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
   const catalogCandidates = provider?.kind === 'builtin'
     ? (catalogProvider(catalog, provider.namespace)?.models ?? []).filter(entry => !modelsOf(provider.id).some(model => model.model === entry.id))
     : [];
+  const matchingCandidates = catalogCandidates.filter(entry => [entry.name, entry.id].join(' ').toLocaleLowerCase().includes(catalogQuery.trim().toLocaleLowerCase()));
   return <div className="model-settings">
+    {!!models.length && <div className="model-defaults">
+      <SettingsSection title={tr('新会话默认')} description={locale === 'en-US' ? 'Applies to new tasks and quick chats. Existing conversations keep their settings.' : '用于新建任务与快速聊天；已有会话保留各自的设置。'}>
+        <FieldRow label={tr('默认模型')} htmlFor="settings-default-model">
+          <Menu id="settings-default-model" label={tr('默认模型')} value={defaultModel?.id ?? ''} matchTriggerWidth className="settings-select"
+            options={models.map(model => ({ value: model.id, label: (providers.find(provider => provider.id === model.provider)?.name ?? '') + ' · ' + model.name }))}
+            onChange={onDefault} />
+        </FieldRow>
+        <FieldRow label={tr('默认思考程度')} htmlFor="settings-default-thinking" description={tr('当前默认模型支持：{p0}。超出范围的档位在新建会话时会自动回落到最接近的一档。', { p0: allowedThinkingLevels(defaultModel).map(level => thinkingLabels[level]).join('、') })}>
+          <Menu id="settings-default-thinking" label={tr('默认思考程度')} value={defaultThinking} matchTriggerWidth className="settings-select"
+            options={thinkingSchema.options.map(level => ({ value: level, label: thinkingLabels[level] }))}
+            onChange={level => onDefaultThinking(level as ThinkingLevel)} />
+        </FieldRow>
+      </SettingsSection>
+    </div>}
     <aside ref={collection} className="model-collection" aria-label={tr('供应商与模型')}>
       <div className="model-collection-compact"><label htmlFor="settings-model-selection">{tr('提供商')}</label>
         <Menu id="settings-model-selection" label={tr('提供商')} value={selected} matchTriggerWidth className="settings-select" disabled={!providers.length}
@@ -139,8 +168,13 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
         items={visible.map(item => {
           const owned = modelsOf(item.id);
           const isDefault = owned.some(model => model.id === defaultId);
+          const itemAuth = item.kind === 'builtin' ? catalogProvider(catalog, item.namespace)?.auth : undefined;
+          const usesOAuth = item.authMethod === 'oauth' && !!itemAuth?.oauth;
           return { id: item.id, label: <span className="model-option-text"><span>{item.name || tr('新提供商')}</span>
-            <small aria-hidden="true">{item.kind === 'builtin' ? tr('内置供应商') : tr('自定义接口')} · {tr('{p0} 个模型', { p0: owned.length })} · {item.hasKey ? tr('已保存密钥') : tr('尚未设置密钥')}</small></span>,
+            <small aria-hidden="true">{item.kind === 'builtin' ? tr('内置供应商') : tr('自定义接口')} · {tr('{p0} 个模型', { p0: owned.length })}</small>
+            <small aria-hidden="true">{usesOAuth
+              ? (locale === 'en-US' ? 'OAuth mode' : 'OAuth 模式')
+              : item.hasKey ? tr('已保存密钥') : tr('尚未设置密钥')}</small></span>,
             trailing: <span className="model-option-status" aria-hidden="true">{isDefault ? tr('当前默认') : null}</span> };
         })} />}
       {!!providers.length && !visible.length && <div className="model-search-empty"><p>{tr('没有匹配的提供商')}</p><Button size="sm" variant="ghost" onClick={() => setQuery('')}>{tr('清除搜索')}</Button></div>}
@@ -148,7 +182,9 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
     </aside>
     <div className="model-editor" ref={editor} data-validation-error={!!error}>
       {error && <p id="model-config-error" className="form-feedback" data-error="true" role="alert">{localizeAppError(error)}</p>}
-      {draft ? <SettingsSection title={tr('新建提供商')} description={tr('一个提供商对应一个连接和一份密钥；创建后可在其下添加模型。')}>
+      {draft ? <SettingsSection title={tr('新建提供商')} description={locale === 'en-US'
+        ? 'One provider holds one connection and an authentication credential (API Key or OAuth). Add its models afterwards.'
+        : '一个提供商对应一个连接和一份认证凭据（API Key 或 OAuth）；创建后可在其下添加模型。'}>
         <fieldset className="connection-modes">
           <legend>{tr("连接方式")}</legend>
           {([
@@ -183,37 +219,30 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
               onChange={value => setDraft(previous => previous && { ...previous, api: value as ModelApi })} />
           </FieldRow>
         </>}
-        <div className="row"><Button size="sm" variant="primary" onClick={commitDraft}>{tr('创建提供商')}</Button><Button size="sm" onClick={() => setDraft(null)}>{tr('取消')}</Button></div>
+        <div className="row model-draft-actions"><Button size="sm" variant="primary" onClick={commitDraft}>{tr('创建提供商')}</Button><Button size="sm" onClick={() => {
+          setDraft(null); requestAnimationFrame(() => collection.current?.querySelector<HTMLButtonElement>('.model-add')?.focus());
+        }}>{tr('取消')}</Button></div>
         {draftError && <p id="provider-draft-error" className="form-feedback" data-error="true" role="alert">{localizeAppError(draftError)}</p>}
-        <p className="hint">{tr('创建后填写 API Key，并在「模型」中添加该提供商可用的模型。')}</p>
+        <p className="hint">{locale === 'en-US'
+          ? 'Set the provider’s authentication credential, then add its available models under “Models”.'
+          : '创建后设置该提供商的认证凭据，再在「模型」中添加可用模型。'}</p>
       </SettingsSection> : !provider ? <div className="empty-card"><h3>{tr('还没有提供商')}</h3><p>{tr('先添加一个提供商，再为其添加模型。')}</p></div> : <>
-        {!!models.length && <SettingsSection title={tr('新会话默认')}
-          description={tr('只影响新建的会话；已经存在的会话保留自己的模型、思考程度与审批策略。')}>
-          <div className="field-stack">
-            <FieldRow label={tr('默认模型')} htmlFor="settings-default-model" description={tr('新建任务与快速聊天都从这里开始。')}>
-              {/* Native <select> opens the operating system's own popup; every list-of-choices control here
-                  uses the app's popover instead, the same one the composer's pickers use. */}
-              <Menu id="settings-default-model" label={tr('默认模型')} value={defaultModel?.id ?? ''} matchTriggerWidth className="settings-select"
-                options={models.map(model => ({
-                  value: model.id,
-                  label: (providers.find(provider => provider.id === model.provider)?.name ?? '') + ' · ' + model.name,
-                }))}
-                onChange={onDefault} />
-            </FieldRow>
-            <FieldRow label={tr('默认思考程度')} htmlFor="settings-default-thinking"
-              description={tr('当前默认模型支持：{p0}。超出范围的档位在新建会话时会自动回落到最接近的一档。', { p0: allowedThinkingLevels(defaultModel).map(level => thinkingLabels[level]).join('、') })}>
-              <Menu id="settings-default-thinking" label={tr('默认思考程度')} value={defaultThinking} matchTriggerWidth className="settings-select"
-                options={thinkingSchema.options.map(level => ({ value: level, label: thinkingLabels[level] }))}
-                onChange={level => onDefaultThinking(level as ThinkingLevel)} />
-            </FieldRow>
-          </div>
-        </SettingsSection>}
+        <header className="model-provider-heading">
+          <div><h2>{provider.name || tr('新提供商')}</h2><p className="hint">{provider.kind === 'builtin' ? provider.namespace : tr('自定义接口')} · {tr('{p0} 个模型', { p0: modelsOf(provider.id).length })}</p></div>
+          {!savedProviderIds.includes(provider.id) && <span className="model-draft-badge">{locale === 'en-US' ? 'Not saved' : '未保存'}</span>}
+        </header>
         <SettingsSection title={tr('连接与凭据')}>
           <FieldRow label={tr('显示名称')} htmlFor={'provider-' + provider.id + '-name'}>
             <input id={'provider-' + provider.id + '-name'} aria-label={tr('显示名称')} aria-invalid={!!error && !provider.name.trim() || undefined} aria-describedby={error ? 'model-config-error' : undefined} required value={provider.name} onChange={event => onChange({ name: event.target.value })} />
           </FieldRow>
-          <ModelConnection key={provider.id} provider={provider} catalog={catalog} catalogError={catalogError} onRetry={onRetry} onChange={onChange}
-            credentials={<FieldRow label="API Key" htmlFor={'provider-' + provider.id + '-key'} description={tr('密钥使用系统加密保存；更新后从下一次运行生效。')}>
+          <ModelConnection key={provider.id} provider={provider} catalog={catalog} catalogError={catalogError} authMethod={authMethod ?? provider.authMethod} authBusy={authBusy} onRetry={onRetry} onChange={onChange}
+            credentials={<>
+            {oauth && <ProviderAuth key={JSON.stringify([provider.id, provider.namespace, provider.baseUrl.trim(), authMethod])}
+              id={provider.id} name={provider.name} oauth={oauth} authMethod={authMethod ?? provider.authMethod}
+              persisted={savedProviderIds.includes(provider.id)}
+              apiKeyAvailable={apiKeyAvailable} baseUrl={provider.baseUrl} invoke={invoke} persist={persist}
+              onAuthMethodChange={method => onChange({ authMethod: method })} onBusyChange={setAuthBusy} />}
+            {apiKeyAvailable && authMethod !== 'oauth' && <FieldRow label="API Key" htmlFor={'provider-' + provider.id + '-key'} description={tr('密钥使用系统加密保存；更新后从下一次运行生效。')}>
               <div className="model-key-control">
                 {/* The reveal control lives inside the field: a pasted key has to be checkable. */}
                 <div className="model-key-input">
@@ -225,9 +254,12 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
                 </div>
                 <span className="model-key-status"><KeyRound size={12} aria-hidden="true" />{keys[provider.id] ? tr('密钥待保存') : provider.hasKey ? tr('已保存密钥') : tr('尚未设置密钥')}</span>
               </div>
-            </FieldRow>} />
+            </FieldRow>}
+            </>} />
         </SettingsSection>
-        <SettingsSection title={tr('模型')} description={tr('该提供商下的模型共享上面的连接与密钥。')}
+        <SettingsSection title={tr('模型')} description={locale === 'en-US'
+          ? 'Models under this provider share the connection and authentication credential above.'
+          : '该提供商下的模型共享上面的连接与认证凭据。'}
           action={addingModel ? undefined : <Button size="sm" onClick={() => setAddingModel(provider.kind)}><Plus size={14} aria-hidden="true" />{tr('添加模型')}</Button>}>
           {/* The card's block padding: the list and its actions sit inside it like the connection rows do. */}
           <div className="model-models">
@@ -246,7 +278,7 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
               return <li key={model.id} className="model-row" data-open={open || undefined}>
                 <div className="model-row-heading">
                   <button type="button" className="model-row-toggle" aria-expanded={open} aria-controls={'model-editor-' + model.id} onClick={() => setEditingModel(open ? '' : model.id)}>
-                    <span className="model-row-name">{model.name || tr('新模型')}</span>
+                    <span className="model-row-title"><ChevronRight className="disclosure-chevron" size={14} aria-hidden="true" /><span className="model-row-name">{model.name || tr('新模型')}</span></span>
                     <small className="model-row-id">{model.model}</small>
                   </button>
                   <span className="model-row-capabilities" aria-hidden="true" title={model.contextWindow.toLocaleString() + ' · ' + model.maxTokens.toLocaleString()}>{compactTokens(model.contextWindow)} · {compactTokens(model.maxTokens)}{model.reasoning ? ' · ' + tr('支持思考') : ''}</span>
@@ -298,22 +330,25 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
           </ul>
           {addingModel === 'builtin' ? <div className="model-add-panel">
             <p className="hint">{tr('从内置目录选择要添加的模型，能力随目录一并复制。')}</p>
+            <div className="settings-search model-catalog-search"><Search size={14} aria-hidden="true" /><input aria-label={locale === 'en-US' ? 'Search available models' : '搜索可用模型'}
+              placeholder={locale === 'en-US' ? 'Search model name or ID' : '搜索模型名称或 ID'} value={catalogQuery} onChange={event => setCatalogQuery(event.target.value)} /></div>
             <ul className="model-catalog-options" aria-label={tr('内置模型')}>
-              {catalogCandidates.map(entry => <li key={entry.id}>
+              {matchingCandidates.map(entry => <li key={entry.id}>
                 <label className="model-catalog-option"><input type="checkbox" value={entry.id} checked={catalogPicks.includes(entry.id)}
                   onChange={event => setCatalogPicks(previous => event.target.checked ? [...previous, entry.id] : previous.filter(id => id !== entry.id))} />
                   <span>{entry.name}<small>{entry.id}{' · ' + entry.contextWindow.toLocaleString()}</small></span></label>
               </li>)}
             </ul>
             {!catalogCandidates.length && <p className="hint">{tr('该供应商的目录模型都已添加。')}</p>}
+            {!!catalogCandidates.length && !matchingCandidates.length && <p className="hint" role="status">{locale === 'en-US' ? 'No matching models' : '没有匹配的模型'}</p>}
             <div className="row"><Button size="sm" variant="primary" disabled={!catalogPicks.length} onClick={() => {
               const group = catalogProvider(catalog, provider.namespace);
               for (const id of catalogPicks) {
                 const picked = group?.models.find(entry => entry.id === id);
                 if (picked) onAddModel(modelFromCatalog(provider.id, picked));
               }
-              setCatalogPicks([]); setAddingModel('');
-            }}>{tr('添加所选模型')}</Button><Button size="sm" onClick={() => { setCatalogPicks([]); setAddingModel(''); }}>{tr('取消')}</Button></div>
+              setCatalogPicks([]); setCatalogQuery(''); setAddingModel('');
+            }}>{tr('添加所选模型')}{catalogPicks.length > 0 && <span aria-hidden="true">（{catalogPicks.length}）</span>}</Button><Button size="sm" onClick={() => { setCatalogPicks([]); setCatalogQuery(''); setAddingModel(''); }}>{tr('取消')}</Button></div>
           </div> : addingModel === 'custom' ? <div className="model-add-panel">
             <FieldRow label={tr('模型 ID')} htmlFor="model-new-id" description={tr("接口服务实际接受的模型名称，不查询 Pi 内置目录")}>
               <input id="model-new-id" aria-label={tr('模型 ID')} required spellCheck={false} placeholder={tr("填写服务方提供的模型 ID")} value={customId} onChange={event => setCustomId(event.target.value)} />
@@ -323,14 +358,18 @@ export function ModelSettings({ providers, models, defaultId, defaultThinking, s
           </div>
         </SettingsSection>
         <SettingsSection title={tr('提供商偏好')}>
-          <FieldRow label={tr('删除该提供商')} description={tr('保存后移除该提供商的模型与本机保存的 API Key')}>
+          <FieldRow label={tr('删除该提供商')} description={locale === 'en-US'
+            ? 'Saving removes this provider’s models and locally stored authentication credential (API Key or OAuth).'
+            : '保存后移除该提供商的模型与本机保存的认证凭据（API Key 或 OAuth）。'}>
             <Button size="sm" variant="ghost" className="model-remove provider-remove" onClick={() => setDeleting(provider)}><Trash2 size={14} aria-hidden="true" />{tr('删除提供商')}</Button>
           </FieldRow>
         </SettingsSection>
         <p className="hint model-privacy-note">{tr('凭据以当前 Windows 用户账户加密后保存在本机，不会写入配置文件。')}</p>
       </>}
     </div>
-    {deleting && <ConfirmDialog title={tr('删除提供商「{p0}」？', { p0: deleting.name })} description={tr('保存设置后移除该提供商、它的 {p0} 个模型和本机保存的 API Key。已有任务的历史记录会保留。', { p0: modelsOf(deleting.id).length })} confirmLabel={tr('删除提供商')} danger initialFocus="cancel" onCancel={() => setDeleting(null)} onConfirm={() => {
+    {deleting && <ConfirmDialog title={tr('删除提供商「{p0}」？', { p0: deleting.name })} description={locale === 'en-US'
+      ? `Saving removes this provider, its ${modelsOf(deleting.id).length} models, and locally stored authentication credentials (API Key or OAuth). Existing task history stays.`
+      : `保存设置后移除该提供商、它的 ${modelsOf(deleting.id).length} 个模型和本机保存的认证凭据（API Key 或 OAuth）。已有任务的历史记录会保留。`} confirmLabel={tr('删除提供商')} danger initialFocus="cancel" onCancel={() => setDeleting(null)} onConfirm={() => {
       onDeleteProvider(deleting.id); setDeleting(null);
       requestAnimationFrame(() => collection.current?.querySelector<HTMLButtonElement>('.model-add')?.focus());
     }} />}

@@ -34,3 +34,9 @@
 .subagent-transcript summary { cursor: pointer; }
 .subagent-transcript table { display: block; overflow-x: auto; }
 .subagent-status.failed, .subagent-status.interrupted { color: var(--danger); }
+
+/* The child's model and reasoning level: two popover menus behind the panel header, plus an inheritance hint. */
+.subagent-run-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.subagent-run-field { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; color: var(--muted); font-size: 12px; }
+.subagent-run-field > strong { color: var(--text); font-weight: 500; }
+.subagent-run-field > em { color: var(--muted); font-style: normal; }

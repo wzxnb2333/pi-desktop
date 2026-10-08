@@ -1,6 +1,7 @@
 import { type UtilityProcess, utilityProcess } from 'electron';
 import type { DesktopToolRequest } from '../shared/worker-protocol.ts';
 import type { ToolResult } from '../shared/tool-results.ts';
+import type { ModelAuthResolver } from '../shared/provider-auth.ts';
 import {
   type WorkerCommand,
   type WorkerConfig,
@@ -15,6 +16,7 @@ export class AgentHost {
   private disposal?: Promise<void>;
   private readonly lifetime = new AbortController();
   private readonly desktopCalls = new Map<string, AbortController>();
+  private readonly authCalls = new Map<string, AbortController>();
   private pending = new Map<
     string,
     { resolve: (event: WorkerEvent) => void; reject: (error: Error) => void; timer?: NodeJS.Timeout }
@@ -25,6 +27,7 @@ export class AgentHost {
     private readonly onExit: () => void,
     private readonly token?: (serverId: string, rejectedToken?: string, signal?: AbortSignal) => Promise<string>,
     private readonly desktopTool?: (id: string, request: DesktopToolRequest, signal: AbortSignal, onData: (data: Uint8Array) => void) => Promise<ToolResult>,
+    private readonly modelAuth?: ModelAuthResolver,
   ) {
     this.child = utilityProcess.fork(workerFile, [], { stdio: 'pipe', serviceName: 'Pi Agent' });
     this.child.on('message', (raw: unknown) => {
@@ -34,6 +37,17 @@ export class AgentHost {
         return;
       }
       const event = parsed.data;
+      if (event.type === 'model.auth.cancel') { this.authCalls.get(event.id)?.abort(); return; }
+      if (event.type === 'model.auth') {
+        if (this.authCalls.has(event.id)) return;
+        const controller = new AbortController(); this.authCalls.set(event.id, controller);
+        const signal = AbortSignal.any([controller.signal, this.lifetime.signal, AbortSignal.timeout(45000)]);
+        void (this.modelAuth ? this.modelAuth(signal) : Promise.reject(new Error('模型 OAuth 不可用')))
+          .then(snapshot => { if (!this.closed && !signal.aborted) this.child.postMessage(workerCommandSchema.parse({ type: 'model.auth.result', id: event.id, snapshot })); },
+            () => { if (!this.closed) this.child.postMessage({ type: 'model.auth.result', id: event.id, error: 'OAuth 认证或刷新失败，请检查连接或重新登录' }); })
+          .finally(() => this.authCalls.delete(event.id));
+        return;
+      }
       if (event.type === 'desktop.cancel') { this.desktopCalls.get(event.id)?.abort(); return; }
       if (event.type === 'desktop.call') {
         if (this.desktopCalls.has(event.id)) return;

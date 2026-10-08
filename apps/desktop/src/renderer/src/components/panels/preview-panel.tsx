@@ -12,12 +12,16 @@ import { BrowserSites } from './browser-sites.tsx';
 import { BrowserAnnotationsPanel } from './browser-annotations.tsx';
 import { BrowserHistoryPanel } from './browser-history.tsx';
 import { BrowserAddressInput } from './browser-address-input.tsx';
+import { BrowserSettings } from '../../BrowserSettings.tsx';
+import { ConfirmDialog } from '../primitives/dialog.tsx';
+import { Button } from '../primitives/button.tsx';
 type PageState = Extract<DesktopEvent, { type: 'browser' }>;
 type Download = Extract<DesktopEvent, { type: 'download' }>;
+type ChromeTab = { sessionId: string; tabId: string; url: string; title: string; backend: 'chrome' };
 const findOpenByThread = new Set<string>();
 export function PreviewPanel({ active = true, pending = false, launcher }: { active?: boolean; pending?: boolean; launcher?: ReactNode }) {
   useLocale();
-  const { act, invoke, activeId, threadUi, patchThread, approvals } = useApp();
+  const { act, invoke, activeId, threadUi, patchThread, approvals, data } = useApp();
   const api = useRef(act); api.current = act;
   const surfaceRef = useRef<HTMLDivElement>(null);
   const tabs = threadUi.browserTabs ?? [];
@@ -37,6 +41,9 @@ export function PreviewPanel({ active = true, pending = false, launcher }: { act
   const [sitesOpen, setSitesOpen] = useState(false);
   const [annotationsOpen, setAnnotationsOpen] = useState<'create' | 'list'>();
   const [historyOpen, setHistoryOpen] = useState<'history' | 'clear'>();
+  const [chromeSnapshot, setChromeSnapshot] = useState<{ threadId: string; tabs: ChromeTab[] }>();
+  const chromeTabs = chromeSnapshot?.threadId === activeId ? chromeSnapshot.tabs : [];
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
   useEffect(() => { setAnnotationsOpen(undefined); }, [activeId]);
   const state = selected && states[identity];
   const currentUrl = state?.url && state.url !== 'about:blank' ? state.url : selected?.url ?? '';
@@ -50,6 +57,20 @@ export function PreviewPanel({ active = true, pending = false, launcher }: { act
     if (event.type === 'preview.snapshot') setSnapshot({ identity: event.threadId + '/' + event.tabId, image: event.image });
   }), []);
   useEffect(() => { composing.current = false; }, [identity]);
+  useEffect(() => {
+    let current = true, revision = 0;
+    if (!active) { setChromeSnapshot(undefined); return () => { current = false; }; }
+    const refresh = () => {
+      const readRevision = ++revision;
+      void invoke({ op: 'browser.bridge.tabs', threadId: activeId }).then(value => {
+        if (current && readRevision === revision) setChromeSnapshot({ threadId: activeId, tabs: Array.isArray(value) ? value as ChromeTab[] : [] });
+      }).catch(() => { if (current && readRevision === revision) setChromeSnapshot(undefined); });
+    };
+    refresh();
+    const unsubscribe = window.desktop.onEvent(event => { if (event.type === 'browser.bridge') refresh(); });
+    const timer = window.setInterval(refresh, 3000);
+    return () => { current = false; unsubscribe(); window.clearInterval(timer); };
+  }, [active, activeId, invoke]);
   useEffect(() => { setDrafts(previous => { if (!previous[identity] || previous[identity].dirty) return previous; const next = { ...previous }; delete next[identity]; return next; }); }, [currentUrl, identity]);
   useEffect(() => {
     if (active && selected) api.current({ op: 'browser.select', threadId: activeId, tabId: selected.id });
@@ -115,6 +136,7 @@ export function PreviewPanel({ active = true, pending = false, launcher }: { act
         { value: 'zoomReset', label: tr("恢复 100%"), disabled: !selected?.url },
         { value: 'permissions', label: tr("站点权限"), disabled: !selected?.url },
         { value: 'agentSites', label: tr('智能体网站访问') },
+        { value: 'connections', label: tr('Chrome 浏览器连接') },
         { value: 'annotate', label: tr('标注当前网页'), disabled: !selected?.url },
         { value: 'annotations', label: tr('已保存的标注') },
         { value: 'history', label: tr('浏览历史') },
@@ -123,6 +145,7 @@ export function PreviewPanel({ active = true, pending = false, launcher }: { act
       ]} onChange={value => {
         if (value === 'find') { findOpenByThread.add(activeId); setFindOpen(true); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.browser-find input')?.focus()); }
         else if (value === 'agentSites') setSitesOpen(true);
+        else if (value === 'connections') setConnectionsOpen(true);
         else if (value === 'annotate' || value === 'annotations') setAnnotationsOpen(value === 'annotate' ? 'create' : 'list');
         else if (value === 'history' || value === 'clearData') setHistoryOpen(value === 'history' ? 'history' : 'clear');
         else if (value === 'copy') void navigator.clipboard.writeText(currentUrl).then(() => setFeedback({ identity, text: tr("已复制当前网页地址") }), () => setFeedback({ identity, text: tr("复制失败，请在地址栏复制") }));
@@ -131,8 +154,15 @@ export function PreviewPanel({ active = true, pending = false, launcher }: { act
         else action(value as Extract<DesktopRequest, { op: 'browser.action' }>['action']);
       }} />
     </form>
+    {chromeTabs.length > 0 && <div className="browser-source-tabs" aria-label={tr('Chrome 标签')}>
+      <span className="browser-source-tabs-label">{tr('Chrome 标签')}</span>
+      {chromeTabs.map(tab => <button type="button" key={tab.sessionId + '/' + tab.tabId} title={tab.url} onClick={() => void invoke({ op: 'browser.bridge.focus', sessionId: tab.sessionId, tabId: tab.tabId }).then(() => setFeedback({ identity, text: tr('已打开浏览器查看') })).catch(error => setFeedback({ identity, text: String(error) }))}>
+        <span>{tab.title || tr('未命名标签')}</span><small>Chrome</small>
+      </button>)}
+    </div>}
     {draft?.error && <p id={errorId} className="browser-error" role="alert">{localizeAppError(draft.error)}</p>}
     {sitesOpen && <BrowserSites url={currentUrl} onClose={() => setSitesOpen(false)} />}
+    {connectionsOpen && <ConfirmDialog presentation="panel" title={tr('Chrome 浏览器连接')} confirmLabel={tr('关闭')} onConfirm={() => setConnectionsOpen(false)} onCancel={() => setConnectionsOpen(false)} description={<div className="browser-connection-settings"><BrowserSettings data={data} invoke={invoke} initialThreadId={activeId} /><Button size="sm" onClick={() => setConnectionsOpen(false)}>{tr('关闭')}</Button></div>} />}
     {annotationsOpen && <BrowserAnnotationsPanel key={activeId} threadId={activeId} tabId={selected?.id ?? ''} create={annotationsOpen === 'create'} onClose={() => setAnnotationsOpen(undefined)} />}
     {historyOpen && <BrowserHistoryPanel key={activeId} threadId={activeId} tabId={selected?.id ?? ''} clear={historyOpen === 'clear'} onClose={() => setHistoryOpen(undefined)} />}
     <BrowserFindBar key={identity} threadId={activeId} tabId={selected?.id ?? ''} state={state?.find} enabled={!!selected?.url} open={findOpen || !!state?.find?.text} onClose={() => { findOpenByThread.delete(activeId); setFindOpen(false); }} />

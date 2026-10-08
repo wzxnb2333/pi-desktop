@@ -5,6 +5,7 @@ import { contextSearchSchema, type ContextSearch } from '../../../../shared/comp
 import { composerCommandLabels } from '../../../../shared/composer-messages.ts';
 import { type ContextReference, type InputCatalog, type InputCommand, inputCatalogSchema } from '../../../../shared/input-context.ts';
 import { tr } from '../../../../shared/localization.ts';
+import { localizeLabel } from '../../../../shared/localization.ts';
 import { composerCommand } from '../../../../shared/shortcuts.ts';
 import type { ComposerTrigger } from '../../lib/composer-trigger.ts';
 import { useLocale } from '../../hooks/use-locale.ts';
@@ -73,8 +74,8 @@ export function ComposerSuggestions({ trigger, draftText, controller, listId, on
     if (trigger.kind === '@' && thread?.projectId) {
       for (const { description, ...file } of files.matches) choices.push({ id: 'file:' + file.directoryId + ':' + file.id, label: file.label, detail: description, group: tr('文件与文件夹'), reference: file });
     }
-    for (const item of catalog?.references ?? []) if ((trigger.kind === '@' || item.kind === 'skill') && matches(item.label + ' ' + item.description))
-      choices.push({ id: item.kind + ':' + item.id, label: item.label, detail: item.description, group: item.kind === 'skill' ? 'Skills' : tr('工具'), reference: { kind: item.kind, id: item.id, label: item.label } });
+    for (const item of catalog?.references ?? []) if ((trigger.kind === '@' || item.kind === 'skill') && matches(localizeLabel(item.label) + ' ' + item.description))
+      choices.push({ id: item.kind + ':' + item.id, label: localizeLabel(item.label), detail: item.description, group: item.kind === 'skill' ? 'Skills' : tr('工具'), reference: { kind: item.kind, id: item.id, label: item.label } });
     if (trigger.kind === '@' && thread?.projectId) choices.push({ id: 'browse', label: tr('浏览项目文件'), detail: tr('文件与文件夹'), group: tr('添加'), browse: true });
     if (trigger.kind === '/') for (const template of data.settings.promptTemplates ?? []) if (matches(template.name)) choices.push({ id: 'template:' + template.id, label: template.name, detail: template.text.slice(0, 60), group: tr('提示词模板'), template: template.text });
   }

@@ -2,7 +2,8 @@ import { type ProviderModel, type Thread, thinkingSchema } from './contracts.ts'
 
 export type ThinkingLevel = Thread['thinking'];
 
-export function allowedThinkingLevels(model: ProviderModel): ThinkingLevel[] {
+export function allowedThinkingLevels(model: ProviderModel | undefined): ThinkingLevel[] {
+  if (!model) return [...thinkingSchema.options];
   if (!model.reasoning) return ['off'];
   const configured = model.thinkingLevels ?? ['off', 'minimal', 'low', 'medium', 'high'];
   return thinkingSchema.options.filter((level) => configured.includes(level));

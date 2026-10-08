@@ -13,13 +13,14 @@ function fixture() {
   const state = defaultData(); state.settings.subtasksEnabled = true;
   state.threads.push(threadSchema.parse({ id: 'p', projectId: 'project', title: 'Parent', cwd: 'unused', createdAt: 1, updatedAt: 1, modelId: 'local', thinking: 'off', policy: 'auto', items: [{ id: 'message', role: 'user', text: 'Captured context', timestamp: 1 }] }));
   let saveError = false, failPrepare = false, calls = 0;
+  const retargets: SubtaskDefinition[] = [];
   let saving = async (_records: Subtask[]) => {};
   const errors: unknown[] = [];
   let run: (record: Subtask, child: Thread, signal: AbortSignal) => Promise<string> = async () => 'Actual result';
   const service = new Subtasks({ records: () => state.subtasks, threads: () => state.threads, enabled: () => state.settings.subtasksEnabled,
     prepare: async record => { if (failPrepare) throw new Error('PREPARE_FAILED'); const child = { ...state.threads[0], id: crypto.randomUUID(), subtaskId: record.id }; state.threads.push(child); return child; },
-    run: async (...args) => { calls++; return run(...args); }, save: async records => { await saving(records); if (saveError) throw new Error('STORAGE_FAILURE'); publishSubtasks(state.subtasks, records); }, deliver: async () => {}, changed: () => {}, error: error => errors.push(error) });
-  return { state, service, errors, get calls() { return calls; }, setRun(next: typeof run) { run = next; }, onSave(next: typeof saving) { saving = next; }, failSave(next: boolean) { saveError = next; }, failPrepare(next: boolean) { failPrepare = next; } };
+    run: async (...args) => { calls++; return run(...args); }, save: async records => { await saving(records); if (saveError) throw new Error('STORAGE_FAILURE'); publishSubtasks(state.subtasks, records); }, deliver: async () => {}, retarget: (_record, next) => { retargets.push(next); }, changed: () => {}, error: error => errors.push(error) });
+  return { state, service, errors, retargets, get calls() { return calls; }, setRun(next: typeof run) { run = next; }, onSave(next: typeof saving) { saving = next; }, failSave(next: boolean) { saveError = next; }, failPrepare(next: boolean) { failPrepare = next; } };
 }
 
 test('uncommitted delegation stays private and cannot dispatch before storage succeeds', async () => {
@@ -138,4 +139,20 @@ test('failed stop persistence never releases the queued child into an open execu
     assert.equal(queued.status, 'interrupted'); f.failSave(false); gate.resolve();
     await until(() => !f.state.subtasks.some(activeSubtask)); assert.equal(f.calls, 4);
   } finally { f.failSave(false); gate.resolve(); await f.service.dispose(); }
+});
+
+test('a delegation can be retargeted later, cleared back to the parent, and stays scoped to its parent', async () => {
+  const f = fixture();
+  const record = await f.service.create('p', crypto.randomUUID(), definition);
+  const updated = await f.service.update('p', record.id, { modelId: 'reasoner', thinking: 'low' });
+  assert.deepEqual({ modelId: updated.definition.modelId, thinking: updated.definition.thinking }, { modelId: 'reasoner', thinking: 'low' });
+  assert.deepEqual(f.retargets.map(item => item.modelId), ['reasoner'], 'the runtime receives the retargeted definition');
+  const cleared = await f.service.update('p', record.id, { modelId: null, thinking: null });
+  assert.equal(cleared.definition.modelId, undefined); assert.equal(cleared.definition.thinking, undefined);
+  assert.equal(f.retargets.length, 2);
+  await assert.rejects(f.service.update('p', crypto.randomUUID(), { modelId: 'reasoner' }), /子任务不存在/);
+  await assert.rejects(f.service.update('other', record.id, { modelId: 'reasoner' }), /父任务不可用/);
+  assert.equal(requestSchema.safeParse({ op: 'subtask.update', parentThreadId: 'p', id: record.id, modelId: null, thinking: null }).success, true);
+  assert.equal(requestSchema.safeParse({ op: 'subtask.update', parentThreadId: 'p', id: record.id, thinking: 'bogus' }).success, false);
+  await f.service.dispose(); assert.deepEqual(f.errors, []);
 });

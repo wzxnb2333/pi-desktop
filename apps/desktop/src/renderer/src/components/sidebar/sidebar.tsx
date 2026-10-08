@@ -3,7 +3,6 @@ import { useLocale } from "../../hooks/use-locale.ts";
 import {
   Archive,
   ArchiveRestore,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   Filter,
@@ -18,7 +17,7 @@ import {
   SquarePen,
   Zap,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_APP_KEYBINDINGS, DEFAULT_GLOBAL_KEYBINDINGS } from '../../../../shared/shortcuts.ts';
 import type { Thread } from '../../../../shared/contracts.ts';
 import { statusText } from '../../lib/labels.ts';
@@ -75,6 +74,24 @@ export function Sidebar({ width }: { width: number }) {
   const [recentsOpen, setRecentsOpen] = useState(true);
   const [pinnedOpen, setPinnedOpen] = useState(true);
   const [projectFilter, setProjectFilter] = useState('');
+  const previousCollapsed = useRef(collapsed);
+  const focusedProject = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const newlyCollapsed = collapsed.filter(id => !previousCollapsed.current.includes(id));
+    previousCollapsed.current = collapsed;
+    const activeMenu = document.activeElement instanceof HTMLElement
+      ? document.activeElement.closest<HTMLElement>('.menu-list[id]')
+      : null;
+    const menuProject = activeMenu && newlyCollapsed.find(id => {
+      const panel = document.getElementById(`project-threads-${id}`);
+      return Array.from(panel?.querySelectorAll<HTMLElement>('[aria-controls]') ?? [])
+        .some(control => control.getAttribute('aria-controls') === activeMenu.id);
+    });
+    const id = activeMenu ? menuProject : newlyCollapsed.find(item => item === focusedProject.current);
+    if (!id) return;
+    focusedProject.current = null;
+    document.getElementById(`project-toggle-${id}`)?.focus({ preventScroll: true });
+  }, [collapsed]);
   const groups = useMemo(
     () => groupThreadList({ projects: data.projects, threads: data.threads, showArchived, search: '' }),
     [data.projects, data.threads, showArchived],
@@ -143,10 +160,14 @@ export function Sidebar({ width }: { width: number }) {
       {/* Pinned tasks collect above the project chats: they are the ones the user keeps in reach. */}
       {!!pinnedThreads.length && <section className="sidebar-pinned" aria-label={tr('置顶')}>
         <button className="section-label pinned-heading" onClick={() => setPinnedOpen(!pinnedOpen)} aria-expanded={pinnedOpen}>
-          {tr("置顶")} {pinnedOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {tr("置顶")} <ChevronRight className="sidebar-disclosure-chevron" size={12} aria-hidden="true" />
         </button>
-        {pinnedOpen && <div className="recent-list">{pinnedThreads.map(thread =>
-          <ShortcutRow key={thread.id} thread={thread} selected={activeId === thread.id && view === 'thread'} label={tr("置顶会话：")} />)}</div>}
+        <div className="sidebar-motion" data-expanded={pinnedOpen} aria-hidden={!pinnedOpen} inert={!pinnedOpen}>
+          <div className="sidebar-motion-clip">
+            <div className="recent-list">{pinnedThreads.map(thread =>
+              <ShortcutRow key={thread.id} thread={thread} selected={activeId === thread.id && view === 'thread'} label={tr("置顶会话：")} />)}</div>
+          </div>
+        </div>
       </section>}
       <section className="sidebar-project-chats" aria-label={showArchived ? tr('已归档') : tr('项目聊天')}>
       <div className="section-label">
@@ -167,10 +188,14 @@ export function Sidebar({ width }: { width: number }) {
           return (
             <section key={item.id} className="project-group">
               <div className={`project-row ${project?.id === item.id ? 'current' : ''}`}>
-                <IconButton label={`${isCollapsed ? tr("展开") : tr("折叠")} ${item.name}`} onClick={() => toggleProject(item.id)}>
-                  <span className="project-folder-icon">{isCollapsed ? <Folder size={16} /> : <FolderOpen size={16} />}</span>
-                  <span className="project-collapse-icon">{isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</span>
-                </IconButton>
+                <Tooltip label={`${isCollapsed ? tr("展开") : tr("折叠")} ${item.name}`}>
+                  <button type="button" id={`project-toggle-${item.id}`} className="icon-button"
+                    aria-label={`${isCollapsed ? tr("展开") : tr("折叠")} ${item.name}`} aria-expanded={!isCollapsed}
+                    aria-controls={`project-threads-${item.id}`} onClick={() => toggleProject(item.id)}>
+                    <span className="project-folder-icon">{isCollapsed ? <Folder size={16} /> : <FolderOpen size={16} />}</span>
+                    <span className="project-collapse-icon"><ChevronRight className="sidebar-disclosure-chevron" size={16} aria-hidden="true" /></span>
+                  </button>
+                </Tooltip>
                 <Button
                   className="project-name"
                   title={item.path}
@@ -190,23 +215,31 @@ export function Sidebar({ width }: { width: number }) {
                   <Plus size={14} />
                 </IconButton>
               </div>
-              {!isCollapsed &&
-                threads.map((thread) => (
-                  <div
-                    key={thread.id}
-                    onContextMenu={event => { event.preventDefault(); event.currentTarget.querySelector<HTMLButtonElement>('[data-thread-menu] button')?.click(); }}
-                    onKeyDown={event => { if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) { event.preventDefault(); event.currentTarget.querySelector<HTMLButtonElement>('[data-thread-menu] button')?.click(); } }}
-                    className={`thread-row ${activeId === thread.id && view === 'thread' ? 'selected' : ''}`}
-                  >
-                    <Button className="thread-main" title={thread.title} onClick={() => selectThread(thread)}>
-                      <span className="truncate">{thread.title}</span>
-                      {thread.worktreeBranch && <GitBranch size={12} />}
-                    </Button>
-                    <ThreadIndicator thread={thread} />
-                    <ThreadRowActions thread={thread} />
-                    <ThreadActions thread={thread} />
+              <div id={`project-threads-${item.id}`} className="sidebar-motion project-thread-motion"
+                data-expanded={!isCollapsed} aria-hidden={isCollapsed} inert={isCollapsed}
+                onFocusCapture={() => { focusedProject.current = item.id; }}
+                onBlurCapture={event => { if (event.currentTarget.getAttribute('aria-hidden') !== 'true') focusedProject.current = null; }}>
+                <div className="sidebar-motion-clip">
+                  <div className="project-thread-list">
+                    {threads.map((thread) => (
+                      <div
+                        key={thread.id}
+                        onContextMenu={event => { event.preventDefault(); event.currentTarget.querySelector<HTMLButtonElement>('[data-thread-menu] button')?.click(); }}
+                        onKeyDown={event => { if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) { event.preventDefault(); event.currentTarget.querySelector<HTMLButtonElement>('[data-thread-menu] button')?.click(); } }}
+                        className={`thread-row ${activeId === thread.id && view === 'thread' ? 'selected' : ''}`}
+                      >
+                        <Button className="thread-main" title={thread.title} onClick={() => selectThread(thread)}>
+                          <span className="truncate">{thread.title}</span>
+                          {thread.worktreeBranch && <GitBranch size={12} />}
+                        </Button>
+                        <ThreadIndicator thread={thread} />
+                        <ThreadRowActions thread={thread} />
+                        <ThreadActions thread={thread} />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+              </div>
             </section>
           );
         })}
@@ -220,10 +253,14 @@ export function Sidebar({ width }: { width: number }) {
       {/* Recents follow the project chats: the project collection is the workspace, recents are a shortcut back. */}
       {!!recentThreads.length && !showArchived && <section className="sidebar-recents" aria-label={tr('最近任务')}>
         <button className="section-label recents-heading" onClick={() => setRecentsOpen(!recentsOpen)} aria-expanded={recentsOpen}>
-          {tr("最近任务")} {recentsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {tr("最近任务")} <ChevronRight className="sidebar-disclosure-chevron" size={12} aria-hidden="true" />
         </button>
-        {recentsOpen && <div className="recent-list">{recentThreads.map(thread =>
-          <ShortcutRow key={thread.id} thread={thread} selected={activeId === thread.id && view === 'thread'} label={tr("最近任务：")} />)}</div>}
+        <div className="sidebar-motion" data-expanded={recentsOpen} aria-hidden={!recentsOpen} inert={!recentsOpen}>
+          <div className="sidebar-motion-clip">
+            <div className="recent-list">{recentThreads.map(thread =>
+              <ShortcutRow key={thread.id} thread={thread} selected={activeId === thread.id && view === 'thread'} label={tr("最近任务：")} />)}</div>
+          </div>
+        </div>
       </section>}
       </div>
       <footer className="sidebar-footer">

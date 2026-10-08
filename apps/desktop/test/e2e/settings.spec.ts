@@ -411,7 +411,7 @@ test('failed key saves retain only unfinished credentials for a targeted retry',
 });
 
 test('the category nav swaps one panel and keeps every control where it is', async () => {
-  await expect(page.locator('.settings-nav button')).toHaveCount(8);
+  await expect(page.locator('.settings-nav button')).toHaveCount(9);
   await expect(page.getByRole('button', { name: '模型', exact: true })).toHaveAttribute('aria-current', 'true');
   await page.getByRole('button', { name: '外观', exact: true }).click();
   await expect(rowFor('显示名称')).toHaveCount(0);

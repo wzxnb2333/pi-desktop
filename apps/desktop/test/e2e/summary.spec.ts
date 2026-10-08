@@ -355,3 +355,89 @@ test('summary and tool pane stay independent across narrow and wide layouts', as
   await expect(pane).toHaveCount(0); await expect(summary).toBeVisible();
   await expect(page.getByLabel('向 Pi 发送消息')).toHaveValue('并排和浮层切换保留草稿');
 });
+
+test('whole sidebar closes with nonlinear width motion and reverses without losing the composer draft', async () => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(url);
+  await page.getByLabel('向 Pi 发送消息').fill('侧栏切换保留草稿');
+  const toggle = page.getByRole('button', { name: '切换侧栏', exact: true });
+  const initialWidth = (await page.locator('.sidebar').boundingBox())!.width;
+  const halfway = await toggle.evaluate(async (element: HTMLButtonElement) => {
+    element.click();
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    const pane = document.querySelector<HTMLElement>('.workspace-sidebar');
+    if (!pane?.querySelector('.sidebar')) throw new Error('Sidebar disappears before its collapse can animate');
+    const animation = pane.getAnimations().find(animation => animation.effect instanceof KeyframeEffect && animation.effect.getKeyframes().some(frame => 'width' in frame));
+    if (!animation?.effect) throw new Error('Missing whole-sidebar width motion');
+    animation.pause();
+    animation.currentTime = Number(animation.effect.getTiming().duration) / 2;
+    return { width: pane.getBoundingClientRect().width, mainX: document.querySelector('.main')!.getBoundingClientRect().x,
+      easing: getComputedStyle(pane).transitionTimingFunction, inert: pane.inert };
+  });
+  expect(halfway.width).toBeGreaterThan(0);
+  expect(halfway.width).toBeLessThan(initialWidth / 2);
+  expect(halfway.mainX).toBeCloseTo(halfway.width, 0);
+  expect(halfway.easing).toContain('cubic-bezier');
+  expect(halfway.inert).toBe(true);
+  await toggle.evaluate((element: HTMLButtonElement) => element.click());
+  await expect.poll(() => page.locator('.workspace-sidebar').evaluate(element => element.getBoundingClientRect().width)).toBe(initialWidth);
+  await expect(page.locator('.sidebar')).toBeVisible();
+  await expect(page.getByLabel('向 Pi 发送消息')).toHaveValue('侧栏切换保留草稿');
+  await toggle.click();
+  await expect(page.locator('.sidebar')).toHaveCount(0);
+  await expect.poll(async () => (await page.locator('.main').boundingBox())!.x).toBe(0);
+  await toggle.click();
+  await expect(page.locator('.sidebar')).toBeVisible();
+  await expect.poll(() => page.locator('.workspace-sidebar').evaluate(element => element.getBoundingClientRect().width)).toBe(initialWidth);
+});
+
+test('whole sidebar honors reduced motion immediately, including preference changes during closing', async () => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(url);
+  await expect(page.locator('.sidebar')).toBeVisible();
+  const toggle = page.getByRole('button', { name: '切换侧栏', exact: true });
+  await page.clock.install();
+  await toggle.click();
+  await expect(page.locator('.workspace-sidebar')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('.sidebar')).toHaveCount(1);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('.sidebar')).toHaveCount(0);
+  await expect(page.locator('.workspace-sidebar')).toHaveCSS('width', '0px');
+  await expect(toggle).toBeFocused();
+  await toggle.press('Space');
+  await expect(page.locator('.sidebar')).toBeVisible();
+  await expect(page.locator('.workspace-sidebar')).toHaveCSS('width', '275px');
+  expect(await page.locator('.workspace-sidebar').evaluate(element => element.getAnimations().length)).toBe(0);
+  await toggle.press('Space');
+  await expect(page.locator('.sidebar')).toHaveCount(0);
+});
+
+test('whole sidebar animates settings navigation but keeps pointer resizing immediate', async () => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(url);
+  await expect(page.locator('.sidebar')).toBeVisible();
+  const frame = page.locator('.workspace-sidebar');
+  const resizer = page.getByRole('separator', { name: '调整侧栏宽度', exact: true });
+  const bounds = (await resizer.boundingBox())!;
+  await page.mouse.move(bounds.x, bounds.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 60, bounds.y + 100);
+  await expect(frame).toHaveAttribute('data-resizing', 'true');
+  await expect(frame).toHaveCSS('width', '335px');
+  expect(await frame.evaluate(element => element.getAnimations().length)).toBe(0);
+  await page.mouse.up();
+  await expect(resizer).toHaveAttribute('aria-valuenow', '335');
+  await resizer.press('ArrowLeft');
+  await expect(frame).toHaveCSS('width', '325px');
+  expect(await frame.evaluate(element => element.getAnimations().length)).toBe(0);
+  await page.getByRole('button', { name: '文件菜单', exact: true }).click();
+  await page.getByRole('menuitem', { name: '设置', exact: true }).click();
+  await expect(page.locator('.settings-sidebar')).toBeVisible();
+  await page.getByRole('button', { name: '切换侧栏', exact: true }).evaluate(async (element: HTMLButtonElement) => {
+    element.click();
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    const pane = document.querySelector<HTMLElement>('.workspace-sidebar')!;
+    if (!pane.querySelector('.settings-sidebar') || !pane.getAnimations().length) throw new Error('Settings sidebar skips closing motion');
+  });
+  await expect(page.locator('.settings-sidebar')).toHaveCount(0);
+});

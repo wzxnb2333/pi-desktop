@@ -1,10 +1,11 @@
 import { File, FileSearch, Folder, GitBranch, Globe, MessageCircle, Network, Plus, RefreshCw, Terminal, X } from 'lucide-react';
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import type { PanelTab } from '../../../../shared/contracts.ts';
 import { fileTabPath } from '../../../../shared/panel-tabs.ts';
 import { tr } from '../../../../shared/localization.ts';
 import { projectDirectories } from '../../../../shared/project-directories.ts';
 import { useLocale } from '../../hooks/use-locale.ts';
+import { useContentMotion } from '../../hooks/use-content-motion.ts';
 import type { PanelActions } from '../../hooks/use-panel-actions.ts';
 import { useTaskGit } from '../../hooks/use-task-git.ts';
 import { fileBufferDirty, fileBuffers } from '../../lib/file-buffers.ts';
@@ -29,6 +30,8 @@ export function ReviewPanel({ width, actions }: { width: number; actions: PanelA
   const buffers = useSyncExternalStore(fileBuffers.subscribe, fileBuffers.snapshot);
   const { git, reload: refreshGit } = useTaskGit();
   const { visibleTabs, selected, pending, select, close: closeTab, openTool, openBrowser, fileCloseRequest, fileCloseBlocked, confirmFileClose, cancelFileClose } = actions;
+  const content = useRef<HTMLDivElement>(null);
+  useContentMotion(content, activeId + '/' + selected.id);
   if (!thread) return null;
   const names = { browser: tr('新标签'), changes: tr('变更'), files: tr('文件'), sidechat: tr('侧聊'), review: tr('审查'), terminal: tr('终端'), subtasks: tr('子智能体'), subtask: tr('子智能体会话') };
   const title = (tab: PanelTab) => tab.kind === 'file' ? fileTabPath(tab.id) : tab.kind === 'subtask' ? data.subtasks.find(record => 'subtask:' + record.id === tab.id && record.parentThreadId === activeId)?.definition.title || names.subtask : tab.kind === 'browser'
@@ -60,7 +63,7 @@ export function ReviewPanel({ width, actions }: { width: number; actions: PanelA
     </div>
     {['changes', 'files', 'file', 'review'].includes(selected.kind) && project && (project.directories?.length ?? 0) > 0 && <Menu label={tr('浏览目录与仓库')} value={directoryId} size="sm"
       options={projectDirectories(project).map(directory => ({ value: directory.id, label: directory.name + ' · ' + directory.path }))} onChange={selectDirectory} />}
-    <div className={'review-content review-tool-content' + (selected.kind === 'changes' ? ' review-changes' : '')}>
+    <div ref={content} className={'review-content review-tool-content' + (selected.kind === 'changes' ? ' review-changes' : '')}>
       {(selected.kind === 'browser' || !!threadUi.browserTabs?.length) && <PreviewPanel key={activeId} active={selected.kind === 'browser'} pending={pending} launcher={launcher} />}
       {selected.kind === 'review' && <ReviewFindings key={fileScopeId} />}
       {(selected.kind === 'files' || selected.kind === 'file') && <FileNavigatorPanel key={fileScopeId} hidden={selected.kind !== 'files'} />}

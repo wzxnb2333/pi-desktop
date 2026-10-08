@@ -3,13 +3,14 @@ import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 import type { ModelProvider, ProviderModel } from '../shared/contracts.ts';
 import { memoryGenerationSchema, type MemoryGeneration } from '../shared/memories.ts';
 import { registerConfiguredModel } from '../shared/model-runtime.ts';
+import type { ModelAuthResolver, RuntimeOAuthSnapshot } from '../shared/provider-auth.ts';
 import type { MemoryInput } from './memories.ts';
 
 /** One inference request; no agent session, filesystem tools, extensions, MCP or transcript cache. */
-export async function generateMemories(provider: ModelProvider, configured: ProviderModel, apiKey: string | undefined, input: MemoryInput, signal: AbortSignal): Promise<MemoryGeneration> {
+export async function generateMemories(provider: ModelProvider, configured: ProviderModel, apiKey: string | undefined, input: MemoryInput, signal: AbortSignal, oauth?: RuntimeOAuthSnapshot, resolveOAuth?: ModelAuthResolver): Promise<MemoryGeneration> {
   signal.throwIfAborted();
   const runtime = await ModelRuntime.create({ credentials: new InMemoryCredentialStore(), modelsPath: null, allowModelNetwork: false, signal });
-  await registerConfiguredModel(runtime, provider, configured, apiKey, ['text']);
+  await registerConfiguredModel(runtime, provider, configured, apiKey, ['text'], oauth, resolveOAuth);
   const model = runtime.getModel(provider.namespace, configured.model);
   if (!model) throw new Error('记忆生成模型不可用');
   const response = await runtime.completeSimple(model, {

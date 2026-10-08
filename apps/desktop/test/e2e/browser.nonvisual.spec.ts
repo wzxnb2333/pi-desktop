@@ -6,6 +6,7 @@ import type { Bootstrap, DesktopEvent, Thread } from '../../src/shared/contracts
 import type { BrowserWindow, KeyboardInputEvent } from 'electron';
 import { acceptanceApp } from './fixtures/acceptance-app.ts';
 import { startDevelopmentSource } from './fixtures/development-source.ts';
+import { translate } from '../../src/shared/localization.ts';
 
 type BrowserEvent = Extract<DesktopEvent, { type: 'browser' }>;
 declare global { interface Window { __browserEvents: BrowserEvent[]; } }
@@ -306,7 +307,7 @@ test('empty browser has one tab row and keeps utility controls in the menu', asy
   expect(tabs!.height).toBe(46);
   expect(address!.y).toBe(tabs!.y + tabs!.height);
   expect(content!.y).toBe(address!.y + 40);
-  await expect(page.locator('.tool-launcher button')).toHaveCount(4);
+  await expect(page.locator('.tool-launcher button')).toHaveText(['审查', '终端', '侧聊', '文件', '子智能体']);
   await page.locator('.tool-launcher').getByRole('button', { name: '文件', exact: true }).click();
   await expect(page.locator('.files-navigator')).toBeVisible();
 });
@@ -374,7 +375,7 @@ test('launcher and mixed tab controls fit both themes and languages at supported
     await fixture.invoke({ op: 'ui.update', ui: { ...state.data.ui, locale } });
     for (const [width, height] of [[1000, 700], [1280, 800], [1440, 940]]) {
       await fixture.app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height), { width, height });
-      await expect(page.locator('.tool-launcher button')).toHaveCount(4);
+      await expect(page.locator('.tool-launcher button')).toHaveText((['审查', '终端', '侧聊', '文件', '子智能体'] as const).map(name => translate(locale, name)));
       await expect(page.locator('.tool-launcher button').first()).toHaveCSS('justify-content', 'flex-start');
       await expect.poll(() => page.locator('.workspace-tab-header').evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
       await expect.poll(() => page.locator('.tool-launcher').evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
@@ -498,6 +499,47 @@ test('panel commands from native pages use settings immediately and keep page st
   await fixture.page.locator('.composer-input').press('Control+Shift+p');
   await fixture.page.getByRole('dialog').getByRole('combobox').fill('Open browser tab');
   await expect(fixture.page.getByRole('option', { name: /Open browser tab.*F6/ })).toBeVisible();
+});
+
+test('whole sidebar motion keeps native browser bounds aligned and preserves the live page', async () => {
+  const id = await open('/a');
+  const page = fixture.page;
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await fixture.app.evaluate(({ webContents }, id) => webContents.fromId(id)!.executeJavaScript('document.querySelector("#native-input").value="sidebar motion"'), id);
+  await page.clock.install();
+  for (const width of [1000, 1440]) {
+    await fixture.app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setContentSize(width, 800), width);
+    for (const open of [false, true]) {
+      await page.getByRole('button', { name: '切换侧栏', exact: true }).evaluate((element: HTMLButtonElement) => element.click());
+      await page.clock.runFor(32);
+      const intermediate = await page.locator('.workspace-sidebar').evaluate(element => {
+        const animation = element.getAnimations().find(animation => animation.effect instanceof KeyframeEffect && animation.effect.getKeyframes().some(frame => 'width' in frame));
+        if (!animation?.effect) throw new Error('Missing sidebar width transition in Electron');
+        animation.pause();
+        animation.currentTime = Number(animation.effect.getTiming().duration) / 2;
+        return element.getBoundingClientRect().width;
+      });
+      expect(intermediate).toBeGreaterThan(0);
+      expect(intermediate).toBeLessThan(275);
+      for (const finish of [false, true]) {
+        if (finish) {
+          await page.locator('.workspace-sidebar').evaluate(element => element.getAnimations().forEach(animation => animation.finish()));
+          await page.clock.runFor(300);
+          await expect(page.locator('.workspace-sidebar')).toHaveAttribute('data-open', String(open));
+          await expect(page.locator('.workspace-sidebar')).toHaveCSS('width', open ? '275px' : '0px');
+        }
+        const bounds = await page.locator('.preview-surface').evaluate(element => {
+          const box = element.getBoundingClientRect();
+          return { x: Math.round(box.x), y: Math.round(box.y), width: Math.round(box.width), height: Math.round(box.height) };
+        });
+        await expect.poll(() => fixture.app.evaluate(({ BrowserWindow, webContents }, id) => {
+          const view = BrowserWindow.getAllWindows()[0].contentView.children.find(view => 'webContents' in view && view.webContents === webContents.fromId(id));
+          return view?.getVisible() ? view.getBounds() : undefined;
+        }, id)).toEqual(bounds);
+      }
+    }
+  }
+  expect(await fixture.app.evaluate(({ webContents }, id) => webContents.fromId(id)!.executeJavaScript('document.querySelector("#native-input").value'), id)).toBe('sidebar motion');
 });
 
 test('panel commands stay in the owning task window and ignore native IME and covered pages', async () => {

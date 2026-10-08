@@ -1,6 +1,6 @@
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
-import type { ImageContent } from '@earendil-works/pi-ai';
+import { InMemoryCredentialStore, type ImageContent } from '@earendil-works/pi-ai';
 import {
   type AgentSession,
   type AgentSessionRuntime,
@@ -22,18 +22,22 @@ import { type Approval, type Thread, type TimelineItem, thinkingSchema } from '.
 import { skillPathKey } from '../shared/skill-paths.ts';
 import { resolveThinkingLevel } from '../shared/thinking.ts';
 import { registerConfiguredModel } from '../shared/model-runtime.ts';
+import type { ModelAuthResolver } from '../shared/provider-auth.ts';
 import type { WorkerConfig, WorkerEvent } from '../shared/worker-protocol.ts';
 import { McpConnection, type McpTokenProvider } from './mcp.ts';
 import { mcpToolDecision, type McpToolPolicy } from '../shared/mcp-tool-policy.ts';
 import { storedToolResult } from '../shared/tool-results.ts';
 import { browserTool, type DesktopToolRunner } from './browser-tool.ts';
+import { browserControlAllowed } from '../shared/browser-access.ts';
 import { goalTools } from './goal-tools.ts';
 import { automationTool } from './automation-tool.ts';
 import { askParentTool, subtaskTool } from './subtask-tool.ts';
+import { askUserTool } from './ask-user-tool.ts';
 import { addContextTool, addDraftAttachmentsTool, appendDraftTool, artifactListingTool, clearQueuedMessagesTool, contextCatalogTool, desktopFocusTool, desktopViewTool, draftStateTool, harnessTool, listDraftAttachmentsTool, listDraftContextTool, listDraftHistoryTool, manageQueuedMessageTool, messageOptionsTool, messageReadTool, operationTool, pendingApprovalsTool, preflightDraftTool, projectActionRunTool, projectActionsListTool, quoteMessageTool, queuedMessagesTool, removeContextTool, removeDraftAttachmentTool, replaceDraftTextTool, restoreDraftHistoryTool, sendDraftTool, terminalReadTool } from './harness-tool.ts';
 import { manageMessagesTool, manageProjectsTool, manageSessionsTool, manageUiTool, readSessionsTool, sendToSessionTool } from './desktop-session-tools.ts';
 import { manageCommentsTool, manageFilesTool, manageGitTool, managePreviewTool, manageReviewTool, manageTerminalTool, manageWindowsTool, manageWorktreesTool } from './workbench-tools.ts';
 import { manageSettingsTool } from './settings-tool.ts';
+import { cacheHitPercent, outputPerSecond } from '../shared/usage-stats.ts';
 import { browserDataTool, mcpTool, prTool, resourceTool } from './service-tools.ts';
 import type { DesktopToolFamily } from '../shared/desktop-tools.ts';
 import type { SubtaskQuestion } from '../shared/subtasks.ts';
@@ -64,7 +68,7 @@ export class DesktopAgent {
   private queued: Array<NonNullable<Thread['queue']>[number] & { prompt: string }> = [];
   private queueWrite = Promise.resolve();
   private pendingQueue?: NonNullable<Thread['queue']>[number] & { prompt: string };
-  constructor(private readonly emit: (event: WorkerEvent) => void, private readonly tokenProvider?: McpTokenProvider, private readonly desktopTool?: DesktopToolRunner) {}
+  constructor(private readonly emit: (event: WorkerEvent) => void, private readonly tokenProvider?: McpTokenProvider, private readonly desktopTool?: DesktopToolRunner, private readonly modelAuth?: ModelAuthResolver) {}
   get session(): AgentSession {
     if (!this.runtime) throw new Error('会话尚未初始化');
     return this.runtime.session;
@@ -185,14 +189,14 @@ export class DesktopAgent {
     this.config = config;
     await mkdir(config.agentDir, { recursive: true });
     const modelRuntime = await ModelRuntime.create({
-      authPath: join(config.agentDir, 'auth.json'),
+      credentials: new InMemoryCredentialStore(),
       modelsPath: null,
       allowModelNetwork: false,
     });
     const connection = config.modelProvider;
     const configured = config.model;
     signal.throwIfAborted();
-    await registerConfiguredModel(modelRuntime, connection, configured, config.apiKey);
+    await registerConfiguredModel(modelRuntime, connection, configured, config.apiKey, ['text', 'image'], config.oauth, this.modelAuth);
     signal.throwIfAborted();
     const model = modelRuntime.getModel(connection.namespace, configured.model);
     if (!model)
@@ -229,6 +233,13 @@ export class DesktopAgent {
     if (automationToolNames.length) customTools.push(automationTool(this.desktopTool!));
     const subtaskToolNames = goalToolNames.length && config.settings.subtasksEnabled && !config.thread.subtaskId ? ['manage_subtasks'] : [];
     if (subtaskToolNames.length) customTools.push(subtaskTool(this.desktopTool!));
+    /*
+     * Asking the user is a read-only interaction, so it is offered in plan mode and under every approval
+     * policy. Only the chats the user actually operates get it: children reach the user through ask_parent,
+     * and a review or temporary sidechat stays unattended.
+     */
+    const userQuestionToolNames = this.desktopTool && !config.thread.review && !config.thread.sidechat?.temporary && !config.thread.subtaskId ? ['ask_user'] : [];
+    if (userQuestionToolNames.length) customTools.push(askUserTool(({ kind, description, options }) => this.ask(kind, 'ask_user', description, options)));
     const desktopFamilies: DesktopToolFamily[] = [];
     const harnessToolNames = this.desktopTool ? ['get_harness', 'list_pending_approvals', 'list_artifacts', 'list_queued_messages'] : [];
     /*
@@ -318,7 +329,7 @@ export class DesktopAgent {
       },
     });
     if (config.trusted && !config.thread.planMode && config.thread.policy !== 'deny') {
-      if (this.desktopTool) customTools.push(browserTool(this.desktopTool));
+      if (this.desktopTool && browserControlAllowed(config.thread, config.trusted)) customTools.push(browserTool(this.desktopTool));
       for (const entry of externalAllowed ? enabledMcp : []) {
         signal.throwIfAborted();
         const connection = new McpConnection();
@@ -371,7 +382,7 @@ export class DesktopAgent {
         if (automationToolNames.includes(event.toolName)) return;
         if (subtaskToolNames.includes(event.toolName)) return;
         if (harnessToolNames.includes(event.toolName) || parentQuestionToolNames.includes(event.toolName)) return;
-        if (event.toolName === 'update_plan' || config.thread.review && ['submit_review', 'read_review_file'].includes(event.toolName)) return;
+        if (event.toolName === 'update_plan' || event.toolName === 'ask_user' || config.thread.review && ['submit_review', 'read_review_file'].includes(event.toolName)) return;
         if (!config.thread.projectId) return { block: true, reason: '请先为此聊天绑定项目目录' };
         let directoryApproval = false;
         let executionDirectory = config.thread.cwd;
@@ -405,7 +416,7 @@ export class DesktopAgent {
             const review = await reviewAction(config.modelProvider, config.model, config.apiKey, {
               tool: event.toolName, arguments: structuredClone(event.input), cwd: executionDirectory,
               userRequest: user?.input?.text ?? user?.text ?? '',
-            }, AbortSignal.any([controller.signal, this.lifetime.signal]));
+            }, AbortSignal.any([controller.signal, this.lifetime.signal]), config.oauth, this.modelAuth);
             controller.signal.throwIfAborted();
             if (review.risk !== 'low' && !(await this.ask('action', event.toolName,
               JSON.stringify(event.input, null, 2), undefined, undefined,
@@ -517,8 +528,8 @@ export class DesktopAgent {
         model,
       thinkingLevel: resolveThinkingLevel(config.model, config.thread.thinking),
         customTools,
-        ...(!config.thread.projectId ? { tools: ['update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...harnessToolNames, ...parentQuestionToolNames] } : config.thread.planMode || config.thread.policy === 'deny'
-          ? { tools: ['read', 'grep', 'find', 'ls', 'update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...harnessToolNames, ...parentQuestionToolNames, ...(config.thread.review ? ['submit_review', 'read_review_file'] : []), ...(directories.length > 1 ? ['project_read', 'project_list'] : [])] }
+        ...(!config.thread.projectId ? { tools: ['update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...userQuestionToolNames, ...harnessToolNames, ...parentQuestionToolNames] } : config.thread.planMode || config.thread.policy === 'deny'
+          ? { tools: ['read', 'grep', 'find', 'ls', 'update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...userQuestionToolNames, ...harnessToolNames, ...parentQuestionToolNames, ...(config.thread.review ? ['submit_review', 'read_review_file'] : []), ...(directories.length > 1 ? ['project_read', 'project_list'] : [])] }
           : {}),
       });
       this.emit({ type: 'resources', report: {
@@ -558,7 +569,11 @@ export class DesktopAgent {
         this.items.set(item.id, item);
         this.emit({ type: 'item', item });
       }
-      if (event.type === 'agent_start') this.emit({ type: 'status', status: 'running' });
+      if (event.type === 'agent_start') {
+        // Timed from the moment the provider starts answering: the throughput below covers this whole run.
+        this.generation = { startedAt: Date.now(), outputBase: this.session.getSessionStats().tokens.output };
+        this.emit({ type: 'status', status: 'running' });
+      }
       if (event.type === 'queue_update') {
         const previous = [...this.queued];
         this.queued = (['steer', 'followUp'] as const).flatMap(kind =>
@@ -571,8 +586,10 @@ export class DesktopAgent {
         this.emit({ type: 'queue', queue: this.queued.map(({ prompt: _prompt, ...item }) => item) });
       }
       if (event.type === 'message_end' || event.type === 'agent_end' || event.type === 'compaction_end') this.publishUsage();
-      if (event.type === 'agent_end')
+      if (event.type === 'agent_end') {
+        this.generation = undefined;
         this.emit({ type: 'status', status: 'idle', sessionFile: this.sessionFile });
+      }
       if (event.type === 'compaction_start') this.notice('正在压缩上下文…');
       if (event.type === 'auto_retry_start') this.notice('供应商请求失败，Pi 正在重试…');
     });
@@ -591,6 +608,8 @@ export class DesktopAgent {
     });
     this.publishUsage();
   }
+  /** Output-token baseline and start time of the run in flight, used for the throughput reading. */
+  private generation: { startedAt: number; outputBase: number } | undefined;
   private publishUsage(): void {
     const stats = this.session.getSessionStats();
     const last = this.session.messages.findLast(message => message.role === 'assistant');
@@ -598,9 +617,14 @@ export class DesktopAgent {
     // The SDK's context estimator includes unsent text. Only expose measured provider token counts.
     const tokens = stats.contextUsage?.tokens !== null && usage && usage.totalTokens > 0 ? usage.totalTokens : null;
     const window = this.session.model?.contextWindow;
+    const cacheRead = typeof usage?.cacheRead === 'number' ? usage.cacheRead : undefined;
+    const cacheWrite = typeof usage?.cacheWrite === 'number' ? usage.cacheWrite : undefined;
+    const cacheHitRate = cacheHitPercent(cacheRead, usage?.input);
+    const throughput = outputPerSecond(this.generation ? stats.tokens.output - this.generation.outputBase : undefined, this.generation ? Date.now() - this.generation.startedAt : undefined);
     this.emit({ type: 'usage', usage: { input: stats.tokens.input, output: stats.tokens.output, total: stats.tokens.total,
       cost: this.config?.modelProvider.kind === 'custom' ? undefined : stats.cost, contextTokens: tokens,
-      contextWindow: window, contextPercent: tokens !== null && window ? tokens / window * 100 : null } });
+      contextWindow: window, contextPercent: tokens !== null && window ? tokens / window * 100 : null,
+      cacheRead, cacheWrite, cacheHitRate, outputPerSecond: throughput } });
   }
   clearQueue(expected?: readonly { id: string; revision: number }[]): NonNullable<Thread['queue']> {
     if (expected) {

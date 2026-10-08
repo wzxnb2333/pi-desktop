@@ -1,0 +1,11 @@
+@media (prefers-reduced-motion: no-preference) {
+  .menu-list[data-motion-state="closing"],
+  .tooltip[data-motion-state="closing"] {
+    animation: popover-motion-exit 100ms var(--ease-out) forwards;
+    pointer-events: none;
+  }
+}
+
+@keyframes popover-motion-exit {
+  to { opacity: 0; }
+}

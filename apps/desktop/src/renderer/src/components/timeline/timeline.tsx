@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import type { Thread } from '../../../../shared/contracts.ts';
 import { useAutoScroll } from '../../hooks/use-auto-scroll.ts';
 import { useTimelineFocus } from '../../hooks/use-timeline-focus.ts';
+import { useContentMotion } from '../../hooks/use-content-motion.ts';
 import { groupTurns } from '../../lib/timeline-groups.ts';
 import { turnPlans } from '../../lib/turn-plans.ts';
 import { useApp } from '../../state/app.tsx';
@@ -31,6 +32,7 @@ export function Timeline() {
     threadUi, patchThread, data, selectThread,
   } = useApp();
   const items = thread?.items;
+  useContentMotion(timelineRef, activeId);
   const turns = useMemo(() => groupTurns(items ?? [], running), [items, running]);
   const plans = useMemo(() => turnPlans(thread, turns), [thread?.plan, thread?.plans, turns]);
   const waiting = useMemo(() => approvals.filter((item) => item.threadId === activeId), [approvals, activeId]);

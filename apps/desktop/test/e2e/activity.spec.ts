@@ -1,11 +1,12 @@
 import { expectAdaptedAppearance } from './fixtures/adapted-appearance.ts';
 import { build } from 'esbuild';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
-import type { TimelineItem } from '../../src/shared/contracts.ts';
+import type { Bootstrap, TimelineItem } from '../../src/shared/contracts.ts';
+import { mkdtemp, cleanupTemporaryDirectories } from './fixtures/temp-paths.ts';
 
 // Existing Pi interaction behavior, not a same-version visual reference.
 const motion = { durationMs: 300, easing: [0.19, 1, 0.22, 1] };
@@ -20,7 +21,7 @@ test.beforeAll(async () => {
   url = pathToFileURL(join(directory, 'index.html')).href;
   browser = await chromium.launch();
 });
-test.afterAll(async () => { await browser?.close(); if (directory) await rm(directory, { recursive: true, force: true }); });
+test.afterAll(async () => { await browser?.close(); await cleanupTemporaryDirectories(); });
 async function open(page: Page, scene: string, mode = 'light') {
   await page.goto(url + '?scene=' + scene + '&theme=' + (mode.startsWith('system') ? 'system' : mode));
   await expect(page.locator('[data-activity-ready]')).toHaveCount(1);
@@ -78,6 +79,77 @@ test('harness calls read as ordinary tool activity with the pi icon and exact to
     await expect(activity.locator('.tool-activity-origin')).toHaveCount(0);
     await expect(activity.locator('.disclosure-summary svg.lucide-pi')).toHaveCount(1);
     await expect(activity.locator('.disclosure-label')).toContainText('已调用 get_harness');
+  } finally { await page.close(); }
+});
+
+test('browser feedback names its source, reports progress and opens only the corresponding tab', async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await open(page, 'behavior');
+    const requests = await page.evaluateHandle(() => {
+      const calls: unknown[] = [], original = window.desktop.invoke;
+      window.desktop.invoke = async request => { calls.push(request); return original(request); }; return calls;
+    });
+    const item: Partial<TimelineItem> = { id: 'browser', role: 'tool', toolName: 'browser', args: JSON.stringify({ backend: 'chrome', action: 'wait', tabId: '00000000-0000-4000-8000-000000000001/3', condition: { kind: 'text', value: 'Ready' } }), state: 'running', toolResult: { result: { content: [{ type: 'text', text: '正在通过 Chrome 扩展执行' }], structuredContent: { browser: { backend: 'chrome', tabId: '00000000-0000-4000-8000-000000000001/3', stage: '正在通过 Chrome 扩展执行' } } } } };
+    const progress = item.toolResult; item.toolResult = undefined;
+    await update(page, [{ id: 'u', role: 'user', text: '浏览器检查' }, item]);
+    await page.locator('[data-disclosure="group:browser"] > .disclosure-header > button').click();
+    const control = page.locator('[data-tool-kind="browser"]');
+    await expect(control.locator('.disclosure-label').first()).toContainText('Chrome · 等待页面');
+    await expect(control.locator('.lucide-globe')).toHaveCount(1);
+    await expect(control.getByRole('status')).toContainText('正在处理…');
+    await expect(control.locator('.browser-tool-feedback .row > span')).toHaveText('Chrome');
+    item.toolResult = progress; await update(page, [{ id: 'u', role: 'user', text: '浏览器检查' }, item]);
+    await expect(control.getByRole('status')).toContainText('正在通过 Chrome 扩展执行');
+    await expect(control.getByText('等待文本出现：Ready', { exact: true })).toBeVisible();
+    await control.getByRole('button', { name: '打开浏览器查看' }).click();
+    expect(await requests.jsonValue()).toContainEqual({ op: 'browser.bridge.focus', sessionId: '00000000-0000-4000-8000-000000000001', tabId: '00000000-0000-4000-8000-000000000001/3' });
+    await page.evaluate(async () => {
+      const { data } = await window.desktop.invoke({ op: 'bootstrap' }) as Bootstrap;
+      await window.desktop.invoke({ op: 'ui.update', ui: { ...data.ui, locale: 'en-US' } });
+    });
+    await expect(control.getByRole('status').first()).toContainText('Using the Chrome extension');
+    await expect(control.getByText('Wait for text: Ready', { exact: true })).toBeVisible();
+    item.state = 'error'; item.text = '等待浏览器条件超时'; await update(page, [{ id: 'u', role: 'user', text: '浏览器检查' }, item]);
+    await expect(control.getByRole('status').first()).toContainText('The browser wait condition timed out');
+  } finally { await page.close(); }
+});
+
+for (const backend of ['in-app', 'chrome'] as const) test(`${backend} browser tab results show authorized tabs and closed results have no open action`, async () => {
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  try {
+    await open(page, 'behavior');
+    const requests = await page.evaluateHandle(() => {
+      const calls: unknown[] = [], original = window.desktop.invoke;
+      window.desktop.invoke = async request => { calls.push(request); return original(request); }; return calls;
+    });
+    const tabId = backend === 'chrome' ? '00000000-0000-4000-8000-000000000001/5' : 'page-5';
+    const user: Partial<TimelineItem> = { id: 'u', role: 'user', text: '查看标签' };
+    const item: Partial<TimelineItem> = { id: 'tabs', role: 'tool', toolName: 'browser', state: 'done', args: JSON.stringify({ backend, action: 'tabs' }),
+      toolResult: { result: { content: [{ type: 'text', text: JSON.stringify([{ tabId, backend, title: 'Authorized page', url: 'https://example.org/page' }]) }] } } };
+    await update(page, [user, item]);
+    await page.locator('[data-disclosure="group:tabs"] > .disclosure-header > button').click();
+    await page.locator('[data-disclosure="tool:tabs"] > .disclosure-header > button').click();
+    const result = page.getByLabel('浏览器标签列表', { exact: true });
+    await expect(result.getByText('Authorized page', { exact: true })).toBeVisible();
+    await expect(result.getByText('https://example.org/page', { exact: true })).toBeVisible();
+    await result.getByRole('button', { name: '打开浏览器查看' }).click();
+    expect(await requests.jsonValue()).toContainEqual(backend === 'chrome'
+      ? { op: 'browser.bridge.focus', sessionId: '00000000-0000-4000-8000-000000000001', tabId }
+      : { op: 'browser.select', threadId: 't', tabId });
+    item.toolResult = { result: { content: [{ type: 'text', text: '[]' }] } };
+    await update(page, [user, item]);
+    await expect(result.getByText('当前任务没有可用的浏览器标签', { exact: true })).toBeVisible();
+    item.args = JSON.stringify({ backend, action: 'close', tabId });
+    item.toolResult = { result: { content: [{ type: 'text', text: JSON.stringify({ backend, tabId, status: 'closed' }) }] } };
+    await update(page, [user, item]);
+    await expect(page.locator('.browser-tool-feedback').getByRole('status')).toHaveText('标签已关闭');
+    await expect(page.locator('.browser-tool-feedback').getByRole('button', { name: '打开浏览器查看' })).toHaveCount(0);
+    await page.evaluate(async () => {
+      const { data } = await window.desktop.invoke({ op: 'bootstrap' }) as Bootstrap;
+      await window.desktop.invoke({ op: 'ui.update', ui: { ...data.ui, locale: 'en-US' } });
+    });
+    await expect(page.locator('.browser-tool-feedback').getByRole('status')).toHaveText('Tab closed');
   } finally { await page.close(); }
 });
 

@@ -2,11 +2,15 @@ import { useLayoutEffect, useRef } from 'react';
 import { ChevronRight, Network } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { ModelProvider, ProviderModel } from '../../../../shared/contracts.ts';
 import { activeSubtask, type Subtask } from '../../../../shared/subtasks.ts';
+import type { ThinkingLevel } from '../../../../shared/thinking.ts';
 import { localizeAppError, localizeLabel, tr } from '../../../../shared/localization.ts';
+import { thinkingLabels } from '../../lib/labels.ts';
 import { useLocale } from '../../hooks/use-locale.ts';
 import { useSubtaskNavigation } from '../../hooks/use-subtask-navigation.ts';
 import { useApp } from '../../state/app.tsx';
+import { Menu } from '../primitives/menu.tsx';
 import { ApprovalCard } from '../timeline/message.tsx';
 
 const statuses = { queued: '排队中', preparing: '准备中', running: '进行中', succeeded: '已完成', failed: '失败', cancelled: '已取消', interrupted: '已中断' } as const;
@@ -39,6 +43,28 @@ export function SubtaskPanel() {
   </section>;
 }
 
+/**
+ * The child runs on its parent's model and reasoning level unless the panel or the main agent overrides it
+ * (`subtask.update`); users cannot edit a child through `thread.update`, which refuses subagent sessions.
+ */
+/**
+ * Read-only summary of what the child actually runs on: it follows its parent unless the delegation (or the
+ * main agent through subtask.update) overrode it. Users cannot edit children - the main process refuses
+ * every user-originated subtask.* call, so the panel only shows the result.
+ */
+function SubtaskRunSettings({ record, parentModelId, parentThinking, models, providers }: {
+  record: Subtask; parentModelId: string; parentThinking: ThinkingLevel;
+  models: ProviderModel[]; providers: ModelProvider[];
+}) {
+  const overrideId = record.definition.modelId;
+  const model = overrideId ? models.find(item => item.id === overrideId) : models.find(item => item.id === parentModelId);
+  const label = (item: ProviderModel | undefined, id: string) => item ? (providers.find(provider => provider.id === item.provider)?.name ?? item.provider) + ' · ' + item.name : id;
+  return <div className="subagent-run-settings">
+    <span className="subagent-run-field">{tr('子代理模型')}：<strong>{label(model, overrideId ?? parentModelId)}</strong>{!overrideId && <em>{tr('跟随主代理')}</em>}</span>
+    <span className="subagent-run-field">{tr('子代理思考档位')}：<strong>{thinkingLabels[record.definition.thinking ?? parentThinking]}</strong>{!record.definition.thinking && <em>{tr('跟随主代理')}</em>}</span>
+  </div>;
+}
+
 /** No composer or message actions. File links never use the parent's working directory. */
 export function SubtaskConversation({ id, hidden }: { id: string; hidden: boolean }) {
   useLocale(); const { thread, data, approvals } = useApp();
@@ -49,6 +75,8 @@ export function SubtaskConversation({ id, hidden }: { id: string; hidden: boolea
   return <section className="subagent-conversation" hidden={hidden} aria-label={tr('子智能体会话')} data-child-thread={child?.id}>
     {!record ? <p className="hint">{tr('子智能体会话不可用')}</p> : <>
       <header><strong>{record.definition.title}</strong><span>{subtaskStatus(record)} · {tr('只读')}</span></header>
+      {!!thread && <SubtaskRunSettings record={record} parentModelId={thread.modelId} parentThinking={thread.thinking}
+        models={data.settings.models} providers={data.settings.modelProviders} />}
       <div ref={scroll} className="subagent-transcript" onScroll={event => { const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 64; }}>
         <details className="subagent-instructions"><summary>{tr('委派要求')}</summary><p>{record.definition.prompt}</p></details>
         {(record.questions ?? []).map(question => <details className="subagent-instructions" data-subtask-question={question.id} key={question.id} open={question.status === 'pending'}>

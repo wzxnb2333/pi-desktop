@@ -1,0 +1,131 @@
+/* Short, restrained motion for a working desktop; geometry and resize remain immediate. */
+:root {
+  --ease-basic: cubic-bezier(.2, 0, 0, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-settle: cubic-bezier(.22, 1, .36, 1);
+  --duration-enter: 220ms;
+}
+
+:is(button, .connection-mode, .thinking-level-option > span, .workspace-tabs .tab-item,
+    .sidebar .thread-row, .sidebar .project-row, .sidebar .shortcut-row) {
+  transition: background-color var(--duration-fast) var(--ease-basic),
+    color var(--duration-fast) var(--ease-basic),
+    border-color var(--duration-fast) var(--ease-basic),
+    opacity var(--duration-fast) var(--ease-basic);
+}
+
+/* Press feedback stays on small controls, outside window chrome and measured menu anchors. */
+.btn:not(.menu-trigger), .icon-button:not(.menu-trigger):not(.window-controls *) {
+  transition: background-color var(--duration-fast) var(--ease-basic),
+    color var(--duration-fast) var(--ease-basic),
+    border-color var(--duration-fast) var(--ease-basic),
+    opacity var(--duration-fast) var(--ease-basic),
+    scale var(--duration-fast) var(--ease-settle);
+}
+.btn:not(.menu-trigger):active:not(:disabled):not([aria-disabled="true"]),
+.icon-button:not(.menu-trigger):not(.window-controls *):active:not(:disabled):not([aria-disabled="true"]) {
+  scale: .97;
+  transition-duration: 80ms;
+}
+/* Confirmation actions have their own higher-specificity skin. */
+.dialog-actions .btn { transition: background-color var(--duration-fast) var(--ease-basic), scale var(--duration-fast) var(--ease-settle); }
+
+:is(input, select, textarea):not(.xterm-helper-textarea) {
+  transition: border-color var(--duration-fast) var(--ease-basic),
+    background-color var(--duration-fast) var(--ease-basic);
+}
+.settings-page .field-row-control > input[type="checkbox"]::before {
+  transition: transform 180ms var(--ease-settle);
+}
+:is(.message-actions, .sidebar .tooltip-anchor, .sidebar [data-thread-menu],
+    .sidebar .thread-indicator, .sidebar-quick-chat, .new-thread .row-hint,
+    .workspace-tabs .tab-close) {
+  transition: opacity var(--duration-fast) var(--ease-basic);
+}
+.disclosure-chevron { transition-timing-function: var(--ease-out); }
+.activity-caret { transition-timing-function: var(--ease-out); }
+.disclosure-chevron { transition-property: transform, opacity; }
+:is(.composer, .config-card, .automation-entry, .subagent-card, .tool-resource) {
+  transition: border-color var(--duration-fast) var(--ease-basic),
+    background-color var(--duration-fast) var(--ease-basic);
+}
+:is(.summary-step, .turn-plan > li, .status, .model-key-status, .provider-auth-status) {
+  transition: color var(--duration-fast) var(--ease-basic), opacity var(--duration-fast) var(--ease-basic);
+}
+.summary-expand svg {
+  rotate: 0deg;
+  transition: rotate 180ms var(--ease-out);
+}
+.summary-expand[aria-expanded="true"] svg { rotate: 180deg; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Translation preserves the sizes Menu measures; scaling would move its placement. */
+  .menu-list { --motion-offset: -4px; animation: motion-popover-in 160ms var(--ease-out); }
+  .menu-list[data-side="top"], .composer-suggestions { --motion-offset: 4px; }
+  .tooltip { animation: motion-fade-in 120ms var(--ease-out); }
+  .dialog-backdrop { animation: motion-fade-in var(--duration-fast) var(--ease-basic); }
+  .dialog { animation: motion-dialog-in var(--duration-enter) var(--ease-out); }
+
+  :is(.page-heading, .settings-fields > .field-stack, .settings-fields > .settings-section, .model-editor,
+      .model-row-editor, .model-add-panel, .provider-auth-prompt,
+      .management-page > .config-card, .approval-card, .attachment,
+      .composer-plan-chip, .tool-launcher, .panel-empty, .loading-content,
+      .management-empty, .empty-card, .model-search-empty, .settings-nav-empty,
+      #automation-editor, .automation-history:not(details),
+      .resource-inspection, .memory-editor, .voice-session,
+      .composer-editor-tools, .composer-draft-preview, .composer-delivery,
+      .composer-import-status, .composer-import-error, .queued-messages > *,
+      .selection-quote, .jump-latest, .thread-error, .working,
+      .summary-task, .summary-approval, .summary-error, .goal-editor) {
+    animation: motion-content-in var(--duration-enter) var(--ease-out);
+  }
+  /* Native browser bounds, xterm, scroll anchors and pane dragging must never be transformed. */
+  :is(.sidebar, .review-pane, .review-tool-content > :not([hidden]), .terminal-panel,
+      .task-summary-rail, .welcome, .review-findings,
+      .file-navigation-error, .git-read-error, .git-feedback, .review-captured,
+      .provider-auth-oauth, .provider-auth-code) {
+    animation: motion-fade-in var(--duration-fast) var(--ease-basic);
+  }
+  /* Only the newest turn enters; streamed text updates retain their DOM and never replay it. */
+  .timeline > .turn:last-of-type,
+  .timeline > .turn:last-of-type :is(.turn-answer, .turn-notices, .process-count, .activity-stats, .activity-error) {
+    animation: motion-fade-in var(--duration-enter) var(--ease-out);
+  }
+  :is(.tabs [role="tab"][aria-selected="true"], .management-filters [aria-pressed="true"]) {
+    animation: motion-selected-in 180ms var(--ease-out);
+  }
+  /* Native disclosures across model, memory, tools and history share a restrained reveal. */
+  details[open] > :not(summary) { animation: motion-fade-in 160ms var(--ease-out); }
+  .error-banner { animation-timing-function: var(--ease-out); }
+}
+
+@keyframes motion-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes motion-popover-in {
+  from { opacity: 0; translate: 0 var(--motion-offset); }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes motion-dialog-in {
+  from { opacity: 0; translate: 0 8px; scale: .985; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes motion-content-in {
+  from { opacity: 0; translate: 0 4px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes motion-selected-in {
+  from { opacity: .55; }
+  to { opacity: 1; }
+}
+
+/* Covers current effects too, and takes effect immediately when the OS preference changes. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .btn:active, .icon-button:active { scale: none !important; }
+}

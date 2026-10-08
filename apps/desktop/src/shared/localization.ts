@@ -1,5 +1,5 @@
 import { messages } from './messages.ts';
-import { appErrors } from './app-errors.ts';
+import { appErrorPatterns, appErrors } from './app-errors.ts';
 import { defaultLocale, type Locale } from './locale.ts';
 
 export type MessageKey = keyof typeof messages;
@@ -44,6 +44,10 @@ export function localizeAppError(message: string): string {
   const transport = /^(Error: (?:Error invoking remote method '[^']+': Error: )?)/.exec(message);
   if (transport) return transport[0] + localizeAppError(message.slice(transport[0].length));
   if (Object.hasOwn(appErrors, message)) return appErrors[message as keyof typeof appErrors];
+  for (const entry of appErrorPatterns) {
+    const match = entry.pattern.exec(message);
+    if (match) return entry.render(match);
+  }
   if (Object.hasOwn(messages, message)) return localizeLabel(message);
   const newline = message.indexOf('\n');
   if (newline > 0) {

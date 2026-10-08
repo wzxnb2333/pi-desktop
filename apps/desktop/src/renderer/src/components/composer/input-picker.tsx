@@ -3,6 +3,7 @@ import { File, Folder, ArrowUp, Check, Terminal, Sparkles } from 'lucide-react';
 import type { FileEntry } from '../../../../shared/contracts.ts';
 import { type ContextReference, type InputCatalog, type InputCommand, inputCatalogSchema } from '../../../../shared/input-context.ts';
 import { tr } from '../../../../shared/localization.ts';
+import { localizeLabel } from '../../../../shared/localization.ts';
 import { useLocale } from '../../hooks/use-locale.ts';
 import { useContextSelection, type SelectContext } from '../../hooks/use-context-selection.ts';
 import { useApp } from '../../state/app.tsx';
@@ -89,13 +90,13 @@ export function InputPicker({ initial, onSelect, onClose, onCommand }: { initial
             {file.directory ? <Folder size={16} /> : <File size={16} />}<span>{file.name}</span>{selected(file.directory ? 'folder' : 'file', file.path) && <Check size={14} />}
           </button>)}
         </>}
-        {(tab === 'skill' || tab === 'tool') && catalog?.references.filter(item => item.kind === tab && matches(item.label + ' ' + item.description)).map(item =>
+        {(tab === 'skill' || tab === 'tool') && catalog?.references.filter(item => item.kind === tab && matches(localizeLabel(item.label) + ' ' + item.description)).map(item =>
           <button type="button" className="input-picker-row" key={item.kind + item.id} title={item.description} disabled={busy} onClick={() => void selection.select({ kind: item.kind, id: item.id, label: item.label })}>
-            {item.kind === 'skill' ? <Sparkles size={16} /> : <Terminal size={16} />}<span>{item.label}<small>{item.description}</small></span>{selected(item.kind, item.id) && <Check size={14} />}
+            {item.kind === 'skill' ? <Sparkles size={16} /> : <Terminal size={16} />}<span>{localizeLabel(item.label)}<small>{item.description}</small></span>{selected(item.kind, item.id) && <Check size={14} />}
           </button>)}
         {tab === 'commands' && catalog?.commands.filter(item => matches('/' + item.id + ' ' + tr(commandLabels[item.id]))).map(item =>
           <button type="button" className="input-picker-row" key={item.id} disabled={busy || !item.enabled} onClick={() => void command(item.id)}><code>/{item.id}</code><span>{tr(commandLabels[item.id])}</span></button>)}
-        {((tab === 'files' && !files.some(item => matches(item.name))) || ((tab === 'skill' || tab === 'tool') && !catalog?.references.some(item => item.kind === tab && matches(item.label + ' ' + item.description)))) &&
+        {((tab === 'files' && !files.some(item => matches(item.name))) || ((tab === 'skill' || tab === 'tool') && !catalog?.references.some(item => item.kind === tab && matches(localizeLabel(item.label) + ' ' + item.description)))) &&
           <p className="command-status">{tr('没有可用的匹配项')}</p>}
       </div>}
       <p className="command-status input-picker-note">{tr('引用不会扩大任务权限；文件夹只包含直属文件清单。')}</p>

@@ -22,6 +22,8 @@ import { subtaskSchema, subtaskRequests } from './subtasks.ts';
 import { voicePreferencesSchema, voiceRequests } from './voice.ts';
 import { messageInputSchema } from './message-input.ts';
 import { timelineFocusTargetSchema } from './harness-tools.ts';
+import { providerAuthStatusSchema } from './provider-auth.ts';
+export type { ProviderAuthStatus } from './provider-auth.ts';
 export { mcpSchema } from './mcp-schema.ts';
 
 export const DATA_VERSION = 3;
@@ -31,6 +33,7 @@ export const policySchema = z.enum(['ask', 'auto', 'full', 'deny']);
 export const thinkingSchema = z.enum(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 export const modelCatalogSchema = z.array(z.object({
   id: z.string(),
+  auth: z.object({ apiKey: z.boolean(), oauth: z.object({ name: z.string(), loginLabel: z.string().optional(), isSubscription: z.boolean().optional() }).optional() }).optional(),
   models: z.array(z.object({
     id: z.string(),
     name: z.string(),
@@ -57,6 +60,7 @@ export const modelProviderSchema = z
     baseUrl: z.string().max(2048).default(''),
     api: modelApiSchema.default('openai-completions'),
     hasKey: z.boolean().default(false),
+    authMethod: z.enum(['api_key', 'oauth']).default('api_key'),
   })
   .strict();
 /** One runnable model inside a provider; `provider` is the owning `settings.modelProviders[].id`. */
@@ -207,7 +211,7 @@ export const threadSchema = z
     mcp: z.array(mcpStateSchema).optional(),
     resourceLoad: resourceLoadSchema.optional(),
     plans: z.record(z.string(), z.array(z.object({ text: z.string(), status: z.enum(['pending', 'in_progress', 'completed']) }))).optional(),
-    usage: z.object({ input: z.number(), output: z.number(), total: z.number(), cost: z.number().optional(), contextTokens: z.number().nullable().optional(), contextWindow: z.number().optional(), contextPercent: z.number().nullable().optional() }).optional(),
+    usage: z.object({ input: z.number(), output: z.number(), total: z.number(), cost: z.number().optional(), contextTokens: z.number().nullable().optional(), contextWindow: z.number().optional(), contextPercent: z.number().nullable().optional(), cacheRead: z.number().optional(), cacheWrite: z.number().optional(), /** Percentage (0-100) of prompt tokens served from the provider cache. */ cacheHitRate: z.number().optional(), /** Output tokens per second across the last run. */ outputPerSecond: z.number().optional() }).optional(),
     queue: z.array(z.object({ id: z.string().optional(), revision: z.number().int().nonnegative().optional(), text: z.string(), attachments: z.array(z.string()), kind: z.enum(['steer', 'followUp']), context: z.array(contextReferenceSchema).optional() })).optional(),
     sendReceipts: z.array(sendReceiptSchema).optional(),
     draftHistory: z.array(draftSnapshotSchema).max(20).optional(),
@@ -495,6 +499,12 @@ export const requestSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('ui.threadUpdate'), threadId: id, thread: uiThreadSchema }).strict(),
   z.object({ op: z.literal('ui.threadPatch'), threadId: id, patch: z.object({ reviewTab: reviewTabSchema.optional(), terminalOpen: z.boolean().optional(), selectedPath: z.string().max(2000).optional(), fileDirectory: uiThreadSchema.shape.fileDirectory, expandedDirectories: uiThreadSchema.shape.expandedDirectories, fileTreeFocus: uiThreadSchema.shape.fileTreeFocus, fileLocation: uiThreadSchema.shape.fileLocation, folds: z.record(z.string(), z.boolean()).optional(), draft: uiThreadSchema.shape.draft, sidechatId: uiThreadSchema.shape.sidechatId, contextReferences: uiThreadSchema.shape.contextReferences, directoryId: uiThreadSchema.shape.directoryId, directoryViews: uiThreadSchema.shape.directoryViews, scroll: uiThreadSchema.shape.scroll, openFiles: uiThreadSchema.shape.openFiles, browserTabs: uiThreadSchema.shape.browserTabs, closedBrowserTabs: uiThreadSchema.shape.closedBrowserTabs, activeBrowserTab: uiThreadSchema.shape.activeBrowserTab, activePanelTab: uiThreadSchema.shape.activePanelTab, panelTabs: uiThreadSchema.shape.panelTabs }).strict() }).strict(),
   z.object({ op: z.literal('provider.key'), id, key: z.string().max(16000), base: modelProviderSchema.optional() }).strict(),
+  z.object({ op: z.literal('provider.oauthStatus'), id }).strict(),
+  z.object({ op: z.literal('provider.oauthStart'), id }).strict(),
+  z.object({ op: z.literal('provider.oauthCancel'), id, operationId: z.uuid() }).strict(),
+  z.object({ op: z.literal('provider.oauthAnswer'), id, operationId: z.uuid(), promptId: z.uuid(), value: z.string().max(16000) }).strict(),
+  z.object({ op: z.literal('provider.oauthLogout'), id }).strict(),
+  z.object({ op: z.literal('provider.oauthOpen'), id, operationId: z.uuid() }).strict(),
   z.object({ op: z.literal('resource.pick'), kind: z.enum(['skill', 'extension']) }).strict(),
   z
     .object({
@@ -578,6 +588,12 @@ export const requestSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('terminal.rename'), id, title: z.string().min(1).max(100) }).strict(),
   z.object({ op: z.literal('browser.select'), threadId: id, tabId: id }).strict(),
   z.object({ op: z.literal('browser.site'), origin: browserOriginSchema, policy: z.enum(['ask', 'allow', 'deny']) }).strict(),
+  z.object({ op: z.literal('browser.bridge.status') }).strict(),
+  z.object({ op: z.literal('browser.bridge.pair') }).strict(),
+  z.object({ op: z.literal('browser.bridge.disconnect'), sessionId: id.optional() }).strict(),
+  z.object({ op: z.literal('browser.bridge.grant'), threadId: id, tabId: id, allowed: z.boolean() }).strict(),
+  z.object({ op: z.literal('browser.bridge.focus'), sessionId: id, tabId: id }).strict(),
+  z.object({ op: z.literal('browser.bridge.tabs'), threadId: id }).strict(),
   z.object({ op: z.literal('browser.history'), query: z.string().max(1000).default(''), offset: z.number().int().min(0).max(10000).default(0), limit: z.number().int().min(1).max(200).default(100) }).strict(),
   z.object({ op: z.literal('browser.data'), range: browserDataRangeSchema }).strict(),
   z.object({ op: z.literal('browser.clear'), requestId: z.uuid(), options: browserClearSchema }).strict(),
@@ -632,6 +648,7 @@ export const bootstrapSchema = z
 export const browserFindSchema = z.object({ text: z.string().max(1000), requestId: z.number().int().nonnegative(), matches: z.number().int().nonnegative(), active: z.number().int().nonnegative(), pending: z.boolean() }).strict();
 export type BrowserFindState = z.infer<typeof browserFindSchema>;
 export const desktopEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('provider.auth'), status: providerAuthStatusSchema }).strict(),
   z.object({ type: z.literal('terminal.created'), terminal: terminalSchema }),
   z.object({ type: z.literal('state'), data: dataSchema }),
   z.object({ type: z.literal('approvals'), approvals: z.array(approvalSchema) }),
@@ -646,6 +663,7 @@ export const desktopEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('error'), message: z.string() }),
   z.object({ type: z.literal('gitProcessesChanged') }),
   z.object({ type: z.literal('browser'), threadId: z.string(), tabId: z.string(), url: z.string(), title: z.string(), loading: z.boolean(), back: z.boolean(), forward: z.boolean(), error: z.string().optional(), zoom: z.number(), matches: z.number().optional(), find: browserFindSchema.optional() }),
+  z.object({ type: z.literal('browser.bridge'), sessionId: z.string(), state: z.enum(['connected', 'disconnected', 'tabs']) }),
   z.object({ type: z.literal('preview.snapshot'), threadId: z.string(), tabId: z.string(), image: z.string() }),
   z.object({ type: z.literal('panel.command'), threadId: z.string(), tabId: z.string(), command: z.enum(['openBrowser', 'openReview', 'closePanelTab', 'nextPanelTab', 'previousPanelTab']) }),
   z.object({ type: z.literal('timeline.focus'), threadId: z.string(), target: timelineFocusTargetSchema }).strict(),

@@ -136,3 +136,25 @@ test('selection quote dismisses on scroll, Escape and task switch; pending quote
   expect((await snapshot()).ui.threads.short.contextReferences ?? []).toHaveLength(0);
   await expect(page.locator('.selection-quote')).toHaveCount(0);
 });
+
+test('the context tooltip shows cache hit rate and output speed only when the provider reported them', async () => {
+  const ring = page.locator('.context-usage-ring');
+  await page.evaluate(() => window.conversationUi.patch('t', { usage: { input: 12000, output: 4384, total: 16384, contextTokens: 16384, contextWindow: 131072, contextPercent: 12.5, cacheRead: 10800, cacheWrite: 300, cacheHitRate: 47.4, outputPerSecond: 62.5 } }));
+  await ring.hover();
+  await expect(page.getByRole('tooltip')).toContainText('缓存命中 47.4%');
+  await expect(page.getByRole('tooltip')).toContainText('缓存读 10,800 · 缓存写 300 tokens');
+  await expect(page.getByRole('tooltip')).toContainText('输出速度 62.5 tokens/s');
+  await page.keyboard.press('Escape');
+  await page.evaluate(async () => { const data = (await window.desktop.invoke({ op: 'bootstrap' }) as Bootstrap).data; await window.desktop.invoke({ op: 'ui.update', ui: { ...data.ui, locale: 'en-US' } }); });
+  await ring.hover();
+  await expect(page.getByRole('tooltip')).toContainText('Cache hit 47.4%');
+  await expect(page.getByRole('tooltip')).toContainText('Output speed 62.5 tokens/s');
+  await page.keyboard.press('Escape');
+  // A provider that reports no cache numbers leaves those rows out entirely.
+  await page.evaluate(() => window.conversationUi.patch('t', { usage: { input: 12000, output: 4384, total: 16384, contextTokens: 16384, contextWindow: 131072, contextPercent: 12.5 } }));
+  // The pointer has to leave the ring first, otherwise hovering again never re-opens the tooltip.
+  await page.mouse.move(0, 0); await page.waitForTimeout(50);
+  await ring.hover();
+  await expect(page.getByRole('tooltip')).not.toContainText('Cache hit');
+  await expect(page.getByRole('tooltip')).not.toContainText('Output speed');
+});

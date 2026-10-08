@@ -1,5 +1,6 @@
 import { localizeAppError, tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
+import { useContentMotion } from '../../hooks/use-content-motion.ts';
 import { useEffect, useRef, useState } from 'react';
 import { Clock3, Plus } from 'lucide-react';
 import type { Automation, AutomationRun, DesktopRequest, Thread } from '../../../../shared/contracts.ts';
@@ -38,6 +39,8 @@ export function AutomationsPage() {
   const [reloadDraft, setReloadDraft] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'enabled' | 'paused'>('all');
+  const results = useRef<HTMLDivElement>(null);
+  useContentMotion(results, filter);
   const [history, setHistory] = useState('');
   const [feedback, setFeedback] = useState('');
   const [failed, setFailed] = useState(false);
@@ -216,7 +219,7 @@ export function AutomationsPage() {
       <p className="hint">{tr('修改仅用于后续触发；已经排队的运行保留触发时的配置。')}</p>
     </form>}
     <p className="form-feedback" data-error={failed || undefined} role="status">{feedback}</p>
-    <div className="field-stack">{visible.map(job => {
+    <div ref={results} className="field-stack">{visible.map(job => {
       const threads = data.threads.filter(thread => thread.automationId === job.id && !thread.automationRunId && !thread.deletedAt).sort((a, b) => b.createdAt - a.createdAt);
       const runs = data.automationRuns.filter(run => run.automationId === job.id);
       const running = runs.some(run => ['queued', 'preparing', 'running'].includes(run.status)) || threads.some(thread => ['running', 'waiting'].includes(thread.status));

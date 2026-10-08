@@ -1,5 +1,6 @@
 import { tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
+import { useContentMotion } from '../../hooks/use-content-motion.ts';
 import { usePanelActions } from '../../hooks/use-panel-actions.ts';
 import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Settings, SettingsNavigation, type SettingsCategory } from '../../Settings.tsx';
@@ -9,6 +10,7 @@ import { ReviewPanel } from '../panels/review-panel.tsx';
 import { TaskSummaryCard } from '../panels/task-summary.tsx';
 import { Resizer } from './resizer.tsx';
 import { Sidebar } from '../sidebar/sidebar.tsx';
+import { SidebarPane } from './sidebar-pane.tsx';
 import { Timeline } from '../timeline/timeline.tsx';
 import { ApprovalCard } from '../timeline/message.tsx';
 import { ErrorBanner } from './status-bar.tsx';
@@ -38,6 +40,8 @@ export function Workspace() {
   } = useApp();
   const [drag, setDrag] = useState<Drag>(undefined);
   const [settingsCategory, setSettingsCategory] = useState<SettingsCategory>('models');
+  const main = useRef<HTMLElement>(null);
+  useContentMotion(main, view);
   const home = view === 'thread' && !thread?.items.length;
   const panelOpen = reviewOpen && ['changes', 'files', 'file', 'browser', 'sidechat', 'review', 'terminal', 'subtasks', 'subtask'].includes(reviewTab);
   const summaryOpen = ui.summaryOpen !== false && (!home || ui.summaryOpen === true);
@@ -63,6 +67,7 @@ export function Workspace() {
     summaryOpen,
   );
   const summary = summaryPlacement(viewport.width - sizes.sidebarWidth - 1, sizes.reviewWidth, sizes.reviewOverlay);
+  const sidebarWidth = sizes.sidebarWidth || requested('sidebarWidth', ui.sidebarWidth);
   const layout = useRef<HTMLDivElement>(null);
   const [summaryHeight, setSummaryHeight] = useState(0);
   const [composerClearance, setComposerClearance] = useState(140);
@@ -86,32 +91,32 @@ export function Workspace() {
   return (
     <div className="workspace">
       <WorkbenchCommands panels={panels} />
-      {sidebarOpen && (
-        <>
-          {view === 'settings' ? (
-            <SettingsNavigation
-              width={sizes.sidebarWidth}
-              category={settingsCategory}
-              onChange={setSettingsCategory}
-              onBack={() => setView('thread')}
-            />
-          ) : (
-            <Sidebar width={sizes.sidebarWidth} />
-          )}
-          <Resizer
-            label={tr("调整侧栏宽度")}
-            axis="horizontal"
-            keyName="sidebarWidth"
-            value={sizes.sidebarWidth}
-            onDrag={(value) => setDrag({ key: 'sidebarWidth', value })}
-            onCommit={(value) => {
-              setDrag(undefined);
-              setLayoutSize('sidebarWidth', value);
-            }}
+      <SidebarPane open={sidebarOpen} width={sidebarWidth} resizing={drag?.key === 'sidebarWidth'}>
+        {view === 'settings' ? (
+          <SettingsNavigation
+            width={sidebarWidth}
+            category={settingsCategory}
+            onChange={setSettingsCategory}
+            onBack={() => setView('thread')}
           />
-        </>
+        ) : (
+          <Sidebar width={sidebarWidth} />
+        )}
+      </SidebarPane>
+      {sidebarOpen && (
+        <Resizer
+          label={tr("调整侧栏宽度")}
+          axis="horizontal"
+          keyName="sidebarWidth"
+          value={sizes.sidebarWidth}
+          onDrag={(value) => setDrag({ key: 'sidebarWidth', value })}
+          onCommit={(value) => {
+            setDrag(undefined);
+            setLayoutSize('sidebarWidth', value);
+          }}
+        />
       )}
-      <main className="main" data-home={home || undefined} data-review-docked={view === 'thread' && panelOpen && !sizes.reviewOverlay || undefined} style={{ '--review-pane-width': sizes.reviewWidth + 'px' } as CSSProperties}>
+      <main ref={main} className="main" data-home={home || undefined} data-review-docked={view === 'thread' && panelOpen && !sizes.reviewOverlay || undefined} style={{ '--review-pane-width': sizes.reviewWidth + 'px' } as CSSProperties}>
         {view !== 'settings' && <Toolbar key={thread?.id ?? view} previewOpen={previewOpen} setPreviewOpen={setPreviewOpen} />}
         <ErrorBanner />
         {view !== 'thread' && approvals.filter(approval => approval.threadId === thread?.id && approval.scope === 'external-tools').map(approval => <ApprovalCard key={approval.id} approval={approval} />)}

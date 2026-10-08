@@ -153,14 +153,14 @@ test('credential presence does not depend on OS decryption availability', async 
   await assert.rejects(locked.get('provider:local'), /系统加密存储不可用/);
 });
 
-test('OAuth removal rolls back and recovers after restart without reviving a committed deletion', async () => {
-  const key = 'mcp-oauth:' + 'a'.repeat(64);
+test('MCP and provider OAuth removal rolls back and recovers after restart without reviving a committed deletion', async () => {
+  const keys = ['mcp-oauth:' + 'a'.repeat(64), 'provider-oauth:' + 'b'.repeat(64)];
   for (const committed of [false, true]) {
     const dir = await mkdtemp(join(tmpdir(), 'pi-settings-vault-'));
     const vault = new SecretVault(dir, encryption, () => true);
-    await vault.set(key, 'fake-private-oauth-tokens');
-    await assert.rejects(vault.removeForSettings([key], async () => { throw new Error('SAVE_FAILED'); }), /SAVE_FAILED/);
-    assert.equal(await vault.get(key), 'fake-private-oauth-tokens');
+    for (const key of keys) await vault.set(key, 'fake-private-oauth-tokens');
+    await assert.rejects(vault.removeForSettings(keys, async () => { throw new Error('SAVE_FAILED'); }), /SAVE_FAILED/);
+    for (const key of keys) assert.equal(await vault.get(key), 'fake-private-oauth-tokens');
     const entries = JSON.parse(await readFile(join(dir, 'secrets.json'), 'utf8'));
     const journal = JSON.stringify({ version: 1, entries });
     assert.equal(journal.includes('fake-private-oauth-tokens'), false);
@@ -168,7 +168,7 @@ test('OAuth removal rolls back and recovers after restart without reviving a com
     if (!committed) await writeFile(join(dir, 'secrets.json'), '{}');
     const restored = new SecretVault(dir, encryption, () => !committed);
     await restored.recover();
-    assert.equal(await restored.get(key), committed ? undefined : 'fake-private-oauth-tokens');
+    for (const key of keys) assert.equal(await restored.get(key), committed ? undefined : 'fake-private-oauth-tokens');
     await assert.rejects(readFile(join(dir, 'secrets-removal.json')), { code: 'ENOENT' });
   }
 });
@@ -211,17 +211,44 @@ test('MCP recovery fingerprints prevent a leftover journal from restoring secret
   }
 });
 
-test('orphan MCP cleanup is atomic and preserves referenced credentials and unrelated namespaces', async () => {
+test('provider recovery fingerprints reject changed identities and still read legacy boolean journals', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pi-settings-vault-'));
+  const apiKey = 'provider:stable-id', oldOAuth = 'provider-oauth:' + 'a'.repeat(64), newOAuth = 'provider-oauth:' + 'b'.repeat(64);
+  let apiIdentity = 'c'.repeat(64), activeOAuth = oldOAuth;
+  const reference = (id: string): boolean | string => id === apiKey ? apiIdentity : id.startsWith('provider-oauth:') ? id === activeOAuth : false;
+  const vault = new SecretVault(dir, encryption, reference);
+  await vault.set(apiKey, 'private-api-key');
+  await vault.set(oldOAuth, 'private-old-oauth');
+  const entries = JSON.parse(await readFile(join(dir, 'secrets.json'), 'utf8')) as Record<string, string>;
+  const journal = JSON.stringify({ version: 1, entries, references: { [apiKey]: apiIdentity, [oldOAuth]: true } });
+  assert.equal(journal.includes('private-api-key'), false);
+  await writeFile(join(dir, 'secrets.json'), '{}');
+  await writeFile(join(dir, 'secrets-removal.json'), journal);
+  apiIdentity = 'd'.repeat(64); activeOAuth = newOAuth;
+  await vault.recover();
+  assert.equal(await vault.get(apiKey), undefined);
+  assert.equal(await vault.get(oldOAuth), undefined);
+
+  await vault.set(apiKey, 'private-legacy-key');
+  const legacyEntries = JSON.parse(await readFile(join(dir, 'secrets.json'), 'utf8')) as Record<string, string>;
+  await writeFile(join(dir, 'secrets.json'), '{}');
+  await writeFile(join(dir, 'secrets-removal.json'), JSON.stringify({ version: 1, entries: { [apiKey]: legacyEntries[apiKey] }, references: { [apiKey]: true } }));
+  await vault.recover();
+  assert.equal(await vault.get(apiKey), 'private-legacy-key');
+});
+
+test('orphan MCP/provider OAuth cleanup is atomic and preserves referenced credentials and unrelated namespaces', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'pi-settings-vault-'));
   const active = 'mcp-oauth:' + 'a'.repeat(64), orphan = 'mcp-oauth:' + 'b'.repeat(64);
-  const retained = new Set([active, 'mcp:disabled-plugin']);
+  const activeProvider = 'provider-oauth:' + 'c'.repeat(64), orphanProvider = 'provider-oauth:' + 'd'.repeat(64);
+  const retained = new Set([active, activeProvider, 'mcp:disabled-plugin']);
   const vault = new SecretVault(dir, encryption, id => retained.has(id));
-  for (const id of [active, orphan, 'mcp:removed-plugin', 'mcp:disabled-plugin', 'provider:orphan', 'future:unknown']) await vault.set(id, 'fake-' + id);
+  for (const id of [active, orphan, activeProvider, orphanProvider, 'mcp:removed-plugin', 'mcp:disabled-plugin', 'provider:orphan', 'future:unknown']) await vault.set(id, 'fake-' + id);
   const before = await readFile(join(dir, 'secrets.json'), 'utf8');
   const blocked = join(dir, 'secrets.json.tmp'); await mkdir(blocked);
   await assert.rejects(vault.pruneMcp(), /EISDIR|EPERM|EACCES/);
   assert.equal(await readFile(join(dir, 'secrets.json'), 'utf8'), before);
   await rm(blocked, { recursive: true });
-  assert.equal(await vault.pruneMcp(), 2); assert.equal(await vault.pruneMcp(), 0);
-  assert.deepEqual(Object.keys(JSON.parse(await readFile(join(dir, 'secrets.json'), 'utf8'))).sort(), [active, 'mcp:disabled-plugin', 'provider:orphan', 'future:unknown'].sort());
+  assert.equal(await vault.pruneMcp(), 3); assert.equal(await vault.pruneMcp(), 0);
+  assert.deepEqual(Object.keys(JSON.parse(await readFile(join(dir, 'secrets.json'), 'utf8'))).sort(), [active, activeProvider, 'mcp:disabled-plugin', 'provider:orphan', 'future:unknown'].sort());
 });

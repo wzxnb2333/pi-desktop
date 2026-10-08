@@ -1,9 +1,20 @@
 import { z } from 'zod';
 
+/**
+ * Mirrors the thread's reasoning levels. Kept local so `subtasks.ts` stays free of an import cycle with
+ * `contracts.ts` (contracts imports this file).
+ */
+export const subtaskThinkingSchema = z.enum(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
+
 export const subtaskDefinitionSchema = z.object({
   title: z.string().trim().min(1).max(200), prompt: z.string().trim().min(1).max(20000),
   environment: z.enum(['local', 'worktree']).default('worktree'), startPoint: z.string().min(1).max(3000).default('HEAD'),
   policy: z.enum(['ask', 'auto', 'deny']).default('deny'), includeContext: z.boolean().default(true),
+  /**
+   * Model and reasoning level for the child agent. Both stay optional on purpose: omitting them means the
+   * child runs exactly like its parent, which is the behaviour the main agent must not change on its own.
+   */
+  modelId: z.string().trim().min(1).max(200).optional(), thinking: subtaskThinkingSchema.optional(),
 }).strict();
 export const subtaskQuestionSchema = z.object({
   id: z.uuid(), question: z.string().trim().min(1).max(4000),
@@ -21,12 +32,15 @@ export const subtaskSchema = z.object({
 }).strict();
 export const subtaskRequests = [
   z.object({ op: z.literal('subtask.create'), parentThreadId: z.string(), requestId: z.uuid(), definition: subtaskDefinitionSchema }).strict(),
+  /** `null` clears the override, putting the child back on its parent's model and reasoning level. */
+  z.object({ op: z.literal('subtask.update'), parentThreadId: z.string(), id: z.uuid(), modelId: z.string().trim().min(1).max(200).nullable().optional(), thinking: subtaskThinkingSchema.nullable().optional() }).strict(),
   z.object({ op: z.literal('subtask.stop'), parentThreadId: z.string(), id: z.uuid().optional() }).strict(),
   z.object({ op: z.literal('subtask.deliver'), parentThreadId: z.string(), id: z.uuid() }).strict(),
 ] as const;
 export const subtaskToolSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('subtasks.list') }).strict(),
   z.object({ action: z.literal('subtasks.create'), definition: subtaskDefinitionSchema }).strict(),
+  z.object({ action: z.literal('subtasks.update'), id: z.uuid(), modelId: z.string().trim().min(1).max(200).nullable().optional(), thinking: subtaskThinkingSchema.nullable().optional() }).strict(),
   z.object({ action: z.literal('subtasks.read'), id: z.uuid() }).strict(),
   z.object({ action: z.literal('subtasks.stop'), id: z.uuid() }).strict(),
   z.object({ action: z.literal('subtasks.reply'), id: z.uuid(), questionId: z.uuid(), answer: z.string().trim().min(1).max(8000) }).strict(),
