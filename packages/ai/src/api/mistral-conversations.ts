@@ -13,6 +13,7 @@ import type {
 	ToolCall,
 	TranscriptContext,
 } from "../types.ts";
+import { combineAbortSignals } from "../utils/abort-signals.ts";
 import { AssistantMessageEventStream } from "../utils/event-stream.ts";
 import { shortHash } from "../utils/hash.ts";
 import { headersToRecord } from "../utils/headers.ts";
@@ -31,7 +32,7 @@ const MAX_MISTRAL_ERROR_BODY_CHARS = 4000;
 /**
  * Provider-specific options for the Mistral API.
  */
-type MistralReasoningEffort = "none" | "high";
+type MistralReasoningEffort = "none" | "low" | "medium" | "high" | "max";
 
 export interface MistralOptions extends StreamOptions {
 	toolChoice?: "auto" | "none" | "any" | "required" | { type: "function"; function: { name: string } };
@@ -150,7 +151,7 @@ export const stream: StreamFunction<"mistral-conversations", MistralOptions> = (
 			}
 			const mistralStream = await requestMistralStream(model, payload, apiKey, options);
 			stream.push({ type: "start", partial: output });
-			await consumeChatStream(model, output, stream, mistralStream);
+			await consumeChatStream(model, output, stream, mistralStream, options?.onProviderStreamEvent);
 
 			if (options?.signal?.aborted) {
 				throw new Error("Request was aborted");
@@ -199,13 +200,18 @@ export const streamSimple: StreamFunction<"mistral-conversations", SimpleStreamO
 	} satisfies MistralOptions;
 	const clampedReasoning = options?.reasoning ? clampThinkingLevel(model, options.reasoning) : undefined;
 	const reasoning = clampedReasoning === "off" ? undefined : clampedReasoning;
-	const shouldUseReasoning = model.reasoning && reasoning !== undefined;
+	// Models with a thinking level map use `reasoning_effort`; other reasoning models use `prompt_mode`.
+	const effortMap = model.reasoning ? model.thinkingLevelMap : undefined;
+	const reasoningEffort = effortMap
+		? reasoning
+			? (effortMap[reasoning] ?? "high")
+			: (effortMap.off ?? undefined)
+		: undefined;
 
 	return stream(model, context, {
 		...base,
-		promptMode: shouldUseReasoning && usesPromptModeReasoning(model) ? "reasoning" : undefined,
-		reasoningEffort:
-			shouldUseReasoning && usesReasoningEffort(model) ? mapReasoningEffort(model, reasoning) : undefined,
+		promptMode: model.reasoning && !effortMap && reasoning ? "reasoning" : undefined,
+		reasoningEffort: reasoningEffort as MistralReasoningEffort | undefined,
 	} satisfies MistralOptions);
 };
 
@@ -299,14 +305,27 @@ async function requestMistralStream(
 	baseUrl.pathname = `${baseUrl.pathname.replace(/\/+$/u, "")}/`;
 	const url = new URL("v1/chat/completions", baseUrl);
 	const headers = buildMistralHeaders(model, apiKey, options);
-	const timeoutSignal = AbortSignal.timeout(options?.timeoutMs ?? 60_000);
-	const signal = options?.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
-	const response = await (options?.fetch ?? globalThis.fetch)(url, {
-		method: "POST",
-		headers,
-		body: JSON.stringify(toMistralWirePayload(payload)),
-		signal,
-	});
+	// The timeout covers only the wait for response headers. Long streams (e.g. extended thinking)
+	// must not be cut off by a fixed deadline; body stalls are left to the HTTP client idle timeout.
+	const timeoutMs = options?.timeoutMs ?? 60_000;
+	const headerTimeoutSignal = AbortSignal.timeout(timeoutMs);
+	const combinedSignal = combineAbortSignals([options?.signal, headerTimeoutSignal]);
+	let response: Response;
+	try {
+		response = await (options?.fetch ?? globalThis.fetch)(url, {
+			method: "POST",
+			headers,
+			body: JSON.stringify(toMistralWirePayload(payload)),
+			signal: combinedSignal.signal,
+		});
+	} catch (error) {
+		if (headerTimeoutSignal.aborted && !options?.signal?.aborted) {
+			throw new Error(`Mistral response headers timed out after ${timeoutMs}ms`);
+		}
+		throw error;
+	} finally {
+		combinedSignal.cleanup();
+	}
 
 	await options?.onResponse?.({ status: response.status, headers: headersToRecord(response.headers) }, model);
 
@@ -318,7 +337,7 @@ async function requestMistralStream(
 		throw new Error("Mistral response has no body");
 	}
 
-	return readMistralEvents(response.body, signal);
+	return readMistralEvents(response.body, options?.signal);
 }
 
 class MistralHttpError extends Error {
@@ -439,7 +458,7 @@ const MISTRAL_STREAM_DONE = Symbol("mistral-stream-done");
 
 async function* readMistralEvents(
 	body: ReadableStream<Uint8Array>,
-	signal: AbortSignal,
+	signal: AbortSignal | undefined,
 ): AsyncGenerator<MistralCompletionEvent> {
 	const reader = body.getReader();
 	const decoder = new TextDecoder();
@@ -447,13 +466,13 @@ async function* readMistralEvents(
 	const onAbort = () => {
 		void reader.cancel().catch(() => {});
 	};
-	signal.addEventListener("abort", onAbort, { once: true });
+	signal?.addEventListener("abort", onAbort, { once: true });
 
 	try {
 		while (true) {
-			if (signal.aborted) throw signal.reason;
+			if (signal?.aborted) throw signal.reason;
 			const { done, value } = await reader.read();
-			if (signal.aborted) throw signal.reason;
+			if (signal?.aborted) throw signal.reason;
 			buffer += done ? decoder.decode() : decoder.decode(value, { stream: true });
 
 			let boundary = findMistralEventBoundary(buffer);
@@ -473,7 +492,7 @@ async function* readMistralEvents(
 			if (event !== MISTRAL_STREAM_DONE && event) yield event;
 		}
 	} finally {
-		signal.removeEventListener("abort", onAbort);
+		signal?.removeEventListener("abort", onAbort);
 		try {
 			await reader.cancel();
 		} catch {}
@@ -559,6 +578,7 @@ async function consumeChatStream(
 	output: AssistantMessage,
 	stream: AssistantMessageEventStream,
 	mistralStream: AsyncIterable<MistralCompletionEvent>,
+	onProviderStreamEvent: StreamOptions["onProviderStreamEvent"],
 ): Promise<void> {
 	let currentBlock: TextContent | ThinkingContent | null = null;
 	const blocks = output.content;
@@ -588,6 +608,7 @@ async function consumeChatStream(
 
 	for await (const event of mistralStream) {
 		const chunk = event.data;
+		await onProviderStreamEvent?.(chunk, model);
 		// Mistral's streamed CompletionChunk carries an id field. Keep the first non-empty one,
 		// mirroring how OpenAI-style streaming exposes a stable response identifier per stream.
 		output.responseId ||= chunk.id;
@@ -624,6 +645,9 @@ async function consumeChatStream(
 			for (const item of contentItems) {
 				if (typeof item === "string") {
 					const textDelta = sanitizeSurrogates(item);
+					// GLM models on Mistral send empty content deltas around thinking and tool calls.
+					// Opening a block for them splits thinking into multiple blocks, which Mistral rejects on replay.
+					if (!textDelta) continue;
 					if (!currentBlock || currentBlock.type !== "text") {
 						finishCurrentBlock(currentBlock);
 						currentBlock = { type: "text", text: "" };
@@ -665,6 +689,7 @@ async function consumeChatStream(
 
 				if (item.type === "text") {
 					const textDelta = sanitizeSurrogates(item.text ?? "");
+					if (!textDelta) continue;
 					if (!currentBlock || currentBlock.type !== "text") {
 						finishCurrentBlock(currentBlock);
 						currentBlock = { type: "text", text: "" };
@@ -895,26 +920,6 @@ function buildToolResultText(text: string, hasImages: boolean, supportsImages: b
 	return isError ? "[tool error] (no tool output)" : "(no tool output)";
 }
 
-function usesReasoningEffort(model: Model<"mistral-conversations">): boolean {
-	return (
-		model.id === "mistral-small-2603" ||
-		model.id === "mistral-small-latest" ||
-		model.id.startsWith("mistral-medium-") ||
-		model.id === "zai-glm-5-2"
-	);
-}
-
-function usesPromptModeReasoning(model: Model<"mistral-conversations">): boolean {
-	return model.reasoning && !usesReasoningEffort(model);
-}
-
-function mapReasoningEffort(
-	model: Model<"mistral-conversations">,
-	level: Exclude<SimpleStreamOptions["reasoning"], undefined>,
-): MistralReasoningEffort {
-	return (model.thinkingLevelMap?.[level] ?? "high") as MistralReasoningEffort;
-}
-
 function mapToolChoice(
 	choice: MistralOptions["toolChoice"],
 ): "auto" | "none" | "any" | "required" | { type: "function"; function: { name: string } } | undefined {
@@ -939,7 +944,8 @@ function mapChatStopReason(reason: string | null): { stopReason: StopReason; err
 		case "tool_calls":
 			return { stopReason: "toolUse" };
 		case "error":
-			return { stopReason: "error", errorMessage: "Provider stopped with: error" };
+			// Mistral reports transient server failures this way; "server error" makes the message retryable.
+			return { stopReason: "error", errorMessage: "Provider stopped with: error (server error)" };
 		default:
 			return { stopReason: "error", errorMessage: `Provider stopped with: ${reason}` };
 	}
