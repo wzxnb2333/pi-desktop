@@ -118,7 +118,7 @@ function Harness() {
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [savedProviderIds, setSavedProviderIds] = useState(initialProviders.map(provider => provider.id));
   replaceProviders = setModelProviders;
-  return <ModelSettings providers={modelProviders} models={[]} defaultId="" defaultThinking="off" selected={selected} keys={keys}
+  return <ModelSettings providers={modelProviders} models={[]} defaultId="" selected={selected} keys={keys}
     savedProviderIds={savedProviderIds}
     catalog={catalog} catalogError="" invoke={invoke} persist={async () => {
       actions.push('persist'); timeline.push('persist');
@@ -131,7 +131,7 @@ function Harness() {
     onRetry={() => {}}
     onKey={(id, value) => setKeys(previous => ({ ...previous, [id]: value }))}
     onAddModel={() => {}} onModelChange={() => {}} onModelDelete={() => {}}
-    onDefault={() => {}} onDefaultThinking={() => {}} onDeleteProvider={id => { providers = providers.filter(provider => provider.id !== id); setModelProviders(providers); }} />;
+    onDeleteProvider={id => { providers = providers.filter(provider => provider.id !== id); setModelProviders(providers); }} />;
 }
 
 function changeProvider(id: string, patch: Partial<ModelProvider>, update: (value: ModelProvider[]) => void = replaceProviders) {

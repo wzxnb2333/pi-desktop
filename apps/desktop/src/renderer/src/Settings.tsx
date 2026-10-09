@@ -54,7 +54,7 @@ const CATEGORY_GROUPS = [
   { label: '编码', items: ['models', 'permissions'] },
 ] as const;
 const CATEGORY_KEYWORDS: Record<SettingsCategory, string[]> = {
-  general: ['界面语言', '默认终端', '编辑器', '发送快捷键', '任务完成通知', '通知条件', '运行期间防止休眠', '运行中追加消息', '关闭窗口时保留到托盘', '启用可选子任务'],
+  general: ['界面语言', '默认终端', '编辑器', '发送快捷键', '默认模型', '默认思考程度', '模型默认值', '任务完成通知', '通知条件', '运行期间防止休眠', '运行中追加消息', '关闭窗口时保留到托盘', '启用可选子任务'],
   appearance: ['主题', '字号', '界面字体', '代码字体', '代码字号', '强调色', '背景色', '前景色', '导入主题', '导出主题'], shortcuts: ['快捷键'], models: ['提供商', '模型', 'API Key', 'Base URL', '供应商'],
   permissions: ['默认审批', '项目可信度'], mcp: ['服务器', '工具'],
   memories: ['跨会话记忆', '记忆范围', '自动生成记忆候选'],
@@ -333,16 +333,15 @@ export function Settings({
           <fieldset className="settings-fields" disabled={saving} aria-label={tr("设置内容")} aria-busy={saving}>
           <MemorySettings data={data} preferences={draft.memory} onChange={memory => patch({ memory })} invoke={invoke} active={category === 'memories'} onDirty={setMemoryDirty} onBusy={setMemoryBusy} />
           <VoiceSettings preferences={draft.voice} savedDirectory={data.settings.voice.modelDirectory} onChange={voice => patch({ voice })} invoke={invoke} active={category === 'voice'} />
-          {category === 'models' && <ModelSettings providers={draft.modelProviders} models={draft.models} defaultId={draft.modelId} defaultThinking={draft.thinking} selected={selected} keys={keys} invoke={invoke} persist={persist}
+          {category === 'models' && <ModelSettings providers={draft.modelProviders} models={draft.models} defaultId={draft.modelId} selected={selected} keys={keys} invoke={invoke} persist={persist}
             savedProviderIds={baseline.current.modelProviders.map(provider => provider.id)}
             error={modelIssue?.id === selected ? modelIssue.text : undefined}
             catalog={catalog} catalogError={catalogError} onSelect={setSelected} onAddProvider={addProvider}
             onChange={patchProvider} onRetry={() => setCatalogAttempt(value => value + 1)}
             onKey={(id, value) => { setKeys(previous => ({ ...previous, [id]: value })); setFeedback(null); }}
-            onAddModel={model => patch({ models: [...draft.models, model], modelId: draft.modelId || model.id })}
-            onModelChange={patchModel} onModelDelete={removeModel}
-            onDefault={id => patch({ modelId: id })} onDefaultThinking={thinking => patch({ thinking })} onDeleteProvider={removeProvider} />}
-          {category === 'general' && <GeneralSettings draft={draft} locale={data.ui.locale} onChange={patch} onLocaleChange={onLocaleChange} />}
+            onAddModel={models => patch({ models: [...draft.models, ...models], modelId: draft.modelId || models[0]?.id || '' })}
+            onModelChange={patchModel} onModelDelete={removeModel} onDeleteProvider={removeProvider} />}
+          {category === 'general' && <GeneralSettings draft={draft} locale={data.ui.locale} providers={draft.modelProviders} models={draft.models} onChange={patch} onLocaleChange={onLocaleChange} />}
           {category === 'appearance' && <AppearanceSettings draft={draft} onChange={patch} invoke={invoke} onFeedback={(text, error) => setFeedback({ text, error })} />}
           {category === 'shortcuts' && (
             <>

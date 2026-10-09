@@ -1,0 +1,7 @@
+{
+  "backend": null,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "estimated_usd": 0.0,
+  "semantic_note": "No Gemini/Google API key; local semantic node registration used."
+}

@@ -10,6 +10,11 @@ const levelNames: Record<string, string> = { off: '关闭思考', minimal: '极�
 test.beforeAll(async () => { development = await startDevelopmentSource(); });
 test.afterAll(async () => { await development?.server.close(); });
 test.beforeEach(async () => { fixture = await acceptanceApp(development.url); });
+const saveSettings = async () => {
+  const drawer = fixture.page.locator('.drawer');
+  if (await drawer.count()) await drawer.press('Escape');
+  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+};
 test.afterEach(async () => {
   if (!fixture) return;
   const errors = [...fixture.errors];
@@ -30,7 +35,7 @@ test('exclusive connection modes persist across Electron restarts and reach only
   await fixture.page.getByRole('button', { name: '添加模型' }).click();
   await fixture.page.locator('.model-catalog-options input[value="deepseek-v4.1-flash"]').check();
   await fixture.page.getByRole('button', { name: '添加所选模型' }).click();
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
   const builtin = (await fixture.snapshot()).data.settings;
   expect(builtin.modelProviders.at(-1)).toMatchObject({ kind: 'builtin', namespace: 'opencode-go', baseUrl: '' });
@@ -46,10 +51,10 @@ test('exclusive connection modes persist across Electron restarts and reach only
   // The custom connection keeps its endpoint, protocol and credential across restarts.
   await fixture.page.getByRole('tab', { name: '验收模型' }).click();
   await fixture.page.getByLabel('Base URL', { exact: true }).fill(fixture.url + '/v1');
+  await fixture.page.getByLabel(/^API Key/).fill('model-settings-fake-key');
   await fixture.page.locator('.model-row-toggle').first().click();
   await fixture.page.getByLabel('模型 ID', { exact: true }).fill('acceptance');
-  await fixture.page.getByLabel(/^API Key/).fill('model-settings-fake-key');
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
   expect((await fixture.snapshot()).data.settings.modelProviders[0]).toMatchObject({
     id: 'local-provider', kind: 'custom', namespace: 'desktop-local-provider', baseUrl: fixture.url + '/v1', hasKey: true,
@@ -65,6 +70,8 @@ test('exclusive connection modes persist across Electron restarts and reach only
   await fixture.page.locator('.model-row-toggle').first().click();
   await expect(fixture.page.getByLabel('模型 ID', { exact: true })).toHaveValue('acceptance');
   await expect(fixture.page.getByLabel(/^API Key/)).toHaveValue('');
+  await fixture.page.locator('.drawer').press('Escape');
+  await expect(fixture.page.locator('.drawer')).toHaveCount(0);
   await fixture.page.getByRole('button', { name: '返回工作台' }).click();
   await fixture.invoke({ op: 'thread.send', id: 't', text: '验证自定义连接', attachments: [] });
   await expect.poll(() => fixture.calls.length).toBe(1);
@@ -82,7 +89,7 @@ test('allowed thinking levels reach the provider and persist through model chang
     await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).uncheck();
   for (const level of levels)
     await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).check();
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
   await fixture.page.getByRole('button', { name: '返回工作台' }).click();
   expect((await fixture.snapshot()).data.threads[0].thinking).toBe('low');
@@ -116,7 +123,7 @@ test('allowed thinking levels reach the provider and persist through model chang
   await fixture.page.locator('.model-row-toggle').first().click();
   for (const level of ['low', 'xhigh', 'max'])
     await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).uncheck();
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
   expect((await fixture.snapshot()).data.threads[0].thinking).toBe('high');
   await expect(fixture.invoke({ op: 'thread.update', id: 't', thinking: 'max' })).rejects.toThrow('未允许');
@@ -168,8 +175,8 @@ test('new sessions inherit the fixed defaults while existing sessions keep their
   initial.models[0].thinkingLevels = ['off', 'low', 'high', 'max'];
   await fixture.invoke({ op: 'settings.save', settings: initial });
   await fixture.page.keyboard.press('Control+,');
-  await fixture.page.getByRole('button', { name: '模型', exact: true }).click();
-  await expect(fixture.page.getByRole('heading', { name: '新会话默认' })).toBeVisible();
+  await fixture.page.getByRole('button', { name: '通用', exact: true }).click();
+  await expect(fixture.page.getByRole('heading', { name: '模型默认值' })).toBeVisible();
   await expect(fixture.page.getByLabel('默认模型', { exact: true })).toContainText('验收模型');
   // The control is the app's own popover, not the operating system's select popup.
   await fixture.page.getByLabel('默认思考程度', { exact: true }).click();
@@ -178,7 +185,7 @@ test('new sessions inherit the fixed defaults while existing sessions keep their
   await fixture.page.getByRole('button', { name: '审批与信任', exact: true }).click();
   await fixture.page.getByLabel('默认审批', { exact: true }).click();
   await fixture.page.getByRole('menuitemradio', { name: '请求批准', exact: true }).click();
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
 
   // A new task starts from those defaults.
@@ -206,7 +213,7 @@ test('a built-in catalogue model keeps the reasoning levels the user adds', asyn
   await fixture.page.getByRole('button', { name: '添加模型' }).click();
   await fixture.page.locator('.model-catalog-options input[value="deepseek-v4.1-flash"]').check();
   await fixture.page.getByRole('button', { name: '添加所选模型' }).click();
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
 
   // The catalogue's list is information, not a fence: the page says so, and the save must agree.
@@ -224,7 +231,7 @@ test('a built-in catalogue model keeps the reasoning levels the user adds', asyn
   };
   await openModel();
   for (const level of extra) await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).check();
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
 
   const saved = (await fixture.snapshot()).data.settings.models.find(model => model.model === 'deepseek-v4.1-flash')!;
@@ -234,7 +241,7 @@ test('a built-in catalogue model keeps the reasoning levels the user adds', asyn
   await openModel();
   for (const level of all.filter(level => level !== only))
     await fixture.page.getByRole('checkbox', { name: levelNames[level], exact: true }).uncheck();
-  await fixture.page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(fixture.page.getByRole('status')).toHaveText('设置已保存');
   await fixture.restart();
   const reloaded = (await fixture.snapshot()).data.settings.models.find(model => model.model === 'deepseek-v4.1-flash')!;

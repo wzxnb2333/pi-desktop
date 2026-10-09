@@ -65,6 +65,10 @@
   .tooltip { animation: motion-fade-in 120ms var(--ease-out); }
   .dialog-backdrop { animation: motion-fade-in var(--duration-fast) var(--ease-basic); }
   .dialog { animation: motion-dialog-in var(--duration-enter) var(--ease-out); }
+  .drawer-backdrop { animation: motion-fade-in var(--duration-fast) var(--ease-basic); }
+  .drawer { animation: motion-drawer-in var(--duration-enter) var(--ease-out); }
+  .drawer-backdrop[data-open="false"] { animation: motion-fade-out 100ms var(--ease-basic) forwards; }
+  .drawer-backdrop[data-open="false"] .drawer { animation: motion-drawer-out 100ms var(--ease-basic) forwards; }
 
   :is(.page-heading, .settings-fields > .field-stack, .settings-fields > .settings-section, .model-editor,
       .model-row-editor, .model-add-panel, .provider-auth-prompt,
@@ -110,6 +114,18 @@
 @keyframes motion-dialog-in {
   from { opacity: 0; translate: 0 8px; scale: .985; }
   to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes motion-drawer-in {
+  from { opacity: 0; translate: 24px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes motion-drawer-out {
+  from { opacity: 1; translate: 0 0; }
+  to { opacity: 0; translate: 24px 0; }
+}
+@keyframes motion-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 @keyframes motion-content-in {
   from { opacity: 0; translate: 0 4px; }

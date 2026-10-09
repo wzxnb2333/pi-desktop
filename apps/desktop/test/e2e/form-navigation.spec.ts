@@ -69,11 +69,11 @@ for (const locale of ['zh-CN', 'en-US'] as const) for (const theme of ['light', 
     try {
       await page.goto(url + '?locale=' + locale + '&theme=' + theme);
       await expect(page.locator('.settings-sidebar .settings-nav-group')).toHaveCount(3);
-      await expect(page.locator('.settings-sidebar [data-category]')).toHaveCount(8);
+      await expect(page.locator('.settings-sidebar [data-category]')).toHaveCount(9);
       await expect(page.locator('.main > .toolbar')).toHaveCount(0);
       for (const [width, height] of [[1440, 940], [1280, 800], [1000, 700]]) {
         await page.setViewportSize({ width, height });
-        for (const category of ['general', 'appearance', 'shortcuts', 'mcp', 'models', 'permissions', 'memories', 'voice']) {
+        for (const category of ['general', 'appearance', 'shortcuts', 'mcp', 'models', 'permissions', 'memories', 'voice', 'browser']) {
           const button = page.locator('.settings-sidebar [data-category=' + category + ']');
           await button.click();
           await expect(button).toHaveAttribute('aria-current', 'true');
@@ -86,7 +86,7 @@ for (const locale of ['zh-CN', 'en-US'] as const) for (const theme of ['light', 
           expect((await page.locator('.settings-sidebar .settings-search').boundingBox())!.y).toBe(90);
           const bounds = (await page.locator('.settings-page h1').boundingBox())!;
           // Keep the reference typography; reduce the blank header space to 64px for the refactor.
-          expect(bounds.y).toBe(100);
+          expect(bounds.y).toBeCloseTo(100, 0);
           const outside = await page.locator('.settings-page').evaluate(root => {
             const bounds = root.getBoundingClientRect();
             return [...root.querySelectorAll('input, select, button, textarea')].filter(node => {

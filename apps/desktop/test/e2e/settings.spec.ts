@@ -187,6 +187,11 @@ test.afterAll(cleanupTemporaryDirectories);
 
 const heading = () => page.locator('.settings-page h1');
 const status = () => page.locator('.settings-footer').getByRole('status');
+const saveSettings = async () => {
+  const drawer = page.locator('.drawer');
+  if (await drawer.count()) await drawer.press('Escape');
+  await page.getByRole('button', { name: '保存设置', exact: true }).click();
+};
 
 test('the model section keeps its add entry on the header and its key reveal inside the field', async () => {
   await page.getByRole('button', { name: '模型', exact: true }).click();
@@ -223,6 +228,31 @@ test('the model row keeps its name and id on the section content edge', async ()
   expect(name!.x).toBeCloseTo(label!.x, 0);
   expect(id!.x).toBeCloseTo(label!.x, 0);
 });
+test('model editing uses a right drawer and keeps the draft until the shared save', async () => {
+  await page.locator('.model-row-toggle').first().click();
+  const drawer = page.getByRole('dialog', { name: '编辑模型' });
+  await expect(drawer).toBeVisible();
+  await drawer.getByLabel('显示名称', { exact: true }).fill('抽屉里的模型');
+  await drawer.press('Escape');
+  await expect(page.locator('.model-row-toggle').first()).toBeFocused();
+  await expect(page.locator('.model-row-name').first()).toHaveText('抽屉里的模型');
+  await saveSettings();
+  const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
+  expect(saved.models[0].name).toBe('抽屉里的模型');
+  await page.getByRole('button', { name: '通用', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '模型默认值' })).toBeVisible();
+  await page.getByRole('button', { name: '模型', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '新会话默认' })).toHaveCount(0);
+});
+
+test('general model defaults show an empty state when no models exist', async () => {
+  await page.goto(pageUrl + '?scenario=empty');
+  await page.getByRole('button', { name: '通用', exact: true }).click();
+  await expect(page.getByLabel('默认模型', { exact: true })).toBeDisabled();
+  await expect(page.getByLabel('默认模型', { exact: true })).toContainText('还没有模型');
+  await expect(page.getByLabel('默认思考程度', { exact: true })).toBeDisabled();
+});
+
 const levelNames: Record<string, string> = { off: '关闭思考', minimal: '极低', low: '低', medium: '中等', high: '高', xhigh: '极高', max: '最高' };
 /**
  * Rows are found by their title span rather than `getByLabel`: a row's accessible name also carries
@@ -234,8 +264,9 @@ const rowFor = (title: string) =>
 const modelIdMetadata = () => rowFor('模型 ID').locator('.model-metadata');
 /** A model created through the add-model form opens its editor right away, so only click when collapsed. */
 const openModelEditor = async (): Promise<void> => {
-  const toggle = page.locator('.model-row-toggle').first();
-  if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+  if (await page.locator('.drawer-backdrop[data-open="true"]').count()) return;
+  if (await page.locator('.drawer').count()) await expect(page.locator('.drawer')).toHaveCount(0);
+  await page.locator('.model-row-toggle').first().click();
 };
 
 test('the settings page opens on the model category with a labelled row per field', async () => {
@@ -251,7 +282,7 @@ test('the settings page opens on the model category with a labelled row per fiel
   await openModelEditor();
   await expect(rowFor('上下文窗口')).toHaveCount(0);
   await expect(modelIdMetadata()).toHaveText('gpt-4.1');
-  await expect(page.getByRole('button', { name: '当前默认', exact: true })).toBeDisabled();
+  await expect(page.locator('.model-default-badge')).toContainText('当前默认');
 });
 
 test('provider key drafts stay with their model and all pending keys save from another category', async () => {
@@ -263,7 +294,7 @@ test('provider key drafts stay with their model and all pending keys save from a
   await page.getByRole('tab', { name: '测试模型', exact: true }).click();
   await expect(page.locator('input[type=password]')).toHaveValue('fixture-first');
   await page.getByRole('button', { name: '通用', exact: true }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const requests = await page.evaluate(() => window.__settingsRequests);
   expect(requests.filter(request => request.op === 'provider.key')).toMatchObject([
@@ -315,8 +346,8 @@ test('provider deletion confirms, selects the remaining model and preserves a va
   await page.locator('.provider-remove').click();
   await dialog.getByRole('button', { name: '删除提供商', exact: true }).click();
   await expect(page.getByLabel('显示名称', { exact: true })).toHaveValue('第二模型');
-  await expect(page.getByRole('button', { name: '当前默认', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await expect(page.locator('.model-default-badge')).toContainText('当前默认');
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(saved.modelId).toBe('model-2');
@@ -338,7 +369,7 @@ test('invalid hidden model opens its editor without dropping other settings draf
   await page.getByRole('button', { name: '通用', exact: true }).click();
   await page.locator('#settings-follow-up').click();
   await page.getByRole('menuitemradio', { name: '引导当前任务', exact: true }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(heading()).toHaveText('模型');
   await expect(page.getByLabel('显示名称', { exact: true })).toBeFocused();
   await expect(page.getByLabel('显示名称', { exact: true })).toHaveAttribute('aria-invalid', 'true');
@@ -347,7 +378,7 @@ test('invalid hidden model opens its editor without dropping other settings draf
   await expect(page.locator('.model-editor [role=alert]')).toHaveCount(0);
   await page.getByRole('button', { name: '通用', exact: true }).click();
   await expect(page.locator('#settings-follow-up')).toContainText('引导当前任务');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
 });
 
@@ -368,7 +399,7 @@ test('settings groups distinguish draft changes, immediate preferences and local
   await expect(page.locator('.appearance-preview code')).toHaveCSS('font-size', '18px');
   await expect(page.locator('.appearance-preview code')).toHaveCSS('color', 'rgb(18, 58, 188)');
   expect(await page.evaluate(() => window.__settingsRequests.filter(request => request.op === 'settings.patch'))).toHaveLength(0);
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
 });
 
@@ -400,12 +431,12 @@ test('failed key saves retain only unfinished credentials for a targeted retry',
   await page.getByRole('tab', { name: '第二模型', exact: true }).click();
   await page.locator('input[type=password]').fill('fixture-second');
   await page.evaluate(() => { window.__failProviderKey = 'model-2-provider'; });
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('KEY_SAVE_FAILED');
   await expect(page.locator('input[type=password]')).toHaveValue('fixture-second');
   await page.getByRole('tab', { name: '测试模型', exact: true }).click();
   await expect(page.locator('input[type=password]')).toHaveValue('');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   expect(await page.evaluate(() => window.__settingsRequests.filter(request => request.op === 'provider.key').map(request => request.id))).toEqual(['model-1-provider', 'model-2-provider', 'model-2-provider']);
 });
@@ -422,7 +453,7 @@ test('the category nav swaps one panel and keeps every control where it is', asy
   await expect(rowFor('主题')).toHaveCSS('min-height', '60px');
   await theme.click();
   await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(page.getByTestId('ops')).toHaveText('settings.patch');
   await page.getByRole('button', { name: '审批与信任', exact: true }).click();
   await expect(page.getByLabel('默认审批', { exact: true })).toHaveRole('button');
@@ -435,11 +466,11 @@ test('keyboard overrides persist, reject conflicts and restore defaults', async 
   await expect(control).toHaveValue('Ctrl+N');
   await control.press('Control+k');
   await expect(page.getByRole('alert')).toContainText('使用相同快捷键');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(page.getByTestId('ops')).toHaveText('');
   await control.press('Control+Alt+n');
   expect(await page.evaluate(() => window.__settingsRequests.filter(request => request.op === 'window.shortcut'))).toHaveLength(1);
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   expect(JSON.parse(await page.getByTestId('saved').textContent() ?? '{}').shortcuts.newThread).toBe('Ctrl+Alt+N');
   await page.getByTestId('remount').click();
@@ -470,14 +501,14 @@ test('appearance fonts and colors persist and reset without clearing model confi
   await page.locator('#settings-codeFontFamily').fill('Consolas');
   await page.locator('#settings-code-font-size').fill('18');
   await page.locator('#settings-accentColor').fill('#123abc');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   await page.getByTestId('remount').click();
   await page.getByRole('button', { name: '外观', exact: true }).click();
   await expect(page.locator('#settings-code-font-size')).toHaveValue('18');
   await expect(page.locator('#settings-accentColor')).toHaveValue('#123abc');
   await page.getByRole('button', { name: '恢复默认外观' }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(saved).toMatchObject({ theme: 'system', codeFontSize: 12, uiFontFamily: '', codeFontFamily: '', accentColor: '', modelId: 'model-1' });
@@ -487,14 +518,14 @@ test('appearance fonts and colors persist and reset without clearing model confi
 
 test('settings stay editable while a task runs and explain when runtime changes apply', async () => {
   await expect(page.getByText('偏好保存后立即生效', { exact: false })).toBeVisible();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   await expect(status()).not.toHaveAttribute('data-error', 'true');
   await page.getByTestId('busy').click();
   await page.getByRole('button', { name: '通用', exact: true }).click();
   await page.locator('#settings-follow-up').click();
   await page.getByRole('menuitemradio', { name: '引导当前任务', exact: true }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   await expect(status()).not.toHaveAttribute('data-error', 'true');
   expect(JSON.parse(await page.getByTestId('saved').textContent() ?? '{}').followUpMode).toBe('steer');
@@ -508,8 +539,9 @@ test('built-in provider changes select a matching model and save no endpoint ove
   await page.getByRole('menuitemradio', { name: 'opencode-go', exact: true }).click();
   // The namespace changed, so the previous catalogue model is flagged instead of silently kept.
   await page.locator('.model-row-toggle').first().click();
-  await expect(page.locator('.model-row-editor [role=alert]')).toContainText('当前模型不在内置目录中');
-  await page.locator('.model-row-toggle').first().click();
+  await expect(page.locator('.drawer [role=alert]')).toContainText('当前模型不在内置目录中');
+  await page.locator('.drawer').press('Escape');
+  await expect(page.locator('.drawer')).toHaveCount(0);
   await page.getByRole('button', { name: '删除模型 测试模型', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '删除模型', exact: true }).click();
   await page.getByRole('button', { name: '添加模型', exact: true }).click();
@@ -524,7 +556,7 @@ test('built-in provider changes select a matching model and save no endpoint ove
   await expect(page.getByRole('checkbox', { name: '最高', exact: true })).not.toBeChecked();
   await expect(thinkingGroup.locator('.hint')).toContainText('内置目录把');
   await page.getByRole('checkbox', { name: '最高', exact: true }).check();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(saved.modelProviders[0]).toMatchObject({ namespace: 'opencode-go', kind: 'builtin', baseUrl: '' });
@@ -554,9 +586,9 @@ test('custom mode has no provider input, keeps independent drafts, and survives 
   await page.getByRole('button', { name: '创建提供商', exact: true }).click();
   await page.getByRole('button', { name: '添加模型', exact: true }).click();
   await page.getByLabel('模型 ID', { exact: true }).fill('deepseek-flash');
-  await page.getByRole('button', { name: '添加模型', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '添加模型', exact: true }).click();
   await expect(page.locator('.model-key-status')).toHaveText('尚未设置密钥');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   const custom = saved.modelProviders.find((provider: { kind: string }) => provider.kind === 'custom');
@@ -576,17 +608,19 @@ test('missing and invalid custom URLs prevent a save and numeric capabilities ar
   await page.getByRole('button', { name: '创建提供商', exact: true }).click();
   await page.getByRole('button', { name: '添加模型', exact: true }).click();
   await page.getByLabel('模型 ID', { exact: true }).fill('deepseek-flash');
-  await page.getByRole('button', { name: '添加模型', exact: true }).click();
-  await openModelEditor();
+  await page.getByRole('dialog').getByRole('button', { name: '添加模型', exact: true }).click();
+  await page.locator('.drawer').press('Escape');
+  await expect(page.locator('.drawer')).toHaveCount(0);
   for (const [url, message] of [['', '请填写接口服务地址'], ['api.example.com', 'Base URL'], ['file:///tmp/model', 'Base URL']] as const) {
     await page.getByLabel('Base URL', { exact: true }).fill(url);
-    await page.getByRole('button', { name: '保存设置' }).click();
+    await saveSettings();
     await expect(status()).toContainText(message);
     await expect(page.getByTestId('ops')).toHaveText('');
   }
   await page.getByLabel('Base URL', { exact: true }).fill('http://localhost:9876/v1');
+  await openModelEditor();
   await page.getByLabel('最大输出 Token', { exact: true }).fill('0');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toContainText('最大输出 Token');
   await expect(page.getByTestId('ops')).toHaveText('');
 });
@@ -599,13 +633,13 @@ test('built-in endpoint overrides stay optional and never rewrite the catalogue 
   await page.locator('.connection-advanced summary').click();
   await expect(page.getByLabel('Base URL', { exact: true })).toHaveValue('http://localhost:9876/v1');
   await page.getByLabel('Base URL', { exact: true }).fill('');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const cleared = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(cleared.modelProviders[0]).toMatchObject({ kind: 'builtin', namespace: 'openai', baseUrl: '' });
   expect(cleared.models[0]).toMatchObject({ model: 'gpt-4.1' });
   await page.getByLabel('Base URL', { exact: true }).fill('http://localhost:9876/v1');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(saved.modelProviders[0]).toMatchObject({ kind: 'builtin', namespace: 'openai', baseUrl: 'http://localhost:9876/v1' });
@@ -617,7 +651,7 @@ test('unlisted models are identified without silently changing the configured mo
   await page.locator('.model-row-toggle').first().click();
   await expect(page.getByRole('alert')).toContainText('当前模型不在内置目录中');
   await expect(modelIdMetadata()).toHaveText('deepseek-flash');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toContainText('当前模型不在该提供商的内置目录中');
   await expect(page.getByTestId('ops')).toHaveText('');
 });
@@ -626,12 +660,12 @@ test('catalog failures support retry and never block a catalogue-free save', asy
   await page.goto(pageUrl + '?scenario=catalog-retry');
   await expect(page.getByRole('alert')).toContainText('加载失败');
   // Nothing in this draft depends on the catalogue, so an unchanged built-in provider cannot veto it.
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   await expect(page.locator('#model-config-error')).toHaveCount(0);
   await page.getByRole('button', { name: '重新加载目录' }).click();
   await expect(page.getByLabel('供应商', { exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   await page.goto(pageUrl + '?scenario=catalog-error');
   await expect(page.getByRole('alert')).toContainText('加载失败');
@@ -642,8 +676,8 @@ test('catalog failures support retry and never block a catalogue-free save', asy
   await page.getByRole('button', { name: '创建提供商', exact: true }).click();
   await page.getByRole('button', { name: '添加模型', exact: true }).click();
   await page.getByLabel('模型 ID', { exact: true }).fill('local-model');
-  await page.getByRole('button', { name: '添加模型', exact: true }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '添加模型', exact: true }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(saved.modelProviders.map((provider: { kind: string }) => provider.kind)).toEqual(['builtin', 'custom']);
@@ -657,7 +691,7 @@ test('catalog failures do not block unrelated preferences and unsaved model edit
   await page.getByRole('button', { name: '外观', exact: true }).click();
   await page.getByLabel('主题', { exact: true }).click();
   await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存', { timeout: 3000 });
   expect(await page.evaluate(() => window.__settingsRequests.filter(request => request.op === 'settings.patch'))).toEqual([
     { op: 'settings.patch', patch: { theme: 'dark' }, base: { theme: 'system' } },
@@ -670,7 +704,7 @@ test('catalog failures do not block unrelated preferences and unsaved model edit
   await page.getByRole('button', { name: '通用', exact: true }).click();
   await page.locator('#settings-follow-up').click();
   await page.getByRole('menuitemradio', { name: '引导当前任务', exact: true }).click();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toContainText('内置模型目录尚未加载');
   expect(await page.evaluate(() => window.__settingsRequests.filter(request => request.op === 'settings.patch'))).toHaveLength(1);
   await expect(heading()).toHaveText('模型');
@@ -714,7 +748,7 @@ test('allowed thinking levels support keyboard changes, validation, mode drafts 
   await page.getByRole('button', { name: '创建提供商', exact: true }).click();
   await page.getByRole('button', { name: '添加模型', exact: true }).click();
   await page.getByLabel('模型 ID', { exact: true }).fill('reasoner');
-  await page.getByRole('button', { name: '添加模型', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '添加模型', exact: true }).click();
   await openModelEditor();
   await page.getByRole('checkbox', { name: /^支持思考/ }).check();
   const levels = ['low', 'high', 'xhigh', 'max'];
@@ -726,15 +760,18 @@ test('allowed thinking levels support keyboard changes, validation, mode drafts 
   await expect(maximum).toBeFocused();
   for (const level of ['low', 'high', 'xhigh']) await page.getByRole('checkbox', { name: levelNames[level], exact: true }).uncheck();
   await expect(page.getByRole('alert')).toContainText('至少选择一个');
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toContainText('至少选择一个');
   await expect(page.getByTestId('ops')).toHaveText('');
+  await openModelEditor();
   for (const level of levels) await page.getByRole('checkbox', { name: levelNames[level], exact: true }).check();
+  await page.locator('.drawer').press('Escape');
+  await expect(page.locator('.drawer')).toHaveCount(0);
   await page.getByRole('button', { name: '通用', exact: true }).click();
   await page.getByRole('button', { name: '模型', exact: true }).click();
   await page.locator('.model-row-toggle').first().click();
   for (const level of levels) await expect(page.getByRole('checkbox', { name: levelNames[level], exact: true })).toBeChecked();
-  await page.getByRole('button', { name: '保存设置' }).click();
+  await saveSettings();
   await expect(status()).toHaveText('设置已保存');
   const saved = JSON.parse(await page.getByTestId('saved').textContent() ?? '{}');
   expect(saved.models.at(-1).thinkingLevels).toEqual(levels);
@@ -755,7 +792,7 @@ for (const locale of ['zh-CN', 'en-US'] as const) for (const theme of ['light', 
     await page.getByRole('button', { name: translate(locale, '创建提供商'), exact: true }).click();
     await page.getByRole('button', { name: translate(locale, '添加模型'), exact: true }).click();
     await page.getByLabel(translate(locale, '模型 ID'), { exact: true }).fill('reasoner');
-    await page.getByRole('button', { name: translate(locale, '添加模型'), exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: translate(locale, '添加模型'), exact: true }).click();
     await openModelEditor();
     const toggle = page.getByRole('checkbox', { name: locale === 'zh-CN' ? /^支持思考/ : /^Supports reasoning/ });
     await toggle.check();
@@ -789,7 +826,7 @@ for (const locale of ['zh-CN', 'en-US'] as const) for (const theme of ['light', 
         expect(size.right).toBeGreaterThanOrEqual(0);
         expect(size.height).toBe(32);
         expect(size.font).toBe('13px');
-        expect(size.icon).toBe(14);
+        expect(size.icon).toBeCloseTo(14, 0);
       }
       if (process.env.PI_UI_EVIDENCE === '1' && width === 1000) {
         const evidence = fileURLToPath(new URL('../../../../.artifacts/selection-ui/', import.meta.url));

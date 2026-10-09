@@ -133,7 +133,6 @@
 .settings-page .field-row-control > input[type=checkbox]:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 .settings-page .btn { min-height: 28px; font-size: 13px; }
 .model-settings { display: grid; grid-template-columns: 216px minmax(0, 1fr); align-items: start; gap: 28px; }
-.model-defaults { grid-column: 1 / -1; min-width: 0; }
 .model-collection { min-width: 0; position: sticky; top: 12px; }
 .model-collection-compact { display: none; }
 .model-collection-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
@@ -152,8 +151,12 @@
 .model-add { margin-top: 12px; width: 100%; justify-content: center; }
 .model-editor { min-width: 0; }
 .model-provider-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0 0 18px; }
-.model-provider-heading h2 { margin: 0; font-size: 16px; line-height: 22px; }
+.model-provider-heading h2 { margin: 0; font-size: 18px; line-height: 24px; }
 .model-provider-heading .hint { margin: 4px 0 0; }
+.model-kicker { margin: 0 0 4px; color: var(--muted); font-size: 11px; line-height: 16px; text-transform: uppercase; letter-spacing: .04em; }
+.model-provider-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.model-auth-badge, .model-default-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 11px; line-height: 16px; white-space: nowrap; }
+.model-auth-badge { color: var(--text); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
 .model-draft-badge { flex: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 11px; line-height: 16px; }
 .model-editor .settings-section { margin-bottom: 24px; }
 .model-key-control { display: flex; flex-direction: column; gap: 6px; width: 250px; max-width: 100%; }
@@ -171,7 +174,7 @@
 .model-list { list-style: none; margin: 0; padding: 0; }
 .model-row { border-top: 1px solid var(--border); padding-block: 10px; }
 .model-row:first-child { border-top: 0; }
-.model-row-heading { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.model-row-heading { display: flex; align-items: center; gap: 10px; min-height: 38px; }
 /*
  * `button` centres its content, so a column-flex button centres its children horizontally. The model
  * name and id are a left-aligned pair: `align-items: stretch` keeps them at the row's left edge
@@ -181,19 +184,20 @@
 .model-row-toggle { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin-inline: -6px; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .model-row-toggle:hover { background: var(--hover); }
 .model-row-toggle:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
-.model-row-title { position: relative; display: flex; align-items: center; min-width: 0; }
-.model-row-title .disclosure-chevron { position: absolute; inset-inline-start: -18px; transition: rotate 180ms var(--ease-out); }
-.model-row[data-open="true"] .model-row-title .disclosure-chevron { rotate: 90deg; }
 .model-row-name { min-width: 0; font-size: 13px; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-row-id { color: var(--muted); font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
-.model-row-capabilities { flex: none; max-width: 38%; color: var(--muted); font-size: 11px; line-height: 16px; text-align: right; font-variant-numeric: tabular-nums; }
+.model-row-capabilities { flex: none; max-width: 30%; color: var(--muted); font-size: 11px; line-height: 16px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .model-row-heading > .btn { flex: none; white-space: nowrap; }
 .model-row-heading > .model-remove { padding-inline: 6px; }
-.model-row-editor { margin-top: 4px; padding-inline: 6px; }
+.model-row-summary { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 0 6px; color: var(--muted); font-size: 11px; line-height: 16px; }
+.model-row-summary span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .model-add-panel { margin-top: 12px; padding-block: 12px; border-top: 1px solid var(--border); }
 .model-catalog-search { margin: 10px 0 4px; }
 .model-catalog-search input { font-size: 12px; }
 .model-add-panel .row { display: flex; gap: 8px; margin-top: 12px; }
+.model-drawer-form { display: grid; gap: 4px; padding-top: 8px; }
+.drawer-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.drawer-actions .model-remove { margin-inline-start: auto; color: var(--danger); }
 .model-catalog-options { list-style: none; margin: 8px 0 0; padding: 0; max-height: 260px; overflow-y: auto; }
 .model-catalog-option { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-radius: 10px; cursor: pointer; }
 .model-catalog-option:hover { background: var(--hover); }
@@ -251,6 +255,23 @@
 .connection-mode > span { min-width: 0; }
 .connection-mode strong { display: block; font-weight: var(--font-weight-medium); }
 .connection-mode-help { margin: 10px 0 8px; font-size: 12px; line-height: 18px; }
+.drawer .field-row { align-items: flex-start; gap: 16px; min-height: 56px; padding-block: 12px; border-bottom: 1px solid var(--border); }
+.drawer .field-row-label { padding-top: 4px; }
+.drawer .field-row-control { width: 220px; max-width: 52%; }
+.drawer .field-row-control > input:not([type=checkbox]):not([type=radio]), .drawer .field-row-control .menu-trigger { width: 100%; min-width: 0; }
+.drawer .field-row-control > input[type=number] { width: 100%; }
+.drawer .thinking-levels { margin-top: 18px; }
+.drawer .field-row-control > input[type=checkbox] { width: 32px; height: 20px; flex: none; }
+@media (max-width: 600px) {
+  .drawer .field-row { flex-direction: column; gap: 8px; }
+  .drawer .field-row-control { width: 100%; max-width: 100%; }
+}
+@container settings (max-width: 500px) {
+  .model-row-heading { flex-wrap: wrap; gap: 6px; }
+  .model-row-toggle { flex-basis: calc(100% - 86px); }
+  .model-row-capabilities { order: 2; max-width: none; text-align: left; }
+  .model-default-badge { order: 2; }
+}
 /*
  * The connection card's rows — display name, provider, endpoint and key — share one control width.
  * A `select` that sizes itself would sit short of the inputs around it, and the column needs a
