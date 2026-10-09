@@ -1,4 +1,5 @@
 import { tr } from "../../../../shared/localization.ts";
+import { appUpdateSchema } from '../../../../shared/contracts.ts';
 import { useLocale } from "../../hooks/use-locale.ts";
 import { ArrowLeft, ArrowRight, Maximize2, Minus, X } from 'lucide-react';
 import { useState } from 'react';
@@ -17,6 +18,11 @@ export function Titlebar() {
   const { act, sidebarOpen, setSidebarOpen } = app;
   const history = useWorkspaceHistory(app);
   const [showInfo, setShowInfo] = useState(false);
+  const [update, setUpdate] = useState<{ status: 'checking' } | ReturnType<typeof appUpdateSchema.parse>>();
+  const checkUpdate = () => {
+    setUpdate({ status: 'checking' });
+    void app.invoke({ op: 'app.updateCheck' }).then(value => setUpdate(appUpdateSchema.parse(value))).catch(() => setUpdate({ status: 'unavailable', currentVersion: '', url: 'https://github.com/wzxnb2333/pi-desktop/releases/latest', message: tr('暂时无法检查更新') }));
+  };
   return (
     <header className="titlebar">
       <div className="titlebar-navigation">
@@ -64,8 +70,8 @@ export function Titlebar() {
           }
         }} />
         <Menu kind="action" label={tr("帮助菜单")} placeholder={tr("帮助")} value="" options={[
-          { value: 'commands', label: tr("命令面板") }, { value: 'info', label: tr("本地运行信息") },
-        ]} onChange={value => value === 'commands' ? dispatchWorkbenchCommand('commands') : setShowInfo(true)} />
+          { value: 'commands', label: tr("命令面板") }, { value: 'update', label: tr("检查更新") }, { value: 'info', label: tr("本地运行信息") },
+        ]} onChange={value => value === 'commands' ? dispatchWorkbenchCommand('commands') : value === 'update' ? checkUpdate() : setShowInfo(true)} />
       </nav>
       <div className="window-controls">
         <IconButton label={tr("最小化")} onClick={() => act({ op: 'window', action: 'minimize' })}>
@@ -80,6 +86,8 @@ export function Titlebar() {
       </div>
       {showInfo && <ConfirmDialog title={tr("本地运行信息")} description={<StatusBar inline />} confirmLabel={tr("关闭")} cancelLabel={tr("返回")}
         onConfirm={() => setShowInfo(false)} onCancel={() => setShowInfo(false)} />}
+      {update && <ConfirmDialog title={tr("检查更新")} description={update.status === 'checking' ? tr('正在检查更新') : update.status === 'available' ? tr('发现新版本 {p0}', { p0: update.latestVersion ?? '' }) : update.message ?? tr('当前已是最新版本')} confirmLabel={update.status === 'available' ? tr('打开下载页') : tr('关闭')} cancelLabel={tr('返回')} pending={update.status === 'checking'}
+        onConfirm={() => { if (update.status === 'available') void app.invoke({ op: 'app.updateOpen' }); setUpdate(undefined); }} onCancel={() => setUpdate(undefined)} />}
     </header>
   );
 }

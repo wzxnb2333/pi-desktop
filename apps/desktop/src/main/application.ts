@@ -104,6 +104,7 @@ import type { BrowserToolRequest } from '../shared/browser-tools.ts';
 import { browserControlAllowed } from '../shared/browser-access.ts';
 import type { AutomationToolRequest } from '../shared/automation-tools.ts';
 import { toolResultSchema, validateResultSize } from '../shared/tool-results.ts';
+import { checkGitHubUpdate, GITHUB_RELEASES_URL } from './app-update.ts';
 
 export class DesktopApplication {
   readonly windows = new WindowState(() => this.store.data);
@@ -2873,6 +2874,11 @@ export class DesktopApplication {
           terminals: this.terminals.list(),
           version: app.getVersion(),
         };
+      case 'app.updateCheck':
+        return checkGitHubUpdate(app.getVersion());
+      case 'app.updateOpen':
+        await shell.openExternal(GITHUB_RELEASES_URL);
+        return null;
       case 'project.add': {
         if (request.path) {
           const project = await this.addProjectPath(request.path);

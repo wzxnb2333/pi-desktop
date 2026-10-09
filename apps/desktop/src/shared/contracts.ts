@@ -435,6 +435,8 @@ export const requestSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('comment.locate'), threadId: id, commentId: id }).strict(),
   z.object({ op: z.literal('comment.remove'), threadId: id, commentId: id }).strict(),
   z.object({ op: z.literal('bootstrap') }).strict(),
+  z.object({ op: z.literal('app.updateCheck') }).strict(),
+  z.object({ op: z.literal('app.updateOpen') }).strict(),
   z.object({ op: z.literal('models.catalog') }).strict(),
   z.object({ op: z.literal('project.add'), path: z.string().min(1).max(2000).optional() }).strict(),
   z.object({ op: z.literal('project.directoryAdd'), projectId: id, path: z.string().min(1).max(2000).optional() }).strict(),
@@ -645,6 +647,13 @@ export const bootstrapSchema = z
     version: z.string(),
   })
   .strict();
+export const appUpdateSchema = z.object({
+  status: z.enum(['available', 'current', 'unavailable']),
+  currentVersion: z.string(),
+  latestVersion: z.string().optional(),
+  url: z.url(),
+  message: z.string().optional(),
+}).strict();
 export const browserFindSchema = z.object({ text: z.string().max(1000), requestId: z.number().int().nonnegative(), matches: z.number().int().nonnegative(), active: z.number().int().nonnegative(), pending: z.boolean() }).strict();
 export type BrowserFindState = z.infer<typeof browserFindSchema>;
 export const desktopEventSchema = z.discriminatedUnion('type', [
