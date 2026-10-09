@@ -11,7 +11,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
-    "typecheck": "tsgo --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
     "test:ui": "playwright test",
     "test:nonvisual": "playwright test -c playwright.nonvisual.config.ts",
@@ -20,8 +20,8 @@
     "package:dir": "npm run build && electron-builder --dir --win --x64"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "0.86.1",
-    "@earendil-works/pi-coding-agent": "0.86.1",
+    "@earendil-works/pi-ai": "1.1.0",
+    "@earendil-works/pi-coding-agent": "1.1.0",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@xterm/addon-fit": "0.11.0",
     "@xterm/xterm": "6.0.0",

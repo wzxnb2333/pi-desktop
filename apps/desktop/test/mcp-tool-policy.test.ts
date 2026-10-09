@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type { ExtensionToolContext } from '@earendil-works/pi-coding-agent';
 import { mcpToolDecision, mcpToolPolicySchema } from '../src/shared/mcp-tool-policy.ts';
 import { settingsSchema } from '../src/shared/contracts.ts';
 import { changedWorkerSettingGroups } from '../src/main/settings-diff.ts';
@@ -24,9 +24,9 @@ test('MCP discovery preserves original tool names, removes disabled tools and en
     await connection.connect(config, {}, process.cwd());
     assert.deepEqual(await connection.tools(config, { echo: mcpToolPolicySchema.parse({ enabled: false }) }), []); assert.equal(connection.discovered[0].sourceName, 'echo');
     const blocked = (await connection.tools(config, { echo: mcpToolPolicySchema.parse({ approval: 'deny' }) }))[0];
-    await assert.rejects(blocked.execute('blocked', {}, new AbortController().signal, undefined, {} as ExtensionContext), /禁止调用/);
+    await assert.rejects(blocked.execute('blocked', {}, new AbortController().signal, undefined, {} as unknown as ExtensionToolContext), /禁止调用/);
     const limited = (await connection.tools(config, { echo: mcpToolPolicySchema.parse({ timeoutMs: 1000 }) }))[0];
-    const started = Date.now(); await assert.rejects(limited.execute('timeout', { wait: true }, new AbortController().signal, undefined, {} as ExtensionContext), /timeout|timed out/i);
+    const started = Date.now(); await assert.rejects(limited.execute('timeout', { wait: true }, new AbortController().signal, undefined, {} as unknown as ExtensionToolContext), /timeout|timed out/i);
     assert.ok(Date.now() - started < 4500); assert.equal((await connection.tools(config)).length, 1);
   } finally { await connection.close(); }
 });

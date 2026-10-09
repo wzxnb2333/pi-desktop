@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { TemporaryDirectories } from './fixtures/temporary-directories.ts';
-import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type { ExtensionToolContext } from '@earendil-works/pi-coding-agent';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -68,7 +68,7 @@ test('MCP drains verbose stderr and reports an actual service exit', { timeout: 
     const tools = await connection.tools(config);
     assert.equal(tools[0].label, '生命周期 · echo');
     assert.equal(disconnected, false);
-    await assert.rejects(tools[0].execute('exit', { exit: true }, new AbortController().signal, undefined, {} as ExtensionContext), /closed/i);
+    await assert.rejects(tools[0].execute('exit', { exit: true }, new AbortController().signal, undefined, {} as unknown as ExtensionToolContext), /closed/i);
     assert.equal(disconnected, true);
     await assert.rejects(connection.tools(config), /connected/i);
   } finally { await connection.close(); }
@@ -110,7 +110,7 @@ test(
         { message: 'hello' },
         new AbortController().signal,
         undefined,
-        {} as ExtensionContext,
+        {} as unknown as ExtensionToolContext,
       );
       assert.deepEqual(result.content, [{ type: 'text', text: 'echo:hello' }]);
     } finally {
@@ -156,7 +156,7 @@ test('MCP HTTP preserves headers, paginates tools, reports errors and cancels ca
     const definitions = await connection.tools(config);
     assert.equal(definitions.length, 2);
     assert.equal(new Set(definitions.map((tool) => tool.name)).size, 2);
-    const execute = (params: object, signal = new AbortController().signal) => definitions[0].execute('call', params, signal, undefined, {} as ExtensionContext);
+    const execute = (params: object, signal = new AbortController().signal) => definitions[0].execute('call', params, signal, undefined, {} as unknown as ExtensionToolContext);
     assert.deepEqual((await execute({})).content, [{ type: 'text', text: 'HTTP_TOOL_OK' }]);
     const failure = await execute({ fail: true });
     assert.deepEqual(failure.content, [{ type: 'text', text: 'MCP_EXPECTED_ERROR' }]);

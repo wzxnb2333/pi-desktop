@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type { ExtensionToolContext } from '@earendil-works/pi-coding-agent';
 import { mcpSchema, settingsSchema, threadSchema } from '../src/shared/contracts.ts';
 import { McpConnection, mcpConfigurationKey } from '../src/worker/mcp.ts';
 import { storedToolResult, resultImage, toolResultSchema, validateResultSize } from '../src/shared/tool-results.ts';
@@ -14,7 +14,7 @@ test('real MCP results preserve images, resources, extension blocks and error de
   const connection = new McpConnection();
   try {
     await connection.connect(config, {}, process.cwd()); const tools = await connection.tools(config);
-    const result = await tools[0].execute('rich', { fail: true }, new AbortController().signal, undefined, {} as ExtensionContext);
+    const result = await tools[0].execute('rich', { fail: true }, new AbortController().signal, undefined, {} as unknown as ExtensionToolContext);
     const stored = storedToolResult(result.details)!;
     assert.equal(result.content[1].type, 'image');
     assert.equal(stored.result.isError, true); assert.deepEqual(stored.result.content[4], { type: 'future_panel', payload: { rows: [1, 2], content: 'UNKNOWN_BLOCK_RETAINED' } });
@@ -27,7 +27,7 @@ test('real MCP results preserve images, resources, extension blocks and error de
     assert.deepEqual(messageItem({ role: 'toolResult', content: [result.content[1]] })?.toolResult?.result.content, [result.content[1]]);
     const resource = await connection.readResource('fixture://report', new AbortController().signal, 5000);
     assert.equal((toolResultSchema.parse(resource).result.content[0].resource as { text: string }).text, 'MCP_RESOURCE_READ_OK');
-    const executeSchema = (params: object) => tools[1].execute('schema', params, new AbortController().signal, undefined, {} as ExtensionContext);
+    const executeSchema = (params: object) => tools[1].execute('schema', params, new AbortController().signal, undefined, {} as unknown as ExtensionToolContext);
     await assert.rejects(executeSchema({ missing: true }), /未返回声明/);
     await assert.rejects(executeSchema({ invalid: true }), /不符合声明/);
     assert.deepEqual(storedToolResult((await executeSchema({})).details)?.result.structuredContent, { count: 3 });

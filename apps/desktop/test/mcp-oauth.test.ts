@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
+import type { ExtensionToolContext } from '@earendil-works/pi-coding-agent';
 import { McpOAuth, oauthCredentialKey } from '../src/main/mcp-oauth.ts';
 import { McpConnection } from '../src/worker/mcp.ts';
 import { oauthServer } from './fixtures/oauth-server.ts';
@@ -32,7 +32,7 @@ test('HTTP MCP retries a rejected bearer once through the real token adapter and
     await oauth.login(fixture.config, signal(), () => {}); fixture.invalidateAccess();
     await connection.connect(fixture.config, { 'X-Fixture': 'value' }, process.cwd(), (config, token) => oauth.token(config, token));
     const tools = await connection.tools(fixture.config); assert.equal(tools.length, 1);
-    const result = await tools[0].execute('echo', {}, signal(), undefined, {} as ExtensionContext);
+    const result = await tools[0].execute('echo', {}, signal(), undefined, {} as unknown as ExtensionToolContext);
     assert.deepEqual(result.content, [{ type: 'text', text: 'OAUTH_REAL_TOOL_OK' }]); assert.equal(fixture.counts.refresh, 1); assert.equal(fixture.counts.tool, 1);
     fixture.failRefresh(true); fixture.invalidateAccess();
     await assert.rejects(connection.tools(fixture.config), /授权已过期/);
