@@ -4,7 +4,7 @@
 
 ## 运行
 
-已构建的程序：`.artifacts/desktop/win-unpacked/Pi Desktop.exe`。安装程序：`.artifacts/desktop/Pi Desktop Setup 0.1.0.exe`。
+已构建的程序：`.artifacts/desktop/win-unpacked/Pi Desktop.exe`。安装程序：`.artifacts/desktop/Pi Desktop Setup 0.1.1.exe`。
 
 源码首次启动需要 Windows 10/11 x64、Node.js 24 LTS、Git for Windows 和 PowerShell（优先 PowerShell 7，未安装时回退 Windows PowerShell）。在仓库根目录执行：
 

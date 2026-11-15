@@ -1,6 +1,6 @@
 {
   "name": "@pi-desktop/app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Pi Desktop Windows 工作台",
   "author": "Pi Desktop contributors",

@@ -62,9 +62,9 @@ test('NSIS installs, upgrades and uninstalls without losing user data', async ()
   };
   try {
     await run(process.env.PI_DESKTOP_PREVIOUS_INSTALLER!, ['/S', `/D=${installPath}`]);
-    expect((await inspect(true)).version).toBe('0.0.9');
+    expect((await inspect(true)).version).toBe('0.1.0');
     await run(process.env.PI_DESKTOP_INSTALLER!, ['/S', `/D=${installPath}`]);
-    expect(await inspect(false)).toEqual({ version: '0.1.0', theme: 'dark' });
+    expect(await inspect(false)).toEqual({ version: '0.1.1', theme: 'dark' });
   } finally {
     const uninstaller = join(installPath, 'Uninstall Pi Desktop.exe');
     if (
