@@ -68,7 +68,7 @@ export function ComposerSuggestions({ trigger, draftText, controller, listId, on
   const matches = (value: string) => value.toLocaleLowerCase().includes(query);
   if (!loading && !error) {
     if (trigger.kind === '/') for (const item of catalog?.commands ?? []) {
-      const label = item.id === 'plan' ? tr(thread?.planMode ? '关闭计划模式' : '开启计划模式') : tr(commandLabels[item.id]);
+      const label = item.id === 'plan' ? tr(thread?.planMode ? '关闭计划模式' : '开启计划模式') : item.id === 'code' ? tr(thread?.codeMode ? '关闭代码模式' : '开启代码模式') : tr(commandLabels[item.id]);
       if (matches(item.id + ' ' + label)) choices.push({ id: 'command:' + item.id, label, detail: '/' + item.id, group: tr('命令'), command: item.id, disabled: !item.enabled });
     }
     if (trigger.kind === '@' && thread?.projectId) {
@@ -89,11 +89,12 @@ export function ComposerSuggestions({ trigger, draftText, controller, listId, on
     if (item.browse) { onBrowse(); return; }
     if (item.reference) { await selection.select(item.reference, onComplete); return; }
     if (item.template) { onTemplate(item.template); return; }
-    if (item.command && !['compact', 'plan', 'stop', 'skills'].includes(item.command)) { onComplete(); onCommand(item.command); return; }
+    if (item.command && !['compact', 'plan', 'code', 'stop', 'skills'].includes(item.command)) { onComplete(); onCommand(item.command); return; }
     setActing(true); setError('');
     try {
       if (item.command === 'skills') { onComplete(); setView('skills'); return; }
       if (item.command === 'plan') await invoke({ op: 'thread.update', id: thread.id, planMode: !thread.planMode });
+      else if (item.command === 'code') await invoke({ op: 'thread.update', id: thread.id, codeMode: !thread.codeMode });
       else await invoke({ op: item.command === 'compact' ? 'thread.compact' : 'thread.stop', id: thread.id });
       if (alive.current) onComplete();
     } catch (reason) { if (alive.current) setError(reason instanceof Error ? reason.message : String(reason)); }

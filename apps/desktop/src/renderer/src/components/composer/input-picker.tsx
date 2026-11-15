@@ -52,6 +52,7 @@ export function InputPicker({ initial, onSelect, onClose, onCommand }: { initial
     try {
       if (id === 'skills') setView('skills');
       else if (id === 'plan') await invoke({ op: 'thread.update', id: thread.id, planMode: !thread.planMode });
+      else if (id === 'code') await invoke({ op: 'thread.update', id: thread.id, codeMode: !thread.codeMode });
       else if (id === 'compact' || id === 'stop') await invoke({ op: id === 'compact' ? 'thread.compact' : 'thread.stop', id: thread.id });
       else onCommand?.(id);
       onClose();

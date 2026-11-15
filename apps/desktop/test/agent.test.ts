@@ -79,6 +79,7 @@ test(
         modelId: 'fake',
         thinking: 'off',
         policy: 'ask',
+        codeMode: true,
       }),
       trusted: false,
       model,
@@ -96,6 +97,7 @@ test(
     let restored: DesktopAgent | undefined;
     try {
       await agent.init(config);
+      assert.equal(agent.session.getActiveToolNames().includes('codemode'), true);
       await agent.prompt('请创建文件，然后回复。', []);
       assert.equal(await readFile(join(root, 'created.txt'), 'utf8'), 'approved file');
       assert.ok(events.some((event) => event.type === 'approval' && event.approval.tool === 'write'));

@@ -1,6 +1,6 @@
 import { tr, localizeAppError } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
-import { AtSign, GitBranch, ListChecks, Shield, Sparkles, Paperclip, Folder, Terminal, X } from 'lucide-react';
+import { AtSign, Code2, GitBranch, ListChecks, Shield, Sparkles, Paperclip, Folder, Terminal, X } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { Thread } from '../../../../shared/contracts.ts';
 import { permissionModes, policyDescriptions, policyLabels } from '../../lib/labels.ts';
@@ -170,7 +170,7 @@ export function Composer({ home = false }: { home?: boolean }) {
     else if (command === 'review') { setReviewTab('review'); setReviewOpen(true); }
     else setPanel({ id: thread.id, kind: command });
   };
-  const updateThread = (patch: Partial<Pick<Thread, 'modelId' | 'thinking' | 'policy' | 'planMode'>>) =>
+  const updateThread = (patch: Partial<Pick<Thread, 'modelId' | 'thinking' | 'policy' | 'planMode' | 'codeMode'>>) =>
     act({ op: 'thread.update', id: thread.id, ...patch });
   const addFiles = async (files: File[]) => {
     if (withdrawing) return;
@@ -306,6 +306,7 @@ export function Composer({ home = false }: { home?: boolean }) {
               { value: 'tool', label: <><Terminal size={16} />{tr('工具')}</> },
               { value: 'expand', label: tr('展开编辑') }, { value: 'history', label: tr('草稿历史') }, { value: 'templates', label: tr('提示词模板') }, { value: 'preflight', label: tr('发送前检查'), disabled: addingReference },
               { value: 'plan', label: <><ListChecks size={16} />{tr(thread.planMode ? '关闭计划模式' : '开启计划模式')}</>, disabled: running },
+              { value: 'code', label: <><Code2 size={16} />{tr(thread.codeMode ? '关闭代码模式' : '开启代码模式')}</>, disabled: running },
               ...(thread.projectId && !thread.worktreeBranch ? [{ value: 'worktree', label: <><GitBranch size={16} />{tr('新建 Worktree')}</>, disabled: running }] : []),
             ]} onChange={value => {
               if (value === 'attachments') { const id = thread.id; void invoke({ op: 'attachment.pick', threadId: id }).then(paths => {
@@ -314,11 +315,13 @@ export function Composer({ home = false }: { home?: boolean }) {
               else if (value === 'preflight') { setDelivery({ id: thread.id, status: 'checking' }); void invoke({ op: 'composer.preflight', threadId: thread.id, payload }).then(raw => { const check = preflightSchema.parse(raw); setDelivery({ id: thread.id, status: check.issues.length ? 'failed' : 'checked', check }); }).catch(reason => setDelivery({ id: thread.id, status: 'failed', error: String(reason) })); }
               else if (['expand', 'history', 'templates'].includes(value)) openCommand(value as InputCommand);
               else if (value === 'plan') updateThread({ planMode: !thread.planMode });
+              else if (value === 'code') updateThread({ codeMode: !thread.codeMode });
               else if (value === 'worktree') void createThread(thread.projectId, true).catch(() => {});
               else setPicker({ id: thread.id, tab: value as 'files' | 'skill' | 'tool' });
             }} />
           {policyMenu}
           {thread.planMode && <Button className="composer-plan-chip" size="xs" aria-label={tr('关闭计划模式')} disabled={running} onClick={() => updateThread({ planMode: false })}><ListChecks size={13} /><span>{tr('计划模式')}</span><X size={12} /></Button>}
+          {thread.codeMode && <Button className="composer-plan-chip" size="xs" aria-label={tr('关闭代码模式')} disabled={running} onClick={() => updateThread({ codeMode: false })}><Code2 size={13} /><span>{tr('代码模式')}</span><X size={12} /></Button>}
           <span className="flex-spacer" />
           <ContextUsage usage={thread.usage} />
           <ModelCapabilities key={thread.id} />

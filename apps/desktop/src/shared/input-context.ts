@@ -9,7 +9,7 @@ export const contextReferenceSchema = z.object({
   range: z.object({ start: z.number().int().positive(), end: z.number().int().positive() }).strict().refine(value => value.end >= value.start).optional(),
   quote: z.object({ start: z.number().int().nonnegative(), end: z.number().int().positive(), text: z.string().min(1).max(40000) }).strict().refine(value => value.end > value.start).optional(),
 }).strict();
-export const inputCommandSchema = z.enum(['compact', 'plan', 'stop', 'skills', 'goal', 'review', 'help', 'templates', 'history', 'expand']);
+export const inputCommandSchema = z.enum(['compact', 'plan', 'code', 'stop', 'skills', 'goal', 'review', 'help', 'templates', 'history', 'expand']);
 export const inputCatalogSchema = z.object({
   commands: z.array(z.object({ id: inputCommandSchema, enabled: z.boolean() }).strict()),
   references: z.array(contextReferenceSchema.extend({ description: z.string() }).strict()),

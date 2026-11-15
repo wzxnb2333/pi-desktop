@@ -1,6 +1,6 @@
 import { tr } from "../../../../shared/localization.ts";
 import { useLocale } from "../../hooks/use-locale.ts";
-import { FolderOpen, GitBranch, Laptop, ListChecks } from 'lucide-react';
+import { Code2, FolderOpen, GitBranch, Laptop, ListChecks } from 'lucide-react';
 import { useApp } from '../../state/app.tsx';
 import { Button } from '../primitives/button.tsx';
 import { Menu } from '../primitives/menu.tsx';
@@ -45,15 +45,16 @@ export function HomeUtility() {
       label={tr("新任务选项")}
       className="home-options"
       value=""
-      placeholder={thread.planMode ? tr("计划模式") : tr("任务选项")}
+      placeholder={thread.codeMode ? tr("代码模式") : thread.planMode ? tr("计划模式") : tr("任务选项")}
       kind="action"
       size="sm"
       side="top"
       align="end"
       disabled={running}
-      options={[{ value: 'toggle-plan', label: <><ListChecks size={16} />{thread.planMode ? tr("关闭计划模式") : tr("开启计划模式")}</> }, ...suggestions, { value: 'close-task', label: tr("关闭当前任务") }]}
+      options={[{ value: 'toggle-plan', label: <><ListChecks size={16} />{thread.planMode ? tr("关闭计划模式") : tr("开启计划模式")}</> }, { value: 'toggle-code', label: <><Code2 size={16} />{thread.codeMode ? tr("关闭代码模式") : tr("开启代码模式")}</> }, ...suggestions, { value: 'close-task', label: tr("关闭当前任务") }]}
       onChange={value => {
         if (value === 'toggle-plan') act({ op: 'thread.update', id: thread.id, planMode: !thread.planMode });
+        else if (value === 'toggle-code') act({ op: 'thread.update', id: thread.id, codeMode: !thread.codeMode });
         else if (value === 'close-task') {
           const remaining = (ui.openThreads ?? [thread.id]).filter(id => id !== thread.id);
           patchUi({ openThreads: remaining, closedThreads: [...(ui.closedThreads ?? []), thread.id].slice(-20), activeThreadId: remaining.at(-1) ?? '' });

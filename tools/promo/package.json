@@ -1,0 +1,9 @@
+{
+  "name": "@pi-desktop/promo",
+  "private": true,
+  "type": "module",
+  "description": "Pi Desktop promo video generator. Isolated from the workspace so its deps never enter the root lockfile.",
+  "dependencies": {
+    "mp4-muxer": "5.2.2"
+  }
+}

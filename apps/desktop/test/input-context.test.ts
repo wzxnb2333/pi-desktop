@@ -53,6 +53,7 @@ test('metadata catalog has usable commands without launching an extension or a w
   assert.equal(catalog.references.filter(item => item.kind === 'skill').length, 1);
   assert.equal(catalog.references.some(item => item.id === 'write'), false);
   assert.equal(catalog.commands.find(item => item.id === 'compact')?.enabled, true);
+  assert.equal(catalog.commands.find(item => item.id === 'code')?.enabled, true);
   thread.status = 'running';
   const busy = inputCatalog(thread, data.settings, cwd);
   assert.equal(busy.commands.find(item => item.id === 'compact')?.enabled, false);

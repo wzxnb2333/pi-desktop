@@ -224,6 +224,7 @@ export const threadSchema = z
     thinking: thinkingSchema,
     policy: policySchema,
     planMode: z.boolean().default(false),
+    codeMode: z.boolean().default(false),
     worktreeBranch: z.string().optional(),
     workspaceRevision: z.number().int().nonnegative().optional(),
     baseCommit: z.string().optional(),
@@ -463,6 +464,7 @@ export const requestSchema = z.discriminatedUnion('op', [
       thinking: thinkingSchema.optional(),
       policy: policySchema.optional(),
       planMode: z.boolean().optional(),
+      codeMode: z.boolean().optional(),
     })
     .strict(),
   z

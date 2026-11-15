@@ -55,5 +55,5 @@ export const composerMessages = {
   '最多保存 100 个模板': 'You can save up to 100 templates.', '消息已开始处理或队列已恢复至草稿': 'The message is being processed, or the queue was restored to the draft.',
   '消息已开始处理或队列已变化，请刷新后重试': 'The message is being processed, or the queue changed. Refresh and try again.',
 } as const;
-export const composerCommandLabels = { compact: '压缩上下文', plan: '切换计划模式', stop: '停止任务', skills: '管理 Skills',
+export const composerCommandLabels = { compact: '压缩上下文', plan: '切换计划模式', code: '切换代码模式', stop: '停止任务', skills: '管理 Skills',
   goal: '持续目标', review: '建议审查改动', help: '输入帮助', templates: '提示词模板', history: '草稿历史', expand: '展开编辑' } as const;

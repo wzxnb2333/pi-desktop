@@ -3044,7 +3044,8 @@ export class DesktopApplication {
           request.modelId !== undefined ||
           request.thinking !== undefined ||
           request.policy !== undefined ||
-          request.planMode !== undefined;
+          request.planMode !== undefined ||
+          request.codeMode !== undefined;
         if ((runtimeChange || request.deletedAt || request.archived) && this.bindingChats.has(thread.id)) throw new Error('正在绑定项目目录，请稍后再发送或修改任务');
         if ((runtimeChange || request.deletedAt || request.archived) && this.reconnectingMcp.has(thread.id))
           throw new Error('任务工具正在重连，请等待完成或取消重连');

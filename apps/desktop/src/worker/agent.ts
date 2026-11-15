@@ -8,6 +8,7 @@ import {
   createAgentSessionRuntime,
   createAgentSessionServices,
   createPowerShellToolDefinition,
+  createCodemodeExtension,
   type ExtensionFactory,
   type ExtensionUIContext,
   ModelRuntime,
@@ -479,7 +480,7 @@ export class DesktopAgent {
       sessionStartEvent,
     }) => {
       const settingsManager = SettingsManager.inMemory({
-        defaultTools: ['read', 'powershell', 'edit', 'write', 'grep', 'find', 'ls'],
+        defaultTools: ['read', 'powershell', 'edit', 'write', 'grep', 'find', 'ls', ...(config.thread.codeMode ? ['codemode'] : [])],
         cacheWarming: 'off',
         defaultProjectTrust: config.trusted ? 'always' : 'never',
       });
@@ -506,7 +507,7 @@ export class DesktopAgent {
             readableSkillPaths = enabled.map((skill) => skill.filePath);
             return { skills: enabled, diagnostics };
           },
-          extensionFactories: [guard],
+          extensionFactories: [guard, createCodemodeExtension()],
           appendSystemPrompt: [
             'You are running inside Pi Desktop on Windows. Use PowerShell for commands. Use update_plan for multi-step tasks. Respond in the user’s language.',
             'Use get_harness to inspect current session, workspace, permissions, context usage and available tools. Desktop tool access does not grant new permissions. ' + (config.thread.subtaskId
@@ -528,8 +529,8 @@ export class DesktopAgent {
         model,
       thinkingLevel: resolveThinkingLevel(config.model, config.thread.thinking),
         customTools,
-        ...(!config.thread.projectId ? { tools: ['update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...userQuestionToolNames, ...harnessToolNames, ...parentQuestionToolNames] } : config.thread.planMode || config.thread.policy === 'deny'
-          ? { tools: ['read', 'grep', 'find', 'ls', 'update_plan', ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...userQuestionToolNames, ...harnessToolNames, ...parentQuestionToolNames, ...(config.thread.review ? ['submit_review', 'read_review_file'] : []), ...(directories.length > 1 ? ['project_read', 'project_list'] : [])] }
+        ...(!config.thread.projectId ? { tools: ['update_plan', ...(config.thread.codeMode ? ['codemode'] : []), ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...userQuestionToolNames, ...harnessToolNames, ...parentQuestionToolNames] } : config.thread.planMode || config.thread.policy === 'deny'
+          ? { tools: ['read', 'grep', 'find', 'ls', 'update_plan', ...(config.thread.codeMode ? ['codemode'] : []), ...goalToolNames, ...automationToolNames, ...subtaskToolNames, ...userQuestionToolNames, ...harnessToolNames, ...parentQuestionToolNames, ...(config.thread.review ? ['submit_review', 'read_review_file'] : []), ...(directories.length > 1 ? ['project_read', 'project_list'] : [])] }
           : {}),
       });
       this.emit({ type: 'resources', report: {
