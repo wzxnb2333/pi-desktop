@@ -44,12 +44,24 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SandboxManager, type SandboxRuntimeConfig } from "@anthropic-ai/sandbox-runtime";
+import { SandboxManager } from "@anthropic-ai/sandbox-runtime";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { type BashOperations, CONFIG_DIR_NAME, createBashTool, getAgentDir } from "@earendil-works/pi-coding-agent";
 
-interface SandboxConfig extends SandboxRuntimeConfig {
+// The runtime's Zod 3 declarations cannot infer these fields against Zod 4.
+interface SandboxConfig {
 	enabled?: boolean;
+	network: {
+		allowedDomains: string[];
+		deniedDomains: string[];
+	};
+	filesystem: {
+		denyRead: string[];
+		allowWrite: string[];
+		denyWrite: string[];
+	};
+	ignoreViolations?: Record<string, string[]>;
+	enableWeakerNestedSandbox?: boolean;
 }
 
 const DEFAULT_CONFIG: SandboxConfig = {
@@ -113,17 +125,11 @@ function deepMerge(base: SandboxConfig, overrides: Partial<SandboxConfig>): Sand
 		result.filesystem = { ...base.filesystem, ...overrides.filesystem };
 	}
 
-	const extOverrides = overrides as {
-		ignoreViolations?: Record<string, string[]>;
-		enableWeakerNestedSandbox?: boolean;
-	};
-	const extResult = result as { ignoreViolations?: Record<string, string[]>; enableWeakerNestedSandbox?: boolean };
-
-	if (extOverrides.ignoreViolations) {
-		extResult.ignoreViolations = extOverrides.ignoreViolations;
+	if (overrides.ignoreViolations) {
+		result.ignoreViolations = overrides.ignoreViolations;
 	}
-	if (extOverrides.enableWeakerNestedSandbox !== undefined) {
-		extResult.enableWeakerNestedSandbox = extOverrides.enableWeakerNestedSandbox;
+	if (overrides.enableWeakerNestedSandbox !== undefined) {
+		result.enableWeakerNestedSandbox = overrides.enableWeakerNestedSandbox;
 	}
 
 	return result;
@@ -256,16 +262,11 @@ export default function (pi: ExtensionAPI) {
 		}
 
 		try {
-			const configExt = config as unknown as {
-				ignoreViolations?: Record<string, string[]>;
-				enableWeakerNestedSandbox?: boolean;
-			};
-
 			await SandboxManager.initialize({
 				network: config.network,
 				filesystem: config.filesystem,
-				ignoreViolations: configExt.ignoreViolations,
-				enableWeakerNestedSandbox: configExt.enableWeakerNestedSandbox,
+				ignoreViolations: config.ignoreViolations,
+				enableWeakerNestedSandbox: config.enableWeakerNestedSandbox,
 			});
 
 			sandboxEnabled = true;

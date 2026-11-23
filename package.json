@@ -81,6 +81,9 @@
 	},
 	"version": "0.0.3",
 	"overrides": {
+		"@anthropic-ai/sandbox-runtime@0.0.26": {
+			"zod": "4.6.7"
+		},
 		"protobufjs": "7.6.6"
 	}
 }
